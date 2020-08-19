@@ -1,4 +1,4 @@
-from    tokmsbasic.toklines  import TokLines, le
+from    tokmsbasic.toklines  import TokLines, le, unle
 from    io  import BytesIO
 import  pytest, struct
 
@@ -7,6 +7,10 @@ def test_le():
     assert b'\x34\x12' == le(0x1234)
     assert b'\xFF\xFF' == le(65535)
     with pytest.raises(struct.error): le(65536)
+
+def test_unle():
+    assert 0x1234 == unle(b'\x34\x12')
+    assert 0x1234 == unle(b'\x34\x12\x56')
 
 ####################################################################
 
@@ -57,15 +61,31 @@ def test_setline_bad_data():
 
 TEST_TEXT = b''.join([
     b'\xFF',                        # file type header
-    b'\x11\x88', b'\x0A\x00',       # next line pointer, line 10
+    b'\x11\x77', b'\x0A\x00',       # next line pointer, line 10
     b'\x8F Tokenized\x00',          # REM Tokenized
-    b'\x1B\x88', b'\x14\x00',       # next line pointer, line 10
+    b'\x1B\x77', b'\x14\x00',       # next line pointer, line 10
     b'\x91 "x"\x00'                 # PRINT "x"
     b'\x00\x00',                    # terminator
 ])
 
-def test_parsetext():
+def test_parsetext_noerr():
     tl = TokLines(TEST_TEXT)
     assert TEST_TEXT == tl.orig_text
-    #assert TEST_TEXT[1:] == tl.text()
-    #assert 0x8800 == tl.txttab
+    assert (0x7701, TEST_TEXT[1:]) == (tl.txttab, tl.text())
+    assert [] == tl.bad_offsets
+    expected = {
+        10: b'\x8F Tokenized',
+        20: b'\x91 "x"',
+        }
+    assert expected == tl.lines
+
+def test_parsetext_badoffsets():
+    tl = TokLines(b''.join([
+        b'\x00\x01', b'\x02\x01', b'\x00',
+        b'\x01\x00', b'\x01\x02', b'ab\x00',
+        b'\x34\x12', b'\x02\x02', b'\x00',
+        b'\x00\x00',
+        ]))
+    assert 0xFB == tl.txttab
+    assert { 258: b'', 513: b'ab', 514: b'', } == tl.lines
+    assert [ (513, 0x107, 0x0001), (514, 0x10C, 0x1234) ] == tl.bad_offsets
