@@ -15,21 +15,21 @@ def test_unle():
 ####################################################################
 
 def test_setline_text():
-    tl = TokLines()
+    tl = TokLines(0x0801)
     assert None is tl.orig_text
     assert 0x0801 == tl.txttab
 
     tl.setline(20, b'this is a longer line')
-    tl.setline(10, b'\x01\x02\xFE\xFF')
+    tl.setline(10, b'\x00\x01\xFE\xFF')
 
     #   If we ever need the first address after the text, here's the API.
     #assert tl.txttab + len(tl.text()) == tl.vartab()
 
     #   Here's an example of how you can get a dump from a test, for debugging.
-    with open('z', 'wb') as f: f.write(tl.text())
+    #with open('z', 'wb') as f: f.write(tl.text())
 
     expected = b''.join([
-        le(0x80A), le(10), b'\x01\x02\xFE\xFF',      b'\x00',
+        le(0x80A), le(10), b'\x00\x01\xFE\xFF',      b'\x00',
         le(0x824), le(20), b'this is a longer line', b'\x00',
         le(0),
         ])
@@ -48,44 +48,38 @@ def test_setline_text():
 
 
 def test_setline_bad_lineno():
-    tl = TokLines()
+    tl = TokLines(0x400)
     with pytest.raises(ValueError): tl.setline(-1, b'')
     with pytest.raises(ValueError): tl.setline(tl.maxlin + 1, b'')
     tl.setline(tl.maxlin, b'')
 
-def test_setline_bad_data():
-    with pytest.raises(ValueError):
-        TokLines().setline(10, b'\x12\x00\x34')
-
 ####################################################################
 
+TEST_TXTTAB = 0x7701
 TEST_TEXT = b''.join([
-    b'\xFF',                        # file type header
     b'\x11\x77', b'\x0A\x00',       # next line pointer, line 10
     b'\x8F Tokenized\x00',          # REM Tokenized
     b'\x1B\x77', b'\x14\x00',       # next line pointer, line 10
-    b'\x91 "x"\x00'                 # PRINT "x"
+    b'\x91 "\x00"\x00'              # PRINT "<NUL>"
     b'\x00\x00',                    # terminator
 ])
 
 def test_parsetext_noerr():
-    tl = TokLines(TEST_TEXT)
+    tl = TokLines(TEST_TXTTAB, TEST_TEXT)
     assert TEST_TEXT == tl.orig_text
-    assert (0x7701, TEST_TEXT[1:]) == (tl.txttab, tl.text())
-    assert [] == tl.bad_offsets
+    assert (0x7701, TEST_TEXT) == (tl.txttab, tl.text())
     expected = {
         10: b'\x8F Tokenized',
-        20: b'\x91 "x"',
+        20: b'\x91 "\x00"',
         }
-    assert expected == tl.lines
+    assert expected == tl.linemap
 
-def test_parsetext_badoffsets():
-    tl = TokLines(b''.join([
-        b'\x00\x01', b'\x02\x01', b'\x00',
-        b'\x01\x00', b'\x01\x02', b'ab\x00',
-        b'\x34\x12', b'\x02\x02', b'\x00',
-        b'\x00\x00',
-        ]))
-    assert 0xFB == tl.txttab
-    assert { 258: b'', 513: b'ab', 514: b'', } == tl.lines
-    assert [ (513, 0x107, 0x0001), (514, 0x10C, 0x1234) ] == tl.bad_offsets
+def test_parsetext_badterm():
+    badprog = b''.join([ b'\x05\x01', b'\x02\x01', b'_\x00\x00', ])
+    with pytest.raises(ValueError) as ex:
+        TokLines(0x100, badprog)
+    assert ex.match(r'line 258 ')
+    assert ex.match(r'addr \$0100:')
+    assert ex.match(r'byte \$5F ')    # '_'
+    assert ex.match(r'at \$0104 ')
+    assert ex.match(r'offset \$0004')

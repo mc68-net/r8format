@@ -2,22 +2,21 @@ import  struct
 
 class TokLines:
     ''' A sequence of tokenized lines. The data for each line is typically
-        tokenized BASIC program text, but may be any string without 0x00
-        bytes in it; this class handles only the line numbers and offsets.
+        tokenized BASIC program text, but may be any sequence of bytes
+        (including 0x00 bytes); this class handles only the line numbers
+        and offsets.
 
         Symbol names such as `txttab` are taken from Microsoft or other
         documentation or source code, where possible.
 
         Attributes:
-        - `lines`: A dictionary mapping `int` line number to the line data
-           (without the terminating 0 byte).
+        - `linemap`: A dictionary mapping `int` line number to the line
+          data (without the terminating 0 byte).
         - `orig_text`: The original (pre-parse) text data this instance was
           instantiated with, if any (otherwise `None`). This should be the
           same as the result of `text()` if the original text was valid,
           `txttab` has not been changed from the value discovered by the
           parse, and no lines have been added, deleted or changed.
-        - `bad_offsets`: A `list` of bad offset values from the last
-          `parsetext()` run.
 
         Issues:
         - This currently assumes little-endian format, which is fine for
@@ -33,79 +32,67 @@ class TokLines:
     NEW_MAXLIN = 65529      # MSX-BASIC, GW-BASIC
                             # Early 6502 BASIC used 63999.
 
-    def __init__(self, text=None, *, txttab=None, maxlin=NEW_MAXLIN):
-        ''' Initialize this set of lines with program text in in-memory or
-            disk save (prefixed by a type byte) format.
-
-            `txttab` is the memory offset at which the lines start. If
-            not provided, it will be automatically determined from `text`
-            if present, or use a default value of 0x0801.
+    def __init__(self, txttab, text=None, *, maxlin=NEW_MAXLIN):
+        ''' Create a list of tokenized lines starting at address `txttab`.
+            if a `bytes` `text` is supplied, it will be parsed with
+            `parsetext()`, providing the initial set of lines.
         '''
+        self.linemap = {}
         self.maxlin = maxlin
-        self.orig_text = text
-        self.lines = {}
-        if text is None:
-            self.txttab = txttab or 0x0801
-        else:
-            self.txttab = self.parsetext(text)
 
-    def parsetext(self, text):
-        ''' Parse the given binary `text` data into lines, adding them to
+        self.txttab = int(txttab)
+        if self.txttab < 0:
+            raise ValueError('txttab {} < 0'.format(self.txttab))
+
+        self.orig_text = text
+        if text is not None:
+             self.parsetext(txttab, text)
+
+    def parsetext(self, txttab, text):
+        ''' Parse the given program image `text` into lines, adding them to
             the lines already held by this object. New lines with the same
             line number as an existing line will overwrite the existing line.
 
-            This returns the start address of `text` as calculated from
-            the data in `txt`; it does not change this instance's `txttab`
+            `text` must not include the initial file type byte (usually
+            0xFF) that usually starts a saved BASIC image.
 
-            Parsing is done by scanning for the 0x00 terminator byte in the
-            line data. Except for the first offset, which is assumed
-            correct and used to calculate the starting address `txttab`,
-            offset values are ignored. However, they are checked against
-            what they're expected to be and a (lineno, expected offset,
-            actual offset) tuple is appended to the `bad_offsets` property
-            for each line that has an offset value not matching the length
-            of the data. (`bad_offsets` is cleared when `parsetext()` is
-            called so it will contain the bad offsets from only the most
-            recent call.)
+            `txttab` must be the correct start address for the system
+            that saved the data.
+
+            Each line's data is checked to see that it ends with a 0x00
+            termination byte; a `ValueError` will be raised if it does
+            not, indicating either bad data or a bug in this function.
         '''
-        self.bad_offsets = []
-
-        p = 0
-        if text[p] == 0xFF:     # If type byte (XXX or 250 char line!)
-            text = text[1:]     # is present, drop it.
-
-        def linelen():
-            ' Len of the entire line, including offset, lineno and terminator. '
-            return 2 + 2 + text[p+4:].find(b'\x00') + 1
-
-        #   Calculate txttab by subtracting the length of the first line,
-        #   calculated by finding its terminating 0x00 byte, from the
-        #   offset of the second line at the start of the text.
-        txttab = unle(text[p:]) - linelen()
-
+        curaddr = txttab
         while True:
-            offset = unle(text[p:])
-            if offset == 0:
+            offset = curaddr - txttab
+            naddr = unle(text[offset:])
+            if naddr == 0:
                 break
-            lineno = unle(text[p+2:])
-            data = text[p+4 : p+linelen()-1]
+            noffset = naddr - txttab
+            lineno = unle(text[offset+2:])
+            termbyte = text[noffset-1]
+            if termbyte != 0:
+                raise ValueError(
+                    'line {} at addr ${:04X}: unexpected termination byte'
+                    ' ${:02X} at ${:04X} (offset ${:04X})'
+                    .format(lineno, curaddr, termbyte, naddr-1, noffset-1))
+            data = text[offset+4:noffset-1]
             self.setline(lineno, data)
-            p += linelen()
-            if p + txttab != offset:
-                self.bad_offsets.append((lineno, p+txttab, offset))
-
-        return txttab
+            curaddr = naddr
 
     def setline(self, lineno, bs):
         ' Set line `lineno` of the text to the data `bs`. '
         if lineno < 0 or lineno > self.maxlin:
             raise ValueError('Line number {} out of range 0-{}'
                 .format(lineno, self.maxlin))
-        if b'\x00' in bs:
-            raise ValueError(
-                'data may not have byte(s) with value 0'
-                ' (lineno={} data={})'.format(lineno, repr(bs)))
-        self.lines[lineno] = bs
+        self.linemap[lineno] = bs
+
+    def lines(self):
+        ''' Return (`int`, `bytes`) tuples containing the line number
+            and its tokenized data in line number order.
+        '''
+        return ( (l, self.linemap[l]) for l in sorted(self.linemap.keys()) )
 
     def text(self):
         ''' Return a `bytes` containing the current tokenized text.
@@ -113,8 +100,7 @@ class TokLines:
         '''
         nextaddr = self.txttab
         data = []
-        for lineno in sorted(self.lines.keys()):
-            linedata = self.lines[lineno]
+        for lineno, linedata in self.lines():
             nextaddr = nextaddr + 2 + 2 + len(linedata) + 1
             data.extend([ le(nextaddr), le(lineno), linedata, b'\x00' ])
         data.append(le(0))
