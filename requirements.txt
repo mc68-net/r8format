@@ -1,0 +1,2 @@
+#   pylib/pytest_pt.py does not yet work with pytest 6.x
+pytest<6.0

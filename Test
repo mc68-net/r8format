@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -eu -o pipefail
+
+basedir=$(cd "$(dirname "$0")" && pwd -P)
+cd "$basedir"
+
+[[ ${#@} -gt 0 && $1 == -C ]] && { shift; rm -rf .build/; }
+. ./activate -q --python=python3
+export PYTHONPATH="$basedir/pylib"
+
+[[ ${#@} -eq 0 ]] && set pylib/
+exec pytest -q "$@"
