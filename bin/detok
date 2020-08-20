@@ -6,6 +6,7 @@ BASEDIR = dirname(dirname(abspath(__file__)))
 if __name__ == '__main__': addsitedir(join(BASEDIR, 'pylib'))
 
 from    bastok.tlines import TLines
+from    bastok.msx2 import Detokenizer
 import  sys
 
 def main():
@@ -15,7 +16,13 @@ def main():
         if type != 0xFF:
             raise RuntimeError('bad type byte ${:02X}'.format(type))
         tl = TLines(0x8001, f.read())
-    for line in tl.lines():
-        print(line)
+
+    #   Print it in MSX-DOS format, with CR-NL and trailing ^Z.
+    #   XXX This will not, however, translate high-bit character codes to
+    #   SJIS, as `SAVE"…",A` seems to do.
+    for lineno, tline in tl.lines():
+        detok = Detokenizer(tline, lineno)
+        print(detok.detokenize(), end='\r\n')
+    print('\x1A', end='')
 
 if __name__ == '__main__': main()

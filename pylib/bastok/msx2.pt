@@ -1,0 +1,157 @@
+from    bastok.msx2  import *
+import  pytest
+
+def test_toktab():
+    assert 'LEFT$' == TOKTAB[b'\xFF\x81']
+
+def test_T_DATA():
+    ' Make sure we correctly extracted the T_DATA token. '
+    assert 0x84 == T_DATA
+
+####################################################################
+#   Support functions
+
+DT = Detokenizer(b'')
+
+@pytest.mark.parametrize('n, s', [
+    (0x00, '00'), (0x47, '47'), (0x99, '99'), ])
+def test_bcdstr(n, s):
+    assert s == DT.bcdstr(n)
+
+@pytest.mark.parametrize('b, s', [
+    #   E+14 form is used from exponent +14 upward and -3 downward
+    #   Remember that printed form shifts decimal point 1 right and
+    #   subtracts 1 from the exponent, compared to internal form where the
+    #   decimal point leads all the mantissa digits.
+    (b'\x4F\x12\x34\x56',   '1.23456E+14'),
+    (b'\x4F\x12\x00\x00',   '1.2E+14'),
+    (b'\x4F\x70\x00\x00',   '7E+14'),
+    (b'\x7F\x30\x00\x00',   '3E+62'),
+    (b'\x3E\x12\x00\x00',   '1.2E-3'),
+    (b'\x01\x45\x60\x00',   '4.56E-64'),
+    #   Internally denormalized mantissas are not normalized for output,
+    #   and any mantissa starting with two zeros wedges the machine on load.
+    (b'\x01\x02\x34\x56',   '0.23456E-64'),
+    #   Exponent 0x00 seems to encode `0!`? Not sure if this is worth doing.
+
+    #   Non-exponent form with no insignficant leading/trailing zeros
+    #   is used for (human-normalized) exponents between -2 and +13.
+    (b'\x3F\x12\x34\x50',   '.012345!'),    # smallest non-exponent form
+    (b'\x40\x12\x34\x56',   '.123456!'),
+    (b'\x40\x12\x30\x00',   '.123!'),
+    (b'\x41\x12\x30\x00',   '1.23!'),
+    (b'\x43\x12\x30\x00',   '123!'),
+    (b'\x45\x12\x34\x56',   '12345.6!'),
+    (b'\x48\x12\x34\x56',   '12345600!'),
+    (b'\x4E\x12\x34\x56',   '12345600000000!'),
+
+    #   If the exponent byte is 0x00, the number is always 0, regardless
+    #   of the mantissa. (Zero normally seems to be tokenized as an exponent
+    #   and mantissa of all-zeros.)
+    (b'\x00\x00\x00\x00',   '0!'),
+
+    #   Double precision works pretty much exactly the same as single.
+    (b'\x00\x00\x00\x00\x00\x00\x00\x00', '0#'),
+    (b'\x3F\x10\x20\x30\x40\x50\x60\x78', '.010203040506078#'),
+    (b'\x4A\x10\x20\x30\x40\x50\x60\x78', '1020304050.6078#'),
+    (b'\x4E\x10\x20\x30\x40\x50\x60\x78', '10203040506078#'),
+])
+def test_real(b, s):
+    dt = Detokenizer(b)
+    dt.reset()
+    dt.real(len(b))
+    assert s == dt._output[0]
+
+@pytest.mark.parametrize('t, s', [
+    (b'"',                 '"'),
+    (b'abc"',              'abc"'),
+    (b'abc"def',           'abc"'),
+    (b'\x00\x01\xFE\xFF"', '\x00\x01\xFE\xFF"'),
+    (b'ab:',               'ab:'),    # no closing quote
+])
+def test_quoted(t, s):
+    dt = Detokenizer(t)
+    dt.quoted()
+    assert s == ''.join(dt._output)
+
+@pytest.mark.parametrize('t, s', [
+    (b'',                   ''),
+    (b'ab,cd:ef',           'ab,cd:'),
+    (b'ab,"c,d":ef',        'ab,"c,d":'),
+    (b'ab,"c:d":ef',        'ab,"c:d":'),
+    (b'",",a"b,"c,d:\x91',  '",",a"b,"c,d:'),
+    (b'  a  , b "" :',      '  a  , b "" :'),
+])
+def test_data(t, s):
+    dt = Detokenizer(t)
+    dt.data()
+    assert s == ''.join(dt._output)
+
+####################################################################
+#   Main function
+
+@pytest.mark.parametrize('t, s', [
+    (b'',               '' ),
+    (b' ',              ' '),
+    (b'Ab',             'Ab'),
+    (b'\x91',           'PRINT'),
+    #   &Onnnnn octal integers
+    (b'\x0B\x00\x00',   '&O0'),
+    (b'\x0B\x9C\xF1',   '&O170634'),
+    #   &Hnnnn hexadecimal integers
+    (b'\x0C\x00\x00',   '&H0'),
+    (b'\x0C\x0F\x00',   '&HF'),
+    (b'\x0C\x1A\x00',   '&H1A'),
+    (b'\x0C\x2B\x01',   '&H12B'),
+    (b'\x0C\xFE\xFF',   '&HFFFE'),
+    #   Integers 10-255
+    (b'\x0F\x0A',       '10'),
+    (b'\x0F\xFF',       '255'),
+    #   Integers 0-9
+    (b'\x11',           '0'),
+    (b'\x12',           '1'),
+    (b'\x13',           '2'),
+    (b'\x14',           '3'),
+    (b'\x15',           '4'),
+    (b'\x16',           '5'),
+    (b'\x17',           '6'),
+    (b'\x18',           '7'),
+    (b'\x19',           '8'),
+    (b'\x1A',           '9'),
+    #   Line numbers
+    (b'\x0E\x00\x00',   '0'),
+    (b'\x0E\xF9\xFF',   '65529'),
+    #   Integers 256-32767
+    (b'\x1C\x00\x01',   '256'),
+    (b'\x1C\x34\x12',   '4660'),
+    (b'\x1C\xFF\x7F',   '32767'),
+    #   Real numbers
+    (b'A\xEF\x1D\x3F\x12\x34\x56',                  'A=.0123456!'),
+    (b'A\xEF\x1F\x43\x12\x30\x00\x00\x00\x00\x00',  'A=123#'),
+    #   ELSE is a weird special case
+    (b'\x3A\xA1',        'ELSE'),
+    #   Multiple-token strings with slightly odd situations.
+    (b'\x91"a:',         'PRINT"a:'),   # EOL instead of closing quote
+    #   DATA
+    (b'\x84  "a",b"c,"d:\x91A',   'DATA  "a",b"c,"d:PRINTA'),
+    #   Two-byte tokens
+    (b'\xFF\x84(A) \xF1 \xFF\x85(B)',   'SGN(A) + INT(B)'),
+])
+def test_detokenize(t, s):
+    dt = Detokenizer(t, 12345)
+    assert '12345 ' + s == dt.detokenize()
+
+@pytest.mark.parametrize('t, err', [
+    #   Line numbers
+    (b'\x0E\xFA\xFF',   'line no. 65530 > 65529'),
+    #   Integers 10-255
+    (b'\x0F\x09',       'too small'),
+    #   Integers 256-32767
+    (b'\x1C\xFF\x00',   'too small'),
+    (b'\x1C\x00\x80',   'too large'),
+    (b'\x1C\xFF\xFF',   'too large'),
+])
+def test_detokenize_bad(t, err):
+    with pytest.raises(DT.TokenError):
+        dt = Detokenizer(t)
+        dt.detokenize()
