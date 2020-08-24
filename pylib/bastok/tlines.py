@@ -1,6 +1,6 @@
 import  struct
 
-class TokLines:
+class TLines:
     ''' A sequence of tokenized lines. The data for each line is typically
         tokenized BASIC program text, but may be any sequence of bytes
         (including 0x00 bytes); this class handles only the line numbers

@@ -1,4 +1,4 @@
-from    tokmsbasic.toklines  import TokLines, le, unle
+from    bastok.tlines  import TLines, le, unle
 from    io  import BytesIO
 import  pytest, struct
 
@@ -15,7 +15,7 @@ def test_unle():
 ####################################################################
 
 def test_setline_text():
-    tl = TokLines(0x0801)
+    tl = TLines(0x0801)
     assert None is tl.orig_text
     assert 0x0801 == tl.txttab
 
@@ -48,7 +48,7 @@ def test_setline_text():
 
 
 def test_setline_bad_lineno():
-    tl = TokLines(0x400)
+    tl = TLines(0x400)
     with pytest.raises(ValueError): tl.setline(-1, b'')
     with pytest.raises(ValueError): tl.setline(tl.maxlin + 1, b'')
     tl.setline(tl.maxlin, b'')
@@ -65,7 +65,7 @@ TEST_TEXT = b''.join([
 ])
 
 def test_parsetext_noerr():
-    tl = TokLines(TEST_TXTTAB, TEST_TEXT)
+    tl = TLines(TEST_TXTTAB, TEST_TEXT)
     assert TEST_TEXT == tl.orig_text
     assert (0x7701, TEST_TEXT) == (tl.txttab, tl.text())
     expected = {
@@ -77,7 +77,7 @@ def test_parsetext_noerr():
 def test_parsetext_badterm():
     badprog = b''.join([ b'\x05\x01', b'\x02\x01', b'_\x00\x00', ])
     with pytest.raises(ValueError) as ex:
-        TokLines(0x100, badprog)
+        TLines(0x100, badprog)
     assert ex.match(r'line 258 ')
     assert ex.match(r'addr \$0100:')
     assert ex.match(r'byte \$5F ')    # '_'
