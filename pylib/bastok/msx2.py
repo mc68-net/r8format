@@ -179,10 +179,17 @@ TOKENS = (
 
 TOKTAB = dict(TOKENS)
 
+def toklastbyte(s):
+    ' Return the last token byte of tokenized keyword `s`. '
+    return [ t for t, k in TOKENS if k == s ][0][-1]
+
 SPACE   = ord(' ')
 DQUOTE  = ord('"')
+COMMA   = ord(',')
 COLON   = ord(':')
-T_DATA  = [ t for t, k in TOKENS if k == 'DATA' ][0][0]
+T_DATA  = toklastbyte('DATA')
+T_REM   = toklastbyte('REM')
+T_ELSE1 = toklastbyte('ELSE')   # without leading ':'
 MAX_LINENO = 65529
 
 class Detokenizer:
@@ -190,12 +197,14 @@ class Detokenizer:
         line and call `detokenize()` for the detokenized result.
     '''
 
-    def __init__(self, tline, lineno=None):
-        ''' `tline` should be a `bytes` containing the tokenized line data,
-            not including the line number or trailing 0x00. `lineno`, if
-            present, will prefix the detokenized line and be printed in any
-            exceptions raised.
+    def __init__(self, charset, tline, lineno=None):
+        ''' `charset` is the `Charset` to use for conversion. `tline` is a
+            `bytes` containing the tokenized line data, not including the
+            line number or trailing 0x00. `lineno`, if present, will prefix
+            the detokenized line and be printed in any exceptions raised.
         '''
+        assert callable(charset.uc)
+        self.charset = charset
         self.tline = tline
         self.lineno = lineno
         self.reset()
@@ -277,16 +286,22 @@ class Detokenizer:
             elif ch == DQUOTE:
                 output(chr(DQUOTE))
                 self.quoted()
-            elif ch == COLON and self.peek() == 0xA1:
+            elif ch == COLON and self.peek() == T_ELSE1:
                 #   ELSE is a special case; it's always encoded as colon
                 #   followed by the ELSE token
+                self.char()     # consume 2nd byte of ELSE token
                 output('ELSE')
-                self.p += 1
             elif ch <= 0x7F:
                 output(chr(ch))
             elif ch == T_DATA:
                 output(TOKTAB[bytes([ch])])
                 self.data()
+            elif ch == T_REM:
+                output('REM')
+                #   Consume the remainder of tline and output its
+                #   charset-converted contents.
+                while self.peek() is not None:
+                    self.chdecode()
             elif ch == 0xFF:        # two-byte token
                 tv = TOKTAB.get(bytes([ch, char()]))
                 if tv is None: terror()
@@ -405,46 +420,77 @@ class Detokenizer:
         else:
             self.output(str(int(mantissa) * 10**(exponent-6)) + precchar)
 
+    def chdecode(self):
+        ''' Consume a native-encoded char from the input, convert it to
+            Unicode via the current converter, and append it to the output.
+            This will consume one or two bytes, depending on if the first
+            byte is 0x01 indicating an "extended" character code.
+
+            This should be used only for strings, not program text.
+        '''
+        c = self.char()
+        if c != 0x01 and c < 0x20:  # BASIC should never tokenize these codes
+            self.terror()
+        elif c != 0x01:             # standard char code
+            self.output(self.charset.uc(c))
+        else:                       # "extended" char code
+            c = self.char()
+            if c is None:               self.terror()
+            if c < 0x40 or c > 0x5F:    self.terror()
+            self.output(self.charset.uc(c-0x40))
+
     def quoted(self):
         ''' Consume and output a quoted string, including the trailing
             quote if present, but not including the leading quote, which
             is assumed to have been consumed and output already.
-
-            XXX This currently returns characters at to the Unicode
-            code point of each byte, which is not correct. What we need is
-            a mapping of the non-ASCII bytes (0x80-0xFF), and probably
-            the ASCII control bytes (0x00-0x1F) to Unicode code points.
         '''
         while True:
-            ch = self.char()
-            if ch is None:
+            c = self.peek()
+            if c is None:                       # EOL ends quoted string
                 return
-            elif ch == DQUOTE:
-                self.output(chr(DQUOTE))
+            elif c == DQUOTE:                   # quote ends quoted string
+                self.output(chr(self.char()))   # and is not charset-decoded
                 return
             else:
-                self.output(chr(ch))    # XXX should be doing charset conversion
+                self.chdecode()
 
     def data(self):
         ''' Consume and output bytes as a ``DATA`` statement argument.
             If the ``DATA`` statement is terminated by a colon, that will
             be consumed and output as well.
 
+            Unquoted spaces leading an argument, quotes and a trailing
+            (unquoted) colon will be output as ASCII codes; all the
+            remainder will use charset translation.
+
             Though how exactly quotes are dealt with in DATA statements is
             complex (e.g., a quote *after* another char in a field is a
-            literal, not quoting a string) it appears we can ignore this at the
-            tokenization level and merely ignore ``:`` chars that are in
-            quotes, otherwise terminating on them or the end of the line.
+            literal, not quoting a string) it appears we can ignore this at
+            the tokenization level and merely ignore ``:`` chars that are
+            in a pair of quotes, otherwise terminating on a ``:`` or EOL.
+
+            This does mean that quotes are always literal, never charset-
+            converted, which may cause issues in certain programs, but it's
+            not clear at the moment exactly how those programs would be
+            written.
         '''
+        leading = True
         while True:
-            ch = self.char()
+            ch = self.peek()
             if ch is None:
-                return
+                return  # EOL
+            elif leading and ch == SPACE:
+                self.output(chr(self.char()))
             elif ch == DQUOTE:
-                self.output(chr(ch))
+                leading = False
+                self.output(chr(self.char()))
                 self.quoted()
+            elif ch == COMMA:
+                leading = True
+                self.output(chr(self.char()))
             elif ch == COLON:
-                self.output(chr(ch))
+                self.output(chr(self.char()))
                 return
             else:
-                self.output(chr(ch))    # XXX should be doing charset conversion
+                leading = False
+                self.chdecode()

@@ -1,22 +1,48 @@
 from    bastok.msx2  import *
 import  pytest
 
+class UTCharset:
+    ''' A Charset converter for unit testing detokenization. This only
+        converts native codes to Unicode, and codes are converted
+        algorithmically from *nn* to *U+F0nn, which are codes in the
+        private use area (U+E000-U+F8FF).
+
+        This will translate ASCII codes to non-ASCII codes, which is
+        intentional: it ensures that we are using this only for strings
+        rather than for code as well.
+    '''
+    def uc(self, n):
+        ''' Translate native code `n`, an `int` from 0x00 through 0xFF, to
+            a single-character Unicode `str`. Note that codes 0x00 through
+            0x1F are represented as [0x01, 0x40+`n`] in MSX BASIC.
+
+            This intentionally translates ASCII to non-ASCII to allow us
+            to confirm exactly where decoding is being done.
+        '''
+        assert n >= 0 and n < 0x100
+        return chr(0xF000+n)
+
+UTCS    = UTCharset()
+
+####################################################################
+
 def test_toktab():
     assert 'LEFT$' == TOKTAB[b'\xFF\x81']
 
-def test_T_DATA():
-    ' Make sure we correctly extracted the T_DATA token. '
+def test_T_():
+    ' Make sure we correctly extracted certain tokens. '
     assert 0x84 == T_DATA
+    assert 0x8F == T_REM
+    assert 0xA1 == T_ELSE1
 
 ####################################################################
 #   Support functions
 
-DT = Detokenizer(b'')
-
 @pytest.mark.parametrize('n, s', [
     (0x00, '00'), (0x47, '47'), (0x99, '99'), ])
 def test_bcdstr(n, s):
-    assert s == DT.bcdstr(n)
+    dt = Detokenizer(UTCS, b'')
+    assert s == dt.bcdstr(n)
 
 @pytest.mark.parametrize('b, s', [
     #   E+14 form is used from exponent +14 upward and -3 downward
@@ -57,33 +83,63 @@ def test_bcdstr(n, s):
     (b'\x4E\x10\x20\x30\x40\x50\x60\x78', '10203040506078#'),
 ])
 def test_real(b, s):
-    dt = Detokenizer(b)
+    dt = Detokenizer(UTCS, b)
     dt.reset()
     dt.real(len(b))
     assert s == dt._output[0]
 
+@pytest.mark.parametrize('b, s', [
+    (b'a',          '\uF061'),
+    (b'\xFF',       '\uF0FF'),
+    (b'\x01\x40',   '\uF000'),
+    (b'\x01\x5F',   '\uF01F'),
+])
+def test_chdecode_good(b, s):
+    dt = Detokenizer(UTCS, b)
+    dt.chdecode()
+    assert s == ''.join(dt._output)
+
+@pytest.mark.parametrize('b', [
+    #   Bytes that should never appear in a tokenized string constant;
+    #   as these character codes would be encoded as \x01\xNN sequences.
+    b'\x00', b'\x02', b'\x1F',
+    b'\x01\x3F',                # \x01 must be followed by >= \x40
+    b'\x01\x60',                # \x01 must be followed by  < \x60
+    b'\x01',                    # \x01 must have a following byte
+])
+def test_chdecode_bad(b):
+    dt = Detokenizer(UTCS, b)
+    with pytest.raises(dt.TokenError):
+        dt.chdecode()
+
 @pytest.mark.parametrize('t, s', [
-    (b'"',                 '"'),
-    (b'abc"',              'abc"'),
-    (b'abc"def',           'abc"'),
-    (b'\x00\x01\xFE\xFF"', '\x00\x01\xFE\xFF"'),
-    (b'ab:',               'ab:'),    # no closing quote
+    (b'"',                  '"'),
+    (b'ab"',                '\uF061\uF062"'),
+    (b'ab"cd',              '\uF061\uF062"'),
+    (b'ab:',                '\uF061\uF062\uF03A'),   # no closing quote
+    (b'\x20\x01\x41\x21',   '\uF020\uF001\uF021'),   # extended code conversion
 ])
 def test_quoted(t, s):
-    dt = Detokenizer(t)
+    ''' Quoted characters, which are always charset-converted excepting
+        the quotes themselves.
+    '''
+    dt = Detokenizer(UTCS, t)
     dt.quoted()
     assert s == ''.join(dt._output)
 
 @pytest.mark.parametrize('t, s', [
-    (b'',                   ''),
-    (b'ab,cd:ef',           'ab,cd:'),
-    (b'ab,"c,d":ef',        'ab,"c,d":'),
-    (b'ab,"c:d":ef',        'ab,"c:d":'),
-    (b'",",a"b,"c,d:\x91',  '",",a"b,"c,d:'),
-    (b'  a  , b "" :',      '  a  , b "" :'),
+    (b'',                       ''),
+    (b'ab,cd:ef',               '\uF061\uF062,\uF063\uF064:'),
+    (b'a,"b,c":d',              '\uF061,"\uF062\uF02C\uF063":'),
+    (b'a,"b:c":d',              '\uF061,"\uF062\uF03A\uF063":'),
+    (b'",",a"b,"c,d:\x91',      '"\uF02C",\uF061"\uF062\uF02C"\uF063,\uF064:'),
+    (b'\x84,"\x84"\x84:\x84',   '\uF084,"\uF084"\uF084:'),
+    #   Leading spaces should not be charset-converted because
+    #   they're dropped when the line is parsed.
+    (b'  a , b "" :',           '  \uF061\uF020, \uF062\uF020""\uF020:'),
 ])
 def test_data(t, s):
-    dt = Detokenizer(t)
+    dt = Detokenizer(UTCS, t)
     dt.data()
     assert s == ''.join(dt._output)
 
@@ -130,15 +186,16 @@ def test_data(t, s):
     (b'A\xEF\x1F\x43\x12\x30\x00\x00\x00\x00\x00',  'A=123#'),
     #   ELSE is a weird special case
     (b'\x3A\xA1',        'ELSE'),
-    #   Multiple-token strings with slightly odd situations.
-    (b'\x91"a:',         'PRINT"a:'),   # EOL instead of closing quote
+    #   Quoted strings, REM
+    (b'\x91"\x91":\x91"\x91',       'PRINT"\uF091":PRINT"\uF091'),
+    (b'\x8F\x91',                   'REM\uF091'),
     #   DATA
-    (b'\x84  "a",b"c,"d:\x91A',   'DATA  "a",b"c,"d:PRINTA'),
+    (b'\x84\x84,"\x84"\x84:\x84',   'DATA\uF084,"\uF084"\uF084:DATA'),
     #   Two-byte tokens
     (b'\xFF\x84(A) \xF1 \xFF\x85(B)',   'SGN(A) + INT(B)'),
 ])
 def test_detokenize(t, s):
-    dt = Detokenizer(t, 12345)
+    dt = Detokenizer(UTCS, t, 12345)
     assert '12345 ' + s == dt.detokenize()
 
 @pytest.mark.parametrize('t, err', [
@@ -152,6 +209,6 @@ def test_detokenize(t, s):
     (b'\x1C\xFF\xFF',   'too large'),
 ])
 def test_detokenize_bad(t, err):
-    with pytest.raises(DT.TokenError):
-        dt = Detokenizer(t)
+    with pytest.raises(Detokenizer.TokenError):
+        dt = Detokenizer(UTCS, t)
         dt.detokenize()

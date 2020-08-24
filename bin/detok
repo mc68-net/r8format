@@ -7,6 +7,7 @@ if __name__ == '__main__': addsitedir(join(BASEDIR, 'pylib'))
 
 from    bastok.tlines import TLines
 from    bastok.msx2 import Detokenizer
+from    bastok.msxchars import CHARMAP
 import  sys
 
 def main():
@@ -18,10 +19,8 @@ def main():
         tl = TLines(0x8001, f.read())
 
     #   Print it in MSX-DOS format, with CR-NL and trailing ^Z.
-    #   XXX This will not, however, translate high-bit character codes to
-    #   SJIS, as `SAVE"…",A` seems to do.
     for lineno, tline in tl.lines():
-        detok = Detokenizer(tline, lineno)
+        detok = Detokenizer(CHARMAP['ja'], tline, lineno)
         print(detok.detokenize(), end='\r\n')
     print('\x1A', end='')
 
