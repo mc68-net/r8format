@@ -96,7 +96,7 @@ def test_real(b, s):
 ])
 def test_chdecode_good(b, s):
     dt = Detokenizer(UTCS, b)
-    dt.chdecode()
+    dt.char()
     assert s == ''.join(dt._output)
 
 @pytest.mark.parametrize('b', [
@@ -110,7 +110,7 @@ def test_chdecode_good(b, s):
 def test_chdecode_bad(b):
     dt = Detokenizer(UTCS, b)
     with pytest.raises(dt.TokenError):
-        dt.chdecode()
+        dt.char()
 
 @pytest.mark.parametrize('t, s', [
     (b'"',                  '"'),

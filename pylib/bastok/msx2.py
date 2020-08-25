@@ -242,74 +242,76 @@ class Detokenizer:
         #   Allow use of these without `self.` prefix.
         def output(s):      return self.output(s)
         def terror():       return self.terror()
-        def byte():         return self.byte()
+        def nchar(*args):   return self.nchar(*args)
         def int16():        return self.int16()
 
         self.reset()
         while True:
-            b = byte()
+            b = self.peek()
             if b is None:
                 break
             elif b <= 0x0A:
-                #   MSX-BASIC does not let you insert chars < 0x20.
+                #   MSX-BASIC does not have native chars < 0x20;
+                #   those code points are encoded as b'\x01\xNN` sequences.
                 terror()
             elif b == 0x0B:
-                output('&O' + oct(int16())[2:].upper())
+                nchar(b, '&O')
+                output(oct(int16())[2:].upper())
             elif b == 0x0C:
-                output('&H' + hex(int16())[2:].upper())
+                nchar(b, '&H')
+                output(hex(int16())[2:].upper())
             elif b == 0x0D:
                 raise RuntimeError('XXX write me: line address')
             elif b == 0x0E:
+                nchar(b, '')
                 i = int16()
                 if i > MAX_LINENO: terror()
                 output(str(i))
             elif b == 0x0F:            # int 10-255 follows token
-                i = byte()
+                nchar(b, '')
+                i = self.byte()
                 if i < 10: terror()
                 output(str(i))
             elif b <= 0x1A:            # single-digit int
-                output(str(b - 0x11))
+                nchar(b, str(b - 0x11))
             elif b == 0x1B:            # unused
                 terror()
             elif b == 0x1C:            # two-byte little-endian int 256-32767
+                nchar(b, '')
                 i = int16()
                 if i < 256 or i > 32767: terror()
                 output(str(i))
             elif b == 0x1D:
+                nchar(b, '')
                 self.real(4)
             elif b == 0x1E:
                 terror()
             elif b == 0x1F:
+                nchar(b, '')
                 self.real(8)
             elif b < DQUOTE:
-                output(chr(b))
+                nchar(b)
             elif b == DQUOTE:
-                output(chr(DQUOTE))
+                nchar(b)
                 self.quoted()
-            elif b == COLON and self.peek() == T_ELSE1:
+            elif b == COLON and self.peek1() == T_ELSE1:
                 #   ELSE is a special case; it's always encoded as colon
                 #   followed by the ELSE token
-                self.byte()     # consume 2nd byte of ELSE token
-                output('ELSE')
+                self.nchar(COLON, '')
+                self.nchar(T_ELSE1, 'ELSE')
             elif b <= 0x7F:
-                output(chr(b))
+                nchar(b)
             elif b == T_DATA:
-                output(TOKTAB[bytes([b])])
+                nchar(b, 'DATA')
                 self.data()
             elif b == T_REM:
-                output('REM')
+                nchar(b, 'REM')
                 #   Consume the remainder of tline and output its
                 #   charset-converted contents.
                 while self.peek() is not None:
-                    self.chdecode()
-            elif b == 0xFF:        # two-byte token
-                tv = TOKTAB.get(bytes([b, byte()]))
-                if tv is None: terror()
-                output(tv)
+                    self.char()
             else:
-                tv = TOKTAB.get(bytes([b]))
-                if tv is None: terror()
-                output(tv)
+                self.keyword()
 
         ret = ''.join(self._output)
         if self.lineno:
@@ -324,13 +326,34 @@ class Detokenizer:
             return None
         return self.tline[self.p]
 
+    def peek1(self):
+        ''' Without consuming anything, return the byte *after* the
+            next byte of input, or `None` input ends before that.
+        '''
+        if self.p + 1 >= len(self.tline):
+            return None
+        return self.tline[self.p + 1]
+
     def byte(self):
         ''' Consume the next byte in the input and return it as an `int`.
-            or `None` if no more input is available.
+            or `None` if no more input is available. No output is generated.
         '''
         b = self.peek()
         self.p += 1
         return b
+
+    def nchar(self, c=None, output=None):
+        ''' Consume char with code `c` (an `int`) or any char if `c` is
+            `None`. Output `output` if not `None`, otherwise output the
+            native char read.
+        '''
+        b = self.byte()
+        if c is not None and c != b:
+            self.terror()
+        if output is not None:
+            self.output(output)
+        else:
+            self.output(chr(b))
 
     def int16(self):
         ''' Consume two bytes and return them as an unsigned `int`. '''
@@ -420,7 +443,7 @@ class Detokenizer:
         else:
             self.output(str(int(mantissa) * 10**(exponent-6)) + precchar)
 
-    def chdecode(self):
+    def char(self):
         ''' Consume a native-encoded char from the input, convert it to
             Unicode via the current converter, and append it to the output.
             This will consume one or two bytes, depending on if the first
@@ -452,7 +475,7 @@ class Detokenizer:
                 self.output(chr(self.byte()))   # and is not charset-decoded
                 return
             else:
-                self.chdecode()
+                self.char()
 
     def data(self):
         ''' Consume and output bytes as a ``DATA`` statement argument.
@@ -493,4 +516,17 @@ class Detokenizer:
                 return
             else:
                 leading = False
-                self.chdecode()
+                self.char()
+
+    def keyword(self):
+        ''' Consume one or two bytes of tokenized keyword and output
+            the keyword.
+        '''
+        b = self.byte()
+        if b == 0xFF:
+            kw = TOKTAB.get(bytes([b, self.byte()]))
+        else:
+            kw = TOKTAB.get(bytes([b]))
+        if kw is None:
+            self.terror()
+        self.output(kw)
