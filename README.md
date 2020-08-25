@@ -2,7 +2,7 @@ bastok - BASIC Tokenization Tools
 =================================
 
 This repository contains a detokenizer, written in Python, for [MSX-BASIC].
-It should not be hard to extend to detokenze other Microsoft BASICs, or any
+It should not be hard to extend to detokenize other Microsoft BASICs, or any
 BASICs that use a similar tokenization format. A tokenizer is also planned,
 but not currently available.
 
@@ -29,9 +29,9 @@ through 0x1F as a 0x01 byte followed by the code point plus 0x40. (This
 allows it to use bytes in the range 0x00 through 0x1F, excepting 0x01, as
 control codes for cursor movement and the like.)
 
-The standard character set for an MSX machine varies by region; details
-of these can be found on the [MSX Characters and Control Codes][codes]
-page of the MSX Wiki. Programs may also define their own character sets.
+The standard character set for an MSX machine varies by region; details of
+these can be found on the [MSX Characters and Control Codes][codes] page of
+the msx.org wiki. Programs may also define their own character sets.
 
 To support reading and editing MSX-BASIC programs, the detokenizer
 translates MSX-encoded characters in string constants (both as quoted
