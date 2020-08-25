@@ -78,7 +78,7 @@ assert len(C_ASCII) == 0x5F, hex(len(C_ASCII))
 #   International charset
 #
 #   Some of this is the same as code page 437, the original IBM PC
-#   character set. When it doubt, the character from that has been used.
+#   character set. When in doubt, the character from that has been used.
 #
 #   0x10 and 0x1F are vertical+horizontal box drawing characters similar to
 #   0x15 `┼`, except that they do not extend all the way to the edge of the
