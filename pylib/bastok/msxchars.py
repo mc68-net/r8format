@@ -38,6 +38,32 @@ CA0 = '\u2817'  # ⠗ DOTS-1235 (sd:b5)
 CFE = '\u2827'  # ⠧ DOTS-1236 (sd:b6)
 
 ####################################################################
+
+def chrsub(codechars, replacement):
+    ''' Replace a code-character mapping in a list of such mappings.
+
+        `codechars` is a sequence of (`int`,`str`) pairs, each a native
+        code point and its associated Unicode character, and `replacement`
+        a single pair to replace (at the same position) the pair in
+        `codechars` with a matching code point. A new sequence with that
+        code pont replaced is returned.
+
+        A `LookupError` will be raised if the replacement code point
+        is not found in `codechars`.
+    '''
+    replaced = False
+    ret = []
+    for mapping in codechars:
+        if mapping[0] == replacement[0]:
+            ret.append(replacement)
+            replaced = True
+        else:
+            ret.append(mapping)
+    if not replaced:
+        raise LookupError('code point {} not replaced'.format(replacement))
+    return tuple(ret)
+
+####################################################################
 #   ASCII characters
 #
 #   These are common to all MSX charsets. These codes include neither
@@ -88,6 +114,7 @@ assert len(HI_int) == 0x80, hex(len(HI_int))
 C_INT = tuple(zip(range(0x00, 0x20), LO_int)) \
      + C_ASCII + ((0x7F,C7F),) \
      + tuple(zip(range(0x80, 0x100), HI_int)) \
+     + ()
 
 ####################################################################
 #   Japanese charset
@@ -111,8 +138,9 @@ assert len(LO_ja) == 0x20, hex(len(LO_ja))
 assert len(HI_ja) == 0x80, hex(len(HI_ja))
 
 C_JA = tuple(zip(range(0x00, 0x20), LO_ja)) \
-     + C_ASCII + ((0x7F,C7F),) \
+     + chrsub(C_ASCII, (0x5C, '¥')) + ((0x7F,C7F),) \
      + tuple(zip(range(0x80, 0x100), HI_ja)) \
+     + ()
 
 ####################################################################
 #   Charset classes

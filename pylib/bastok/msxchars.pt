@@ -9,6 +9,7 @@ def test_blanks():
 @pytest.mark.parametrize('map, n, u', [
    #('int', 0x61, 'a'),
     ('ja',  0x62, 'b'),
+    ('ja',  0x5C, '¥'),
 
    #('int', 0x91, 'æ'),
    #('int', 0xE0, 'α'),
