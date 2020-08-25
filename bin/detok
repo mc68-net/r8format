@@ -5,14 +5,39 @@ from    site  import addsitedir
 BASEDIR = dirname(dirname(abspath(__file__)))
 if __name__ == '__main__': addsitedir(join(BASEDIR, 'pylib'))
 
+from    argparse  import ArgumentParser
+import  sys
+
 from    bastok.tlines import TLines
 from    bastok.msx2 import Detokenizer
 from    bastok.msxchars import CHARMAP
-import  sys
 
-def main():
-    path = sys.argv[1]
-    with open(path, 'rb') as f:
+def die(exitcode, *msglines):
+    for l in msglines:
+        print(l, file=sys.stderr)
+    exit(exitcode)
+
+def parseargs():
+    p = ArgumentParser(description='MSX-BASIC detokenizer')
+    arg = p.add_argument
+
+    arg('-c', '--charset', default='ja',
+        help='MSX charset: ja (default), int, ar, ru, etc.')
+    arg('input', help='input file (required)')
+
+    return p.parse_args()
+
+def main(args):
+
+    cmap = CHARMAP.get(args.charset)
+    if cmap is None:
+        die(3, 'Unknown MSX charset: {}'.format(args.charset),
+            'Known charsets:',
+            *[ ' {:>4}: {}'.format(k, v.description)
+               for k, v in sorted(CHARMAP.items()) ]
+            )
+
+    with open(args.input, 'rb') as f:
         type = f.read(1)[0]
         if type != 0xFF:
             raise RuntimeError('bad type byte ${:02X}'.format(type))
@@ -20,8 +45,9 @@ def main():
 
     #   Print it in MSX-DOS format, with CR-NL and trailing ^Z.
     for lineno, tline in tl.lines():
-        detok = Detokenizer(CHARMAP['ja'], tline, lineno)
+        detok = Detokenizer(cmap, tline, lineno)
         print(detok.detokenize(), end='\r\n')
     print('\x1A', end='')
 
-if __name__ == '__main__': main()
+if __name__ == '__main__':
+    main(parseargs())

@@ -123,7 +123,8 @@ class Charset:
         Unicode characters (1-character `str`s).
     '''
 
-    def __init__(self, *maps):
+    def __init__(self, description, *maps):
+        self.description = description
         self._nu = {}   # native (int) to Unicode (str) map
         self._un = {}   # Unicode (str) to native (int) map
         for m in maps: self.setchars(m)
@@ -178,21 +179,21 @@ class Charset:
         return bytes([self._un[u]])
 
 class Unimplemented:
-    def __init__(self, name):
+    def __init__(self, name, description):
         self.name = name
+        self.description = description + ' (not yet implemented)'
     def unimpl(self):
         raise NotImplementedError("charset '{}' ".format(self.name))
-
     def uc(self, n):            self.unimpl()
     def native(self, u):        self.unimpl()
 
 CHARMAP = {
-   #'int':  Charset(C_INT),             # International
-    'int':  Unimplemented('int'),       # XXX definition is incomplete
-    'ja':   Charset(C_JA),              # Japanese (MSX2)
-    'ja1':  Unimplemented('ja1'),       # Japanese (MSX1, different hiragana)
-    'ar':   Unimplemented('ar'),        # Arabic
-    'pt':   Unimplemented('pt'),        # Portuguese (Brazil)
-    'BR':   Unimplemented('pt'),        # alias for 'pt'
-    'ru':   Unimplemented('ru'),        # Russian
+    'int':  #Charset("International (North America/Europe), C_INT), # incomplete
+            Unimplemented('int', 'International (North America/Europe)'),
+    'ja':   Charset('Japanese (MSX2)', C_JA),
+    'ja1':  Unimplemented('ja1', 'Japanese (MSX1, different hiragana)'),
+    'ar':   Unimplemented('ar', 'Arabic'),
+    'pt':   Unimplemented('pt', 'Portuguese (Brazil)'),
+    'BR':   Unimplemented('BR', "alias for 'pt'"),
+    'ru':   Unimplemented('ru', 'Russian'),
 }
