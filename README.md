@@ -51,6 +51,17 @@ to use user-supplied translation tables.
 Support for programs that use kanji ROM characters needs to be investigated.
 
 
+Support
+-------
+
+Contact the author, Curt Sampson (usually known as 'cjs') if you have
+questions, comments, feature requests, or just want help using this. If you
+are on The MSX Channel server on [Discord], I am there; otherwise you can
+try a private message to `cjs_cynic` on [Telegram], `0cjs` on [Gitter] or
+`cjs#6537` on Discord. You may also send email to <cjs@cynic.net>, but text
+chat is the preferred way of contacting me.
+
+
 Caveats and Todo Items
 ----------------------
 
@@ -81,3 +92,7 @@ Caveats and Todo Items
 [codes]: https://www.msx.org/wiki/MSX_Characters_and_Control_Codes
 [msx-basic]: https://en.wikipedia.org/wiki/MSX_BASIC
 [msx]: https://en.wikipedia.org/wiki/MSX
+
+[discord]: https://discord.com
+[gitter]: https://gitter.im
+[telegram]: https://telegram.org
