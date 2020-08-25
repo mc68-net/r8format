@@ -97,6 +97,8 @@ LO_int = ''.join([C00,
         VH_shortH, '┴┬┤├┼│─┌┐└┘╳╱╲', VH_shortV,
         ])
 
+#   There's not complete agreement on what all the Code Page 437 characters
+#   are; see the notes at https://en.wikipedia.org/wiki/Code_page_437 .
 HI_int = ''.join([
         'ÇüéâäàåçêëèïîìÄÅ',     # row from CP 437
         'ÉæÆôöòûùÿÖÜ¢£¥₧ƒ',     # row from CP 437
@@ -104,8 +106,8 @@ HI_int = ''.join([
         'ÃãĨĩÕõŨũ__¾___¶§',     # XXX incomplete
         '________________',     # XXX incomplete
         '________________',     # XXX incomplete
-        '________________',     # XXX incomplete
-        '________________',     # XXX incomplete
+        'αßΓπΣσµτΦΘΩδ∞φ∈∩',     # row from CP 437, possibly excepting 0xEE
+        '≡±≥≤⌠⌡÷≈°∙·√ⁿ²■█',     # row from CP 437, mostly
         ])
 
 assert len(LO_int) == 0x20, hex(len(LO_int))
