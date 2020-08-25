@@ -242,72 +242,72 @@ class Detokenizer:
         #   Allow use of these without `self.` prefix.
         def output(s):      return self.output(s)
         def terror():       return self.terror()
-        def char():         return self.char()
+        def byte():         return self.byte()
         def int16():        return self.int16()
 
         self.reset()
         while True:
-            ch = char()
-            if ch is None:
+            b = byte()
+            if b is None:
                 break
-            elif ch <= 0x0A:
+            elif b <= 0x0A:
                 #   MSX-BASIC does not let you insert chars < 0x20.
                 terror()
-            elif ch == 0x0B:
+            elif b == 0x0B:
                 output('&O' + oct(int16())[2:].upper())
-            elif ch == 0x0C:
+            elif b == 0x0C:
                 output('&H' + hex(int16())[2:].upper())
-            elif ch == 0x0D:
+            elif b == 0x0D:
                 raise RuntimeError('XXX write me: line address')
-            elif ch == 0x0E:
+            elif b == 0x0E:
                 i = int16()
                 if i > MAX_LINENO: terror()
                 output(str(i))
-            elif ch == 0x0F:            # int 10-255 follows token
-                i = char()
+            elif b == 0x0F:            # int 10-255 follows token
+                i = byte()
                 if i < 10: terror()
                 output(str(i))
-            elif ch <= 0x1A:            # single-digit int
-                output(str(ch-0x11))
-            elif ch == 0x1B:            # unused
+            elif b <= 0x1A:            # single-digit int
+                output(str(b - 0x11))
+            elif b == 0x1B:            # unused
                 terror()
-            elif ch == 0x1C:            # two-byte little-endian int 256-32767
+            elif b == 0x1C:            # two-byte little-endian int 256-32767
                 i = int16()
                 if i < 256 or i > 32767: terror()
                 output(str(i))
-            elif ch == 0x1D:
+            elif b == 0x1D:
                 self.real(4)
-            elif ch == 0x1E:
+            elif b == 0x1E:
                 terror()
-            elif ch == 0x1F:
+            elif b == 0x1F:
                 self.real(8)
-            elif ch < DQUOTE:
-                output(chr(ch))
-            elif ch == DQUOTE:
+            elif b < DQUOTE:
+                output(chr(b))
+            elif b == DQUOTE:
                 output(chr(DQUOTE))
                 self.quoted()
-            elif ch == COLON and self.peek() == T_ELSE1:
+            elif b == COLON and self.peek() == T_ELSE1:
                 #   ELSE is a special case; it's always encoded as colon
                 #   followed by the ELSE token
-                self.char()     # consume 2nd byte of ELSE token
+                self.byte()     # consume 2nd byte of ELSE token
                 output('ELSE')
-            elif ch <= 0x7F:
-                output(chr(ch))
-            elif ch == T_DATA:
-                output(TOKTAB[bytes([ch])])
+            elif b <= 0x7F:
+                output(chr(b))
+            elif b == T_DATA:
+                output(TOKTAB[bytes([b])])
                 self.data()
-            elif ch == T_REM:
+            elif b == T_REM:
                 output('REM')
                 #   Consume the remainder of tline and output its
                 #   charset-converted contents.
                 while self.peek() is not None:
                     self.chdecode()
-            elif ch == 0xFF:        # two-byte token
-                tv = TOKTAB.get(bytes([ch, char()]))
+            elif b == 0xFF:        # two-byte token
+                tv = TOKTAB.get(bytes([b, byte()]))
                 if tv is None: terror()
                 output(tv)
             else:
-                tv = TOKTAB.get(bytes([ch]))
+                tv = TOKTAB.get(bytes([b]))
                 if tv is None: terror()
                 output(tv)
 
@@ -317,20 +317,20 @@ class Detokenizer:
         return ret
 
     def peek(self):
-        ''' Without consuming it, return the next character in the input
+        ''' Without consuming it, return the next byte in the input
             or `None` if no more input is available.
         '''
         if self.p >= len(self.tline):
             return None
         return self.tline[self.p]
 
-    def char(self):
-        ''' Consume the next (native) character in the input and return
-            it as an `int`. Return `None` when no more input is available.
+    def byte(self):
+        ''' Consume the next byte in the input and return it as an `int`.
+            or `None` if no more input is available.
         '''
-        ch = self.peek()
+        b = self.peek()
         self.p += 1
-        return ch
+        return b
 
     def int16(self):
         ''' Consume two bytes and return them as an unsigned `int`. '''
@@ -428,13 +428,13 @@ class Detokenizer:
 
             This should be used only for strings, not program text.
         '''
-        c = self.char()
+        c = self.byte()
         if c != 0x01 and c < 0x20:  # BASIC should never tokenize these codes
             self.terror()
         elif c != 0x01:             # standard char code
             self.output(self.charset.uc(c))
         else:                       # "extended" char code
-            c = self.char()
+            c = self.byte()
             if c is None:               self.terror()
             if c < 0x40 or c > 0x5F:    self.terror()
             self.output(self.charset.uc(c-0x40))
@@ -449,7 +449,7 @@ class Detokenizer:
             if c is None:                       # EOL ends quoted string
                 return
             elif c == DQUOTE:                   # quote ends quoted string
-                self.output(chr(self.char()))   # and is not charset-decoded
+                self.output(chr(self.byte()))   # and is not charset-decoded
                 return
             else:
                 self.chdecode()
@@ -476,20 +476,20 @@ class Detokenizer:
         '''
         leading = True
         while True:
-            ch = self.peek()
-            if ch is None:
+            b = self.peek()
+            if b is None:
                 return  # EOL
-            elif leading and ch == SPACE:
-                self.output(chr(self.char()))
-            elif ch == DQUOTE:
+            elif leading and b == SPACE:
+                self.output(chr(self.byte()))
+            elif b == DQUOTE:
                 leading = False
-                self.output(chr(self.char()))
+                self.output(chr(self.byte()))
                 self.quoted()
-            elif ch == COMMA:
+            elif b == COMMA:
                 leading = True
-                self.output(chr(self.char()))
-            elif ch == COLON:
-                self.output(chr(self.char()))
+                self.output(chr(self.byte()))
+            elif b == COLON:
+                self.output(chr(self.byte()))
                 return
             else:
                 leading = False
