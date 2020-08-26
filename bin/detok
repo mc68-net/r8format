@@ -23,6 +23,8 @@ def parseargs():
 
     arg('-c', '--charset', default='ja',
         help='MSX charset: ja (default), int, ar, ru, etc.')
+    arg('-z', '--dos-text', action='store_true',
+        help='Use DOS text file format (CR+LF line endings, ^Z file end marker')
     arg('input', help='input file (required)')
 
     return p.parse_args()
@@ -43,11 +45,13 @@ def main(args):
             raise RuntimeError('bad type byte ${:02X}'.format(type))
         tl = TLines(0x8001, f.read())
 
-    #   Print it in MSX-DOS format, with CR-NL and trailing ^Z.
+    endline = '\n';
+    if args.dos_text: endline = '\r\n'
     for lineno, tline in tl.lines():
         detok = Detokenizer(cmap, tline, lineno)
-        print(detok.detokenize(), end='\r\n')
-    print('\x1A', end='')
+        print(detok.detokenize(), end=endline)
+    if args.dos_text:
+        print('\x1A', end='')
 
 if __name__ == '__main__':
     main(parseargs())
