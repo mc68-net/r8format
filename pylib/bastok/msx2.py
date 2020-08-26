@@ -206,7 +206,10 @@ class Detokenizer:
         assert callable(charset.trans)
         self.charset = charset
         self.tline = tline
-        self.lineno = lineno
+        if lineno is None:
+            self.lineno = None
+        else:
+            self.lineno = int(lineno)   # catch bad param early
         self.reset()
 
     class TokenError(ValueError):
@@ -215,15 +218,6 @@ class Detokenizer:
     def terror(self, offset=0):
         ' Throw a tokenization error at the current position. '
         raise self.TokenError('Bad tokenized data: ' + self.pstate())
-
-    def output(self, s):
-        ' Append `str` `s` to the output. '
-        self._output.append(s)
-
-    def reset(self):
-        ' Clear the output and reset the detokenization pointer to the start. '
-        self._output = [];
-        self.p = 0              # current parse offset in input
 
     def pstate(self):
         ''' Return a string with information about the current parser state.
@@ -235,12 +229,32 @@ class Detokenizer:
         return 'lineno={} pos={} consumed=...{} next={}... output=...{}' \
             .format(self.lineno, p, consumed, next, self._output[-4:])
 
+    def reset(self):
+        ' Clear the output and reset the detokenization pointer to the start. '
+        self._output = [];
+        self.p = 0              # current parse offset in input
+
+        if self.lineno is not None:
+            self.gen(str(self.lineno))
+            self.gen(' ')
+
+    def output(self):
+        ''' Return the generated output. If `lineno` is `True`, the output
+            will be prefixed by the line number given at instantiation. If
+            no line number was given, a `ValueError` will be raised.
+        '''
+        return ''.join(self._output)
+
+    def gen(self, s):
+        ' Append `str` `s` to the output. '
+        self._output.append(s)
+
     def detokenize(self):
         ''' Return a `str` containing the detokenized version of the
             tokenized line, prefixed by `lineno` if that was provided.
         '''
         #   Allow use of these without `self.` prefix.
-        def output(s):      return self.output(s)
+        def gen(s):         return self.gen(s)
         def terror():       return self.terror()
         def nchar(*args):   return self.nchar(*args)
         def int16():        return self.int16()
@@ -256,22 +270,22 @@ class Detokenizer:
                 terror()
             elif b == 0x0B:
                 nchar(b, '&O')
-                output(oct(int16())[2:].upper())
+                gen(oct(int16())[2:].upper())
             elif b == 0x0C:
                 nchar(b, '&H')
-                output(hex(int16())[2:].upper())
+                gen(hex(int16())[2:].upper())
             elif b == 0x0D:
                 raise RuntimeError('XXX write me: line address')
             elif b == 0x0E:
                 nchar(b, '')
                 i = int16()
                 if i > MAX_LINENO: terror()
-                output(str(i))
+                gen(str(i))
             elif b == 0x0F:            # int 10-255 follows token
                 nchar(b, '')
                 i = self.byte()
                 if i < 10: terror()
-                output(str(i))
+                gen(str(i))
             elif b <= 0x1A:            # single-digit int
                 nchar(b, str(b - 0x11))
             elif b == 0x1B:            # unused
@@ -280,7 +294,7 @@ class Detokenizer:
                 nchar(b, '')
                 i = int16()
                 if i < 256 or i > 32767: terror()
-                output(str(i))
+                gen(str(i))
             elif b == 0x1D:
                 nchar(b, '')
                 self.real(4)
@@ -306,17 +320,14 @@ class Detokenizer:
                 self.data()
             elif b == T_REM:
                 nchar(b, 'REM')
-                #   Consume the remainder of tline and output its
+                #   Consume the remainder of tline and generate its
                 #   charset-converted contents.
                 while self.peek() is not None:
                     self.char()
             else:
                 self.keyword()
 
-        ret = ''.join(self._output)
-        if self.lineno:
-            ret = str(self.lineno) + ' ' + ret
-        return ret
+        return self.output()
 
     def peek(self):
         ''' Without consuming it, return the next byte in the input
@@ -342,18 +353,18 @@ class Detokenizer:
         self.p += 1
         return b
 
-    def nchar(self, c=None, output=None):
+    def nchar(self, c=None, gen=None):
         ''' Consume char with code `c` (an `int`) or any char if `c` is
-            `None`. Output `output` if not `None`, otherwise output the
+            `None`. Generate `gen` if not `None`, otherwise generate the
             native char read.
         '''
         b = self.byte()
         if c is not None and c != b:
             self.terror()
-        if output is not None:
-            self.output(output)
+        if gen is not None:
+            self.gen(gen)
         else:
-            self.output(chr(b))
+            self.gen(chr(b))
 
     def int16(self):
         ''' Consume two bytes and return them as an unsigned `int`. '''
@@ -372,11 +383,11 @@ class Detokenizer:
         return str(hi) + str(lo)
 
     def real(self, blen):
-        ''' Consume `blen` bytes, convert them to a real number and append
-            it to the output. `blen` must be 4 for single-precision or 8
-            for double-precision. The first byte is be the sign (bit 7) and
-            biased exponent (bits 0-6); the remaining bytes are pairs of
-            BCD digits.
+        ''' Consume `blen` bytes, convert them to a real number and
+            generate it as output. `blen` must be 4 for single-precision or
+            8 for double-precision. The first byte is be the sign (bit 7)
+            and biased exponent (bits 0-6); the remaining bytes are pairs
+            of BCD digits.
 
             Negative constants always store the sign as a ``-`` token ahead
             of a positive constant, so this will raise an error if the sign
@@ -407,7 +418,7 @@ class Detokenizer:
 
         #   Special case: all zeros is a zero value.
         if bs == bytes(blen):
-            self.output('0' + precchar)
+            self.gen('0' + precchar)
             return
         if bs[0] == 0x00:
             #   This form causes the interpreter to wedge when loading the file.
@@ -431,23 +442,23 @@ class Detokenizer:
             #   for a "human-normalized" mantissa.
             fraction = mantissa[1:].rstrip('0')
             if fraction: fraction = '.' + fraction
-            self.output('{}{}E{:+d}'.format(mantissa[0], fraction, exponent-1))
+            self.gen('{}{}E{:+d}'.format(mantissa[0], fraction, exponent-1))
         elif exponent == -1:
-            self.output('.0' + mantissa.rstrip('0') + precchar)
+            self.gen('.0' + mantissa.rstrip('0') + precchar)
         elif exponent == 0:
-            self.output('.' + mantissa.rstrip('0') + precchar)
+            self.gen('.' + mantissa.rstrip('0') + precchar)
         elif exponent <= sigdigs:
             #   We may have a decimal fractional part.
             v = mantissa[0:exponent] + '.' + mantissa[exponent:]
-            self.output(v.rstrip('0').rstrip('.') + precchar)
+            self.gen(v.rstrip('0').rstrip('.') + precchar)
         else:
-            self.output(str(int(mantissa) * 10**(exponent-6)) + precchar)
+            self.gen(str(int(mantissa) * 10**(exponent-6)) + precchar)
 
     def char(self):
         ''' Consume a native-encoded char from the input, convert it to
-            Unicode via the current converter, and append it to the output.
-            This will consume one or two bytes, depending on if the first
-            byte is 0x01 indicating an "extended" character code.
+            Unicode via the current converter, and generate it to the
+            output. This will consume one or two bytes, depending on if the
+            first byte is 0x01 indicating an "extended" character code.
 
             This should be used only for strings, not program text.
         '''
@@ -455,35 +466,35 @@ class Detokenizer:
         if c != 0x01 and c < 0x20:  # BASIC should never tokenize these codes
             self.terror()
         elif c != 0x01:             # standard char code
-            self.output(self.charset.trans(c))
+            self.gen(self.charset.trans(c))
         else:                       # "extended" char code
             c = self.byte()
             if c is None:               self.terror()
             if c < 0x40 or c > 0x5F:    self.terror()
-            self.output(self.charset.trans(c-0x40))
+            self.gen(self.charset.trans(c-0x40))
 
     def quoted(self):
-        ''' Consume and output a quoted string, including the trailing
+        ''' Consume and generate a quoted string, including the trailing
             quote if present, but not including the leading quote, which
-            is assumed to have been consumed and output already.
+            is assumed to have been consumed and generated already.
         '''
         while True:
             c = self.peek()
             if c is None:                       # EOL ends quoted string
                 return
             elif c == DQUOTE:                   # quote ends quoted string
-                self.output(chr(self.byte()))   # and is not charset-decoded
+                self.gen(chr(self.byte()))   # and is not charset-decoded
                 return
             else:
                 self.char()
 
     def data(self):
-        ''' Consume and output bytes as a ``DATA`` statement argument.
+        ''' Consume and generate bytes as a ``DATA`` statement argument.
             If the ``DATA`` statement is terminated by a colon, that will
-            be consumed and output as well.
+            be consumed and generated as well.
 
             Unquoted spaces leading an argument, quotes and a trailing
-            (unquoted) colon will be output as ASCII codes; all the
+            (unquoted) colon will be generated as ASCII codes; all the
             remainder will use charset translation.
 
             Though how exactly quotes are dealt with in DATA statements is
@@ -503,24 +514,24 @@ class Detokenizer:
             if b is None:
                 return  # EOL
             elif leading and b == SPACE:
-                self.output(chr(self.byte()))
+                self.gen(chr(self.byte()))
             elif b == DQUOTE:
                 leading = False
-                self.output(chr(self.byte()))
+                self.gen(chr(self.byte()))
                 self.quoted()
             elif b == COMMA:
                 leading = True
-                self.output(chr(self.byte()))
+                self.gen(chr(self.byte()))
             elif b == COLON:
-                self.output(chr(self.byte()))
+                self.gen(chr(self.byte()))
                 return
             else:
                 leading = False
                 self.char()
 
     def keyword(self):
-        ''' Consume one or two bytes of tokenized keyword and output
-            the keyword.
+        ''' Consume one or two bytes of tokenized keyword and generate the
+            keyword.
         '''
         b = self.byte()
         if b == 0xFF:
@@ -529,4 +540,4 @@ class Detokenizer:
             kw = TOKTAB.get(bytes([b]))
         if kw is None:
             self.terror()
-        self.output(kw)
+        self.gen(kw)

@@ -97,7 +97,7 @@ def test_real(b, s):
 def test_chdecode_good(b, s):
     dt = Detokenizer(UTCS, b)
     dt.char()
-    assert s == ''.join(dt._output)
+    assert s == dt.output()
 
 @pytest.mark.parametrize('b', [
     #   Bytes that should never appear in a tokenized string constant;
@@ -125,7 +125,7 @@ def test_quoted(t, s):
     '''
     dt = Detokenizer(UTCS, t)
     dt.quoted()
-    assert s == ''.join(dt._output)
+    assert s == dt.output()
 
 @pytest.mark.parametrize('t, s', [
     (b'',                       ''),
@@ -141,7 +141,7 @@ def test_quoted(t, s):
 def test_data(t, s):
     dt = Detokenizer(UTCS, t)
     dt.data()
-    assert s == ''.join(dt._output)
+    assert s == dt.output()
 
 ####################################################################
 #   Main function
