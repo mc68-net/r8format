@@ -30,7 +30,7 @@ allows it to use bytes in the range 0x00 through 0x1F, excepting 0x01, as
 control codes for cursor movement and the like.)
 
 The standard character set for an MSX machine varies by region; details of
-these can be found on the [MSX font][font and [MSX Characters and Control
+these can be found on the [MSX font][font] and [MSX Characters and Control
 Codes][codes] pages of the msx.org wiki. Programs may also define their own
 character sets.
 
