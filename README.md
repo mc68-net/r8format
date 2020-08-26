@@ -30,8 +30,9 @@ allows it to use bytes in the range 0x00 through 0x1F, excepting 0x01, as
 control codes for cursor movement and the like.)
 
 The standard character set for an MSX machine varies by region; details of
-these can be found on the [MSX Characters and Control Codes][codes] page of
-the msx.org wiki. Programs may also define their own character sets.
+these can be found on the [MSX font][font and [MSX Characters and Control
+Codes][codes] pages of the msx.org wiki. Programs may also define their own
+character sets.
 
 To support reading and editing MSX-BASIC programs, the detokenizer
 translates MSX-encoded characters in string constants (both as quoted
@@ -90,6 +91,7 @@ Caveats and Todo Items
 
 <!-------------------------------------------------------------------->
 [codes]: https://www.msx.org/wiki/MSX_Characters_and_Control_Codes
+[font]: https://www.msx.org/wiki/MSX_font
 [msx-basic]: https://en.wikipedia.org/wiki/MSX_BASIC
 [msx]: https://en.wikipedia.org/wiki/MSX
 
