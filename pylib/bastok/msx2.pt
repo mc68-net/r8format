@@ -38,6 +38,23 @@ def test_T_():
 ####################################################################
 #   Support functions
 
+@pytest.mark.parametrize('a, s', [
+    (0x00,      '\u0000'),
+    ('\u0000',  '\u0000'),
+    (0x7E,      '~'),
+    ('ABCdef',  'ABCdef'),
+])
+def test_genasc_good(a, s):
+    dt = Detokenizer(UTCS, b'')
+    dt.genasc(a)
+    assert s == dt.output()
+
+@pytest.mark.parametrize('a', [ -1, 0x80, '\u0080', ])
+def test_genasc_error(a):
+    dt = Detokenizer(UTCS, b'')
+    with pytest.raises(ValueError):
+        dt.genasc(a)
+
 @pytest.mark.parametrize('n, s', [
     (0x00, '00'), (0x47, '47'), (0x99, '99'), ])
 def test_bcdstr(n, s):

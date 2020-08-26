@@ -245,6 +245,21 @@ class Detokenizer:
         '''
         return ''.join(self._output)
 
+    def genasc(self, a):
+        ''' Append an ASCII character or characters to the output.
+
+            `a` must be either an `int` from 0x00 to 0x7F, which will
+            generate a single ASCII character corresponding to that code,
+            or an `str` that contains only ASCII characters.
+        '''
+        if isinstance(a, int):
+            if a < 0 or a > 0x7F:
+                raise ValueError('Invalid ASCII code: ' + hex(a))
+            self._output.append(chr(a))
+        else:
+            bytes(a, 'ASCII')       # raise error if not ASCII
+            self._output.append(a)
+
     def gen(self, s):
         ' Append `str` `s` to the output. '
         self._output.append(s)
@@ -254,9 +269,9 @@ class Detokenizer:
             tokenized line, prefixed by `lineno` if that was provided.
         '''
         #   Allow use of these without `self.` prefix.
-        def gen(s):         return self.gen(s)
+        def genasc(s):      return self.genasc(s)
         def terror():       return self.terror()
-        def nchar(*args):   return self.nchar(*args)
+        def asc(*args):     return self.asc(*args)
         def int16():        return self.int16()
 
         self.reset()
@@ -269,57 +284,57 @@ class Detokenizer:
                 #   those code points are encoded as b'\x01\xNN` sequences.
                 terror()
             elif b == 0x0B:
-                nchar(b, '&O')
-                gen(oct(int16())[2:].upper())
+                asc(b, '&O')
+                genasc(oct(int16())[2:].upper())
             elif b == 0x0C:
-                nchar(b, '&H')
-                gen(hex(int16())[2:].upper())
+                asc(b, '&H')
+                genasc(hex(int16())[2:].upper())
             elif b == 0x0D:
                 raise RuntimeError('XXX write me: line address')
             elif b == 0x0E:
-                nchar(b, '')
+                asc(b, '')
                 i = int16()
                 if i > MAX_LINENO: terror()
-                gen(str(i))
+                genasc(str(i))
             elif b == 0x0F:            # int 10-255 follows token
-                nchar(b, '')
+                asc(b, '')
                 i = self.byte()
                 if i < 10: terror()
-                gen(str(i))
+                genasc(str(i))
             elif b <= 0x1A:            # single-digit int
-                nchar(b, str(b - 0x11))
+                asc(b, str(b - 0x11))
             elif b == 0x1B:            # unused
                 terror()
             elif b == 0x1C:            # two-byte little-endian int 256-32767
-                nchar(b, '')
+                asc(b, '')
                 i = int16()
                 if i < 256 or i > 32767: terror()
-                gen(str(i))
+                genasc(str(i))
             elif b == 0x1D:
-                nchar(b, '')
+                asc(b, '')
                 self.real(4)
             elif b == 0x1E:
                 terror()
             elif b == 0x1F:
-                nchar(b, '')
+                asc(b, '')
                 self.real(8)
             elif b < DQUOTE:
-                nchar(b)
+                asc(b)
             elif b == DQUOTE:
-                nchar(b)
+                asc(b)
                 self.quoted()
             elif b == COLON and self.peek1() == T_ELSE1:
                 #   ELSE is a special case; it's always encoded as colon
                 #   followed by the ELSE token
-                self.nchar(COLON, '')
-                self.nchar(T_ELSE1, 'ELSE')
+                self.asc(COLON, '')
+                self.asc(T_ELSE1, 'ELSE')
             elif b <= 0x7F:
-                nchar(b)
+                asc(b)
             elif b == T_DATA:
-                nchar(b, 'DATA')
+                asc(b, 'DATA')
                 self.data()
             elif b == T_REM:
-                nchar(b, 'REM')
+                asc(b, 'REM')
                 #   Consume the remainder of tline and generate its
                 #   charset-converted contents.
                 while self.peek() is not None:
@@ -353,18 +368,18 @@ class Detokenizer:
         self.p += 1
         return b
 
-    def nchar(self, c=None, gen=None):
-        ''' Consume char with code `c` (an `int`) or any char if `c` is
-            `None`. Generate `gen` if not `None`, otherwise generate the
-            native char read.
+    def asc(self, c=None, a=None):
+        ''' Consume ASCII character with code `c` (an `int`) or any ASCII
+            code if `c` is `None`. Generate `a` if not `None`, otherwise
+            generate the ASCII char read.
         '''
         b = self.byte()
         if c is not None and c != b:
             self.terror()
-        if gen is not None:
-            self.gen(gen)
+        if a is not None:
+            self.genasc(a)
         else:
-            self.gen(chr(b))
+            self.genasc(b)
 
     def int16(self):
         ''' Consume two bytes and return them as an unsigned `int`. '''
@@ -418,7 +433,7 @@ class Detokenizer:
 
         #   Special case: all zeros is a zero value.
         if bs == bytes(blen):
-            self.gen('0' + precchar)
+            self.genasc('0' + precchar)
             return
         if bs[0] == 0x00:
             #   This form causes the interpreter to wedge when loading the file.
@@ -442,17 +457,18 @@ class Detokenizer:
             #   for a "human-normalized" mantissa.
             fraction = mantissa[1:].rstrip('0')
             if fraction: fraction = '.' + fraction
-            self.gen('{}{}E{:+d}'.format(mantissa[0], fraction, exponent-1))
+            self.genasc(
+                '{}{}E{:+d}'.format(mantissa[0], fraction, exponent-1))
         elif exponent == -1:
-            self.gen('.0' + mantissa.rstrip('0') + precchar)
+            self.genasc('.0' + mantissa.rstrip('0') + precchar)
         elif exponent == 0:
-            self.gen('.' + mantissa.rstrip('0') + precchar)
+            self.genasc('.' + mantissa.rstrip('0') + precchar)
         elif exponent <= sigdigs:
             #   We may have a decimal fractional part.
             v = mantissa[0:exponent] + '.' + mantissa[exponent:]
-            self.gen(v.rstrip('0').rstrip('.') + precchar)
+            self.genasc(v.rstrip('0').rstrip('.') + precchar)
         else:
-            self.gen(str(int(mantissa) * 10**(exponent-6)) + precchar)
+            self.genasc(str(int(mantissa) * 10**(exponent-6)) + precchar)
 
     def char(self):
         ''' Consume a native-encoded char from the input, convert it to
@@ -483,7 +499,7 @@ class Detokenizer:
             if c is None:                       # EOL ends quoted string
                 return
             elif c == DQUOTE:                   # quote ends quoted string
-                self.gen(chr(self.byte()))   # and is not charset-decoded
+                self.genasc(self.byte())      # and is not charset-decoded
                 return
             else:
                 self.char()
@@ -514,16 +530,16 @@ class Detokenizer:
             if b is None:
                 return  # EOL
             elif leading and b == SPACE:
-                self.gen(chr(self.byte()))
+                self.genasc(self.byte())
             elif b == DQUOTE:
                 leading = False
-                self.gen(chr(self.byte()))
+                self.genasc(self.byte())
                 self.quoted()
             elif b == COMMA:
                 leading = True
-                self.gen(chr(self.byte()))
+                self.genasc(self.byte())
             elif b == COLON:
-                self.gen(chr(self.byte()))
+                self.genasc(self.byte())
                 return
             else:
                 leading = False
@@ -540,4 +556,4 @@ class Detokenizer:
             kw = TOKTAB.get(bytes([b]))
         if kw is None:
             self.terror()
-        self.gen(kw)
+        self.genasc(kw)
