@@ -21,6 +21,8 @@ def parseargs():
     p = ArgumentParser(description='MSX-BASIC detokenizer')
     arg = p.add_argument
 
+    arg('-b', '--binary', action='store_true',
+        help='do not do charset conversion')
     arg('-c', '--charset', default='ja',
         help='MSX charset: ja (default), int, ar, ru, etc.')
     arg('-z', '--dos-text', action='store_true',
@@ -31,13 +33,16 @@ def parseargs():
 
 def main(args):
 
-    cmap = CHARMAP.get(args.charset)
-    if cmap is None:
-        die(3, 'Unknown MSX charset: {}'.format(args.charset),
-            'Known charsets:',
-            *[ ' {:>4}: {}'.format(k, v.description)
-               for k, v in sorted(CHARMAP.items()) ]
-            )
+    if args.binary:
+        cmap = None
+    else:
+        cmap = CHARMAP.get(args.charset)
+        if cmap is None:
+            die(3, 'Unknown MSX charset: {}'.format(args.charset),
+                'Known charsets:',
+                *[ ' {:>4}: {}'.format(k, v.description)
+                   for k, v in sorted(CHARMAP.items()) ]
+                )
 
     with open(args.input, 'rb') as f:
         type = f.read(1)[0]
@@ -45,13 +50,20 @@ def main(args):
             raise RuntimeError('bad type byte ${:02X}'.format(type))
         tl = TLines(0x8001, f.read())
 
-    endline = '\n';
-    if args.dos_text: endline = '\r\n'
+    #   We always write in binary mode, printing `str` output explictly
+    #   as UTF-8 rather than letting the locale decide.
+    out = sys.stdout.buffer
+    endline = b'\n';
+    if args.dos_text: endline = b'\r\n'
     for lineno, tline in tl.lines():
         detok = Detokenizer(cmap, tline, lineno)
-        print(detok.detokenize(), end=endline)
+        line = detok.detokenize()
+        if not args.binary:
+            line = bytes(line, 'UTF-8')
+        out.write(line)
+        out.write(endline)
     if args.dos_text:
-        print('\x1A', end='')
+        out.write(b'\x1A')
 
 if __name__ == '__main__':
     main(parseargs())

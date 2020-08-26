@@ -198,12 +198,17 @@ class Detokenizer:
     '''
 
     def __init__(self, charset, tline, lineno=None):
-        ''' `charset` is the `Charset` to use for conversion. `tline` is a
-            `bytes` containing the tokenized line data, not including the
-            line number or trailing 0x00. `lineno`, if present, will prefix
-            the detokenized line and be printed in any exceptions raised.
+        ''' Set up a detokenizer.
+            * `charset` is the `Charset` to use for conversion. If `None`,
+              charset conversion will not be done and instead `bytes`
+              output in MSX-BASIC encoding will be generated.
+            * `tline` is a `bytes` containing the tokenized line data, not
+              including the line number or trailing 0x00.
+            * `lineno`, if present, will prefix the detokenized line and be
+              printed in any exceptions raised.
         '''
-        assert callable(charset.trans)
+        if charset is not None:
+            assert callable(charset.trans)
         self.charset = charset
         self.tline = tline
         if lineno is None:
@@ -235,15 +240,19 @@ class Detokenizer:
         self.p = 0              # current parse offset in input
 
         if self.lineno is not None:
-            self.gen(str(self.lineno))
-            self.gen(' ')
+            self.genasc(str(self.lineno))
+            self.genasc(' ')
 
     def output(self):
         ''' Return the generated output. If `lineno` is `True`, the output
             will be prefixed by the line number given at instantiation. If
             no line number was given, a `ValueError` will be raised.
         '''
-        return ''.join(self._output)
+        if self.charset is None:
+            empty = bytes()
+        else:
+            empty = str()
+        return empty.join(self._output)
 
     def genasc(self, a):
         ''' Append an ASCII character or characters to the output.
@@ -255,14 +264,24 @@ class Detokenizer:
         if isinstance(a, int):
             if a < 0 or a > 0x7F:
                 raise ValueError('Invalid ASCII code: ' + hex(a))
-            self._output.append(chr(a))
+            if self.charset is None:
+                self._output.append(bytes([a]))
+            else:
+                self._output.append(chr(a))
         else:
-            bytes(a, 'ASCII')       # raise error if not ASCII
-            self._output.append(a)
+            b = bytes(a, 'ASCII')       # raise error if not ASCII
+            if self.charset is None:
+                self._output.append(b)
+            else:
+                self._output.append(a)
 
-    def gen(self, s):
-        ' Append `str` `s` to the output. '
-        self._output.append(s)
+    def generate(self, c):
+        ''' Append object `c` to the output.
+
+            This must be of the correct type: (Unicode) `str` if we
+            are doing charset conversion, or `bytes` if we are not.
+        '''
+        self._output.append(c)
 
     def detokenize(self):
         ''' Return a `str` containing the detokenized version of the
@@ -471,23 +490,34 @@ class Detokenizer:
             self.genasc(str(int(mantissa) * 10**(exponent-6)) + precchar)
 
     def char(self):
-        ''' Consume a native-encoded char from the input, convert it to
-            Unicode via the current converter, and generate it to the
-            output. This will consume one or two bytes, depending on if the
-            first byte is 0x01 indicating an "extended" character code.
+        ''' If we have a charset, consume a native-encoded char from the
+            input and generate it to the output after doing charset
+            conversion on it. This will consume one or two bytes, depending
+            on if the first byte is 0x01 indicating an "extended" character
+            code. Illegal encoding sequences (control characters and
+            bad 0x01 0xNN sequences) will raise an exception.
+
+            If we do not have a charset, simply pass the bytes through with
+            no checks, i.e., leave them in MSX encoding or whatever someone
+            managed to stick in the program.
 
             This should be used only for strings, not program text.
         '''
         c = self.byte()
-        if c != 0x01 and c < 0x20:  # BASIC should never tokenize these codes
-            self.terror()
-        elif c != 0x01:             # standard char code
-            self.gen(self.charset.trans(c))
-        else:                       # "extended" char code
-            c = self.byte()
-            if c is None:               self.terror()
-            if c < 0x40 or c > 0x5F:    self.terror()
-            self.gen(self.charset.trans(c-0x40))
+        if self.charset is None:
+            self.generate(bytes([c]))
+        else:
+            if c == 0x01:                   # "extended" char code
+                c = self.byte()
+                if c is None:               self.terror()
+                if c < 0x40 or c > 0x5F:    self.terror()
+                self.generate(self.charset.trans(c-0x40))
+            elif c < 0x20 or c == 0x7F:     # control char
+                #   MSX-BASIC should never allow entry of strings with
+                #   control characters.
+                self.terror()
+            else:                           # one-byte char code
+                self.generate(self.charset.trans(c))
 
     def quoted(self):
         ''' Consume and generate a quoted string, including the trailing

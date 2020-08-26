@@ -49,6 +49,10 @@ def test_genasc_good(a, s):
     dt.genasc(a)
     assert s == dt.output()
 
+    dt = Detokenizer(None, b'')
+    dt.genasc(a)
+    assert bytes(s, 'ASCII') == dt.output()
+
 @pytest.mark.parametrize('a', [ -1, 0x80, '\u0080', ])
 def test_genasc_error(a):
     dt = Detokenizer(UTCS, b'')
@@ -111,7 +115,7 @@ def test_real(b, s):
     (b'\x01\x40',   '\uF000'),
     (b'\x01\x5F',   '\uF01F'),
 ])
-def test_chdecode_good(b, s):
+def test_char(b, s):
     dt = Detokenizer(UTCS, b)
     dt.char()
     assert s == dt.output()
@@ -123,11 +127,24 @@ def test_chdecode_good(b, s):
     b'\x01\x3F',                # \x01 must be followed by >= \x40
     b'\x01\x60',                # \x01 must be followed by  < \x60
     b'\x01',                    # \x01 must have a following byte
+    b'\x7F',                    # DEL is a control char
 ])
-def test_chdecode_bad(b):
+def test_chdecode_invalid(b):
     dt = Detokenizer(UTCS, b)
     with pytest.raises(dt.TokenError):
         dt.char()
+
+@pytest.mark.parametrize('b', [
+    b'\x00', b'\x01', b'\x1F', b'\x7F', b'\x01\x3F', b'\x01\x01',
+])
+def test_char_notrans_invalid(b):
+    ''' Show that we pass through control characters and invalid encoding
+        sequences when not doing translation.
+    '''
+    dt = Detokenizer(None, b)
+    #   char() always reads only one byte when not doing chracer translation.
+    for _ in range(len(b)): dt.char()
+    assert b == dt.output()
 
 @pytest.mark.parametrize('t, s', [
     (b'"',                  '"'),
