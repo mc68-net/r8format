@@ -73,6 +73,17 @@ Caveats and Todo Items
   These should not be difficult to add for someone familiar with this
   charset and its multilingual use.
 
+* This currently doesn't handle `'` as an (inexact) synonym for `REM`.
+  (It's tokenized differently, as `3A 8F E6`.)
+
+* It might be reasonable to be able to decode native characters, especially
+  control sequences, to a multi-character Unicode sequence, e.g., 0x00 to
+  `‹00›` and 0x08 to `‹H›` (those characters are are U+2039 and U+203A,
+  "single left/right-pointing angle quotation mark; see [[brackets]] for
+  some other possibilities), similar to Commdore BASIC control character
+  quotation. The effects of introducing multi-byte Unicode sequences in the
+  detokenized program text need thought.
+
 * Some programs created with tools other than the MSX BASIC interpreter may
   use binary data, including invalid encoding sequences, in string
   constants and/or REM statements. (This is often to embed binary data or
@@ -98,3 +109,5 @@ Caveats and Todo Items
 [discord]: https://discord.com
 [gitter]: https://gitter.im
 [telegram]: https://telegram.org
+
+[brackets]: https://en.wikipedia.org/wiki/Bracket#Encoding_in_digital_media
