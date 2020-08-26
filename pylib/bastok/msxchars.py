@@ -190,10 +190,13 @@ class Charset:
             self._nu[n] = u
             self._un[u] = n
 
-    def uc(self, n):
-        ''' Translate native code `n`, an `int` from 0x00 through 0xFF, to
-            a single-character Unicode `str`. Note that codes 0x00 through
-            0x1F are represented as [0x01, 0x40+`n`] in MSX BASIC.
+    def trans(self, n):
+        ''' Return the translated version (a Unicode `str`) of native code
+            point `n` (an `int` from 0x00 through 0xFF).
+
+            Note that native points 0x00 through 0x1F are encoded as [0x01,
+            0x40+`n`] in MSX BASIC; this takes the code point itself, not
+            the encoded version of it.
         '''
         self._ncheck(n)
         return self._nu[n]
@@ -214,7 +217,7 @@ class Unimplemented:
         self.description = description + ' (not yet implemented)'
     def unimpl(self):
         raise NotImplementedError("charset '{}' ".format(self.name))
-    def uc(self, n):            self.unimpl()
+    def trans(self, n):            self.unimpl()
     def native(self, u):        self.unimpl()
 
 CHARMAP = {

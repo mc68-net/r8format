@@ -11,7 +11,7 @@ class UTCharset:
         intentional: it ensures that we are using this only for strings
         rather than for code as well.
     '''
-    def uc(self, n):
+    def trans(self, n):
         ''' Translate native code `n`, an `int` from 0x00 through 0xFF, to
             a single-character Unicode `str`. Note that codes 0x00 through
             0x1F are represented as [0x01, 0x40+`n`] in MSX BASIC.

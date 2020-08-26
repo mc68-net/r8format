@@ -203,7 +203,7 @@ class Detokenizer:
             line number or trailing 0x00. `lineno`, if present, will prefix
             the detokenized line and be printed in any exceptions raised.
         '''
-        assert callable(charset.uc)
+        assert callable(charset.trans)
         self.charset = charset
         self.tline = tline
         self.lineno = lineno
@@ -455,12 +455,12 @@ class Detokenizer:
         if c != 0x01 and c < 0x20:  # BASIC should never tokenize these codes
             self.terror()
         elif c != 0x01:             # standard char code
-            self.output(self.charset.uc(c))
+            self.output(self.charset.trans(c))
         else:                       # "extended" char code
             c = self.byte()
             if c is None:               self.terror()
             if c < 0x40 or c > 0x5F:    self.terror()
-            self.output(self.charset.uc(c-0x40))
+            self.output(self.charset.trans(c-0x40))
 
     def quoted(self):
         ''' Consume and output a quoted string, including the trailing

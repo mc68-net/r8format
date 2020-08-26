@@ -24,4 +24,4 @@ def test_blanks():
 ])
 def test_charmap(map, n, u):
     cm = CHARMAP[map]
-    assert (u, bytes([n])) == (cm.uc(n), cm.native(u))
+    assert (u, bytes([n])) == (cm.trans(n), cm.native(u))
