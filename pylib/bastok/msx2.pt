@@ -22,7 +22,17 @@ class UTCharset:
         assert n >= 0 and n < 0x100
         return chr(0xF000+n)
 
+class MSXCodePoint:
+    ''' Produce printable ASCII and Unicode code points that have the same
+        number as the MSX code points. This is nonsense output, but convenient
+        for testing.
+    '''
+    def trans(self, n):
+        assert n >= 0 and n < 0x100
+        return chr(n)
+
 UTCS    = UTCharset()
+MSXCP   = MSXCodePoint()
 
 ####################################################################
 
@@ -246,3 +256,24 @@ def test_detokenize_bad(t, err):
     with pytest.raises(Detokenizer.TokenError):
         dt = Detokenizer(UTCS, t)
         dt.detokenize()
+
+@pytest.mark.parametrize('ln, t, s', [
+    (    0, b'\x91""',      '    0 PRINT ""'),
+    (60000, b'\x8F',        '60000 REM'),
+
+    (None, b'\x84a,b,   c,"d", "e",   "f"',
+            'DATA a, b,   c, "d", "e",   "f"'),
+    (None, b'\x91\xFF\x96(\x0F\x0C\xF8\x0F\xFF)\xF1"3"',
+            'PRINT CHR$(12 XOR 255)+"3"'),
+    (None, b'\x8BX\xEF\x12\xDAY\xEF\x13:\xA1Z\xEF\x14',
+           'IF X=1 THEN Y=2 ELSE Z=3'),
+    (None, b'\x82I\xEF\x11\xD9\x1A\xDC\x13:\x83I',
+            'FOR I=0 TO 9 STEP 2\n    : NEXT I'),
+   #    The expansion inserts a fair number of trailing spaces, but this
+   #    really isn't worth fixing; many of those lines will end up manually
+   #    reformatted anyway.
+   #(None, b'\x91:\x91', 'PRINT\n    : PRINT'),
+])
+def test_detokenize_expand(ln, t, s):
+    dt = Detokenizer(MSXCP, t, lineno=ln, expand=True)
+    assert s == dt.detokenize()

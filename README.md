@@ -81,6 +81,32 @@ and MSX-BASIC encoding is output directly (the `-b` or `--binary` option).
 Support for programs that use kanji ROM characters needs to be investigated.
 
 
+Formatting
+----------
+
+`detok` offers an `--expand`/`-e` option to generate source code in a more
+readable format, especially if the program text is "packed" to save space
+by minimizing use of spaces. When enabled it will render this:
+
+    10 FORI=16TO40STEP2:IFI<32THENPRINTI:NEXTIELSEPRINTCHR$(I):NEXTI
+
+as:
+
+       10 FOR I=16 TO 40 STEP 2
+        : IF I<32 THEN PRINT I
+        : NEXT I ELSE PRINT CHR$(I)
+        : NEXT I
+
+This is far from perfect (clearly the line split should be before the
+`ELSE`, not the preceeding `: NEXT I`) but since in most workflows the
+developer will do further manual reformatting to better express the code as
+she reverse-engineers the program, this is fine to kickstart the process.
+
+The (re-)tokenizer, when written will read programs in the above format and
+be able to "compress" them back to a tokenized version without unnecessary
+whitespace.
+
+
 Support
 -------
 

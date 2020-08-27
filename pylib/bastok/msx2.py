@@ -197,7 +197,7 @@ class Detokenizer:
         line and call `detokenize()` for the detokenized result.
     '''
 
-    def __init__(self, charset, tline, lineno=None):
+    def __init__(self, charset, tline, lineno=None, *, expand=False):
         ''' Set up a detokenizer.
             * `charset` is the `Charset` to use for conversion. If `None`,
               charset conversion will not be done and instead `bytes`
@@ -206,6 +206,8 @@ class Detokenizer:
               including the line number or trailing 0x00.
             * `lineno`, if present, will prefix the detokenized line and be
               printed in any exceptions raised.
+            * `expand` will add spacing to make the output more readable,
+              including newlines before ``:``s.
         '''
         if charset is not None:
             assert callable(charset.trans)
@@ -215,6 +217,7 @@ class Detokenizer:
             self.lineno = None
         else:
             self.lineno = int(lineno)   # catch bad param early
+        self.expand = expand
         self.reset()
 
     class TokenError(ValueError):
@@ -236,11 +239,12 @@ class Detokenizer:
 
     def reset(self):
         ' Clear the output and reset the detokenization pointer to the start. '
-        self._output = [];
+        self._output = []
         self.p = 0              # current parse offset in input
 
         if self.lineno is not None:
-            self.genasc(str(self.lineno))
+            self.genasc('{:{width}}'.format(self.lineno,
+               width=5 if self.expand else 0))
             self.genasc(' ')
 
     def output(self):
@@ -282,6 +286,23 @@ class Detokenizer:
             are doing charset conversion, or `bytes` if we are not.
         '''
         self._output.append(c)
+
+    def expandsp(self):
+        ' If we are in expand mode, generate a space. '
+        if self.expand:
+            self.genasc(' ')
+
+    def expandnl(self):
+        '''' If we are in expand mode, generate a (Unix) newline and indent
+            for the continuation line.
+
+            We do not currently support multi-line output in non-Unix
+            format since it's expected this will be used only for files
+            stored in revision control, where one wants to keep them in a
+            single format regardless of platform.
+        '''
+        if self.expand:
+            self.genasc('\n    ')
 
     def detokenize(self):
         ''' Return a `str` containing the detokenized version of the
@@ -342,15 +363,13 @@ class Detokenizer:
             elif b == DQUOTE:
                 asc(b)
                 self.quoted()
-            elif b == COLON and self.peek1() == T_ELSE1:
-                #   ELSE is a special case; it's always encoded as colon
-                #   followed by the ELSE token
-                self.asc(COLON, '')
-                self.asc(T_ELSE1, 'ELSE')
+            elif b == COLON:
+                self.colon()
             elif b <= 0x7F:
                 asc(b)
             elif b == T_DATA:
                 asc(b, 'DATA')
+                self.expandsp()
                 self.data()
             elif b == T_REM:
                 asc(b, 'REM')
@@ -370,14 +389,6 @@ class Detokenizer:
         if self.p >= len(self.tline):
             return None
         return self.tline[self.p]
-
-    def peek1(self):
-        ''' Without consuming anything, return the byte *after* the
-            next byte of input, or `None` input ends before that.
-        '''
-        if self.p + 1 >= len(self.tline):
-            return None
-        return self.tline[self.p + 1]
 
     def byte(self):
         ''' Consume the next byte in the input and return it as an `int`.
@@ -399,6 +410,17 @@ class Detokenizer:
             self.genasc(a)
         else:
             self.genasc(b)
+
+    def colon(self):
+        b = self.byte()
+        if b != COLON: self.terror()
+        if self.peek() != T_ELSE1:
+            self.expandnl(); self.genasc(b); self.expandsp()
+        else:
+            #   ELSE is a special case; it's always encoded as colon
+            #   followed by the ELSE token
+            self.byte()
+            self.expandsp(); self.genasc('ELSE'); self.expandsp()
 
     def int16(self):
         ''' Consume two bytes and return them as an unsigned `int`. '''
@@ -568,12 +590,16 @@ class Detokenizer:
             elif b == COMMA:
                 leading = True
                 self.genasc(self.byte())
+                if self.peek() != SPACE: self.expandsp()
             elif b == COLON:
-                self.genasc(self.byte())
+                self.colon()
                 return
             else:
                 leading = False
                 self.char()
+
+    #   Operator "keywords" that are preceeded by a space.
+    KWOPS = [ 'THEN', 'TO', 'STEP', 'AND', 'OR', 'XOR', ]
 
     def keyword(self):
         ''' Consume one or two bytes of tokenized keyword and generate the
@@ -586,4 +612,8 @@ class Detokenizer:
             kw = TOKTAB.get(bytes([b]))
         if kw is None:
             self.terror()
+
+        if kw in self.KWOPS: self.expandsp()
         self.genasc(kw)
+        if len(kw) > 1 and self.peek() != ord('('):
+            self.expandsp()

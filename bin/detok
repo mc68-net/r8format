@@ -25,6 +25,8 @@ def parseargs():
         help='do not do charset conversion')
     arg('-c', '--charset', default='ja',
         help='MSX charset: ja (default), int, ar, ru, etc.')
+    arg('-e', '--expand', action='store_true',
+        help='add spacing for readability')
     arg('-z', '--dos-text', action='store_true',
         help='Use DOS text file format (CR+LF line endings, ^Z file end marker')
     arg('input', help='input file (required)')
@@ -32,6 +34,9 @@ def parseargs():
     return p.parse_args()
 
 def main(args):
+
+    if args.expand and args.binary:
+        die(2, '--binary and --expand are incompatible')
 
     if args.binary:
         cmap = None
@@ -56,7 +61,7 @@ def main(args):
     endline = b'\n';
     if args.dos_text: endline = b'\r\n'
     for lineno, tline in tl.lines():
-        detok = Detokenizer(cmap, tline, lineno)
+        detok = Detokenizer(cmap, tline, lineno, expand=args.expand)
         line = detok.detokenize()
         if not args.binary:
             line = bytes(line, 'UTF-8')
