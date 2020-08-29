@@ -113,11 +113,16 @@ Support
 -------
 
 Contact the author, Curt Sampson (usually known as 'cjs') if you have
-questions, comments, feature requests, or just want help using this. If you
-are on The MSX Channel server on [Discord], I am there; otherwise you can
-try a private message to `cjs_cynic` on [Telegram], `0cjs` on [Gitter] or
-`cjs#6537` on Discord. You may also send email to <cjs@cynic.net>, but text
-chat is the preferred way of contacting me.
+questions, comments, feature requests, or just want help using this. The
+following are good places to get in touch, more or less in order of
+preference:
+- The ["MSX Center"](https://discord.gg/rg4fWAj) or "The MSX Channel"
+  servers on [Discord], in the `#development` group of either.
+- `cjs_cynic` on [Telegram]
+- `0cjs` on [Gitter]. (A Gitter group could be set up for this, if there's
+  any demand.)
+- `cjs#6537` on Discord.
+- Email to <cjs@cynic.net>, but a reply from that might take days.
 
 
 Caveats and Todo Items
