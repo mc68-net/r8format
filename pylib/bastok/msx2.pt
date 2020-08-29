@@ -44,6 +44,7 @@ def test_T_():
     assert 0x84 == T_DATA
     assert 0x8F == T_REM
     assert 0xA1 == T_ELSE1
+    assert 0xEF == T_EQ
 
 ####################################################################
 #   Support functions
@@ -68,6 +69,63 @@ def test_genasc_error(a):
     dt = Detokenizer(UTCS, b'')
     with pytest.raises(ValueError):
         dt.genasc(a)
+
+def test_parse_functions():
+    ' Various generic parsing functions. '
+    #   XXX This API is a bit of a mess right now.
+
+    def ascout(c=None, a=None):
+        dt.asc(c, a)
+        return dt.output()[-1]
+
+    dt = Detokenizer(UTCS, b'@ABCDE')
+    assert                             dt.match(b'@ABCD') \
+                               and not dt.match(b'@ABCE') \
+                               and not dt.match(b'@ABCDEF')
+    assert (0x40, 0x40) == (dt.peek(), dt.byte())
+    assert (0x41, 'A')  == (dt.peek(), ascout(0x41))
+    assert (0x42, 'X')  == (dt.peek(), ascout(0x42, 'X'))
+    assert (0x43, 'C')  == (dt.peek(), ascout())
+    assert                             dt.match(b'DE')
+
+    with pytest.raises(dt.ParseError): dt.byte(0x3F)
+    with pytest.raises(dt.ParseError): dt.asc(0x3F)
+
+    #   XXX EOF behaviour
+    dt = Detokenizer(UTCS, b'')
+    assert not dt.match(b'A')
+    assert None is dt.peek()
+    assert None is dt.byte()
+    #   dt.asc() behviour at EOF is undefined
+
+def test_consume():
+    dt = Detokenizer(UTCS, b'abcdef')
+    dt.consume(b'abc'); assert dt.match(b'def')
+    dt.consume(b'de');  assert dt.match(b'f')
+    with pytest.raises(dt.ParseError):
+        dt.consume(b'XY')
+
+tok_interval = b'\xFF\x85' b'ER' b'\xFF\x94'
+tok_eq = bytes([T_EQ])
+
+@pytest.mark.parametrize('expand, input, output', [
+    (False, b'\x91',                'PRINT'),
+    ( True, b'\x91',                'PRINT'),
+    ( True, b'\x91:',               'PRINT'),
+    (False, b'\xFF\x85',            'INT'),
+    ( True, b'\xFF\x85(',           'INT'),
+    (False, tok_interval,           'INTERVAL'),
+    ( True, tok_interval + b'ON',   'INTERVAL '),
+    ( True, tok_interval + tok_eq,  'INTERVAL'),
+])
+def test_token_match(expand, input, output):
+    dt = Detokenizer(UTCS, input, expand=expand)
+    assert dt.token()
+    assert output == dt.output()
+
+def test_token_nomatch():
+    dt = Detokenizer(UTCS, b'ABC')
+    assert not dt.token()
 
 @pytest.mark.parametrize('n, s', [
     (0x00, '00'), (0x47, '47'), (0x99, '99'), ])
@@ -235,7 +293,7 @@ def test_data(t, s):
     (b'\x8F\x91',                   'REM\uF091'),
     #   DATA
     (b'\x84\x84,"\x84"\x84:\x84',   'DATA\uF084,"\uF084"\uF084:DATA'),
-    #   Two-byte tokens
+    #   Multi-byte tokens
     (b'\xFF\x84(A) \xF1 \xFF\x85(B)',   'SGN(A) + INT(B)'),
 ])
 def test_detokenize(t, s):
@@ -269,11 +327,16 @@ def test_detokenize_bad(t, err):
            'IF X=1 THEN Y=2 ELSE Z=3'),
     (None, b'\x82I\xEF\x11\xD9\x1A\xDC\x13:\x83I',
             'FOR I=0 TO 9 STEP 2\n    : NEXT I'),
-   #    The expansion inserts a fair number of trailing spaces, but this
-   #    really isn't worth fixing; many of those lines will end up manually
-   #    reformatted anyway.
-   #(None, b'\x91:\x91', 'PRINT\n    : PRINT'),
+    #   Some keywords are tokenized with a combination of several tokens and
+    #   letters; these must not have spaces inserted into the middle of them.
+    (None, b'\xFF\x85' b'ER' b'\xFF\x94' b'\xEF' b'\x0F\x1E',
+           'INTERVAL=30'),
+    (None, b'\x91:\x91', 'PRINT\n    : PRINT'),
 ])
 def test_detokenize_expand(ln, t, s):
     dt = Detokenizer(MSXCP, t, lineno=ln, expand=True)
     assert s == dt.detokenize()
+
+def test_repl():
+    pass
+    #assert [] == DETOKENS[0:8]

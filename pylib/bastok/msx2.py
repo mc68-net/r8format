@@ -175,7 +175,18 @@ TOKENS = (
     (b'\xFF\xAE',   'MKI$',         ),
     (b'\xFF\xAF',   'MKS$',         ),
     (b'\xFF\xB0',   'MKD$',         ),
+
+    #   Some keywords are "tokenized" with a series of tokens and ASCII
+    #   letters. We make these separate entries so we can match them in
+    #   full, ensuring we don't ever split the keywords with spaces or
+    #   anything like that.
+    (b'\xFF\x85' b'ER' b'\xFF\x94', 'INTERVAL', ),
 )
+
+#   Tokens sorted by decending length, so that we can walk through this
+#   as a list of alternatives, ensuring that a word will match before
+#   its prefix.
+DETOKENS = sorted(TOKENS, key=lambda t: len(t[0]), reverse=True)
 
 TOKTAB = dict(TOKENS)
 
@@ -190,6 +201,7 @@ COLON   = ord(':')
 T_DATA  = toklastbyte('DATA')
 T_REM   = toklastbyte('REM')
 T_ELSE1 = toklastbyte('ELSE')   # without leading ':'
+T_EQ    = toklastbyte('=')
 MAX_LINENO = 65529
 
 class Detokenizer:
@@ -221,11 +233,16 @@ class Detokenizer:
         self.reset()
 
     class TokenError(ValueError):
-        pass
-
-    def terror(self, offset=0):
+        ' Invalid input. '
+    def terror(self):
         ' Throw a tokenization error at the current position. '
         raise self.TokenError('Bad tokenized data: ' + self.pstate())
+
+    class ParseError(RuntimeError):
+        ' Probably a bug in our parser. '
+    def parseerror(self):
+        ' Throw a parse error at the current position. '
+        raise self.ParseError('Internal error: ' + self.pstate())
 
     def pstate(self):
         ''' Return a string with information about the current parser state.
@@ -377,10 +394,16 @@ class Detokenizer:
                 #   charset-converted contents.
                 while self.peek() is not None:
                     self.char()
+            elif self.token():
+                pass
             else:
-                self.keyword()
+                parseerror()
 
         return self.output()
+
+    def match(self, bs):
+        ' Are the next bytes in the input are `bs`? '
+        return self.tline[self.p:].startswith(bs)
 
     def peek(self):
         ''' Without consuming it, return the next byte in the input
@@ -390,26 +413,40 @@ class Detokenizer:
             return None
         return self.tline[self.p]
 
-    def byte(self):
+    def byte(self, b=None):
         ''' Consume the next byte in the input and return it as an `int`.
             or `None` if no more input is available. No output is generated.
+
+            If `b` is not `None`, the byte must have `int` value `b`.
         '''
-        b = self.peek()
+        i = self.peek()
+        if b is not None and i != b:
+            self.parseerror()
         self.p += 1
-        return b
+        return i
 
     def asc(self, c=None, a=None):
-        ''' Consume ASCII character with code `c` (an `int`) or any ASCII
-            code if `c` is `None`. Generate `a` if not `None`, otherwise
-            generate the ASCII char read.
+        ''' Consume an ASCII character and generate output.
+
+            If an `int` `c` is specified, the next byte must have value `c`
+            or a `ParseError` will be raised.
+
+            If `a` is not `None`, that `str` (which must be ASCII) will be
+            generated, otherwise the consumed byte, which must be an
+            ASCII character, will be generated.
         '''
         b = self.byte()
         if c is not None and c != b:
-            self.terror()
-        if a is not None:
-            self.genasc(a)
-        else:
-            self.genasc(b)
+            self.parseerror()
+        if a is None:
+            a = b
+        self.genasc(a)
+
+    def consume(self, bs):
+        ''' Consume from the input the bytes in `bs`.
+            Raise a ParseError if the input does not match.
+        '''
+        for b in bs: self.byte(b)
 
     def colon(self):
         b = self.byte()
@@ -598,22 +635,22 @@ class Detokenizer:
                 leading = False
                 self.char()
 
-    #   Operator "keywords" that are preceeded by a space.
-    KWOPS = [ 'THEN', 'TO', 'STEP', 'AND', 'OR', 'XOR', ]
+    #   Tokens that are preceeded by a space in expand mode.
+    PRESPACE_KEYWORDS = [ 'THEN', 'TO', 'STEP', 'AND', 'OR', 'XOR', ]
 
-    def keyword(self):
-        ''' Consume one or two bytes of tokenized keyword and generate the
-            keyword.
+    def token(self):
+        ''' If the next input is a token, consume it, generate the
+            ASCII text for it (with expansion if we're expanding)
+            and return `True`. Otherwise return `False`.
         '''
-        b = self.byte()
-        if b == 0xFF:
-            kw = TOKTAB.get(bytes([b, self.byte()]))
-        else:
-            kw = TOKTAB.get(bytes([b]))
-        if kw is None:
-            self.terror()
-
-        if kw in self.KWOPS: self.expandsp()
-        self.genasc(kw)
-        if len(kw) > 1 and self.peek() != ord('('):
-            self.expandsp()
+        for t, s in DETOKENS:
+            if not self.match(t):
+                continue
+            self.consume(t)
+            if s in self.PRESPACE_KEYWORDS: self.expandsp()
+            self.genasc(s)
+            next = self.peek()
+            if len(s) > 1 and next not in [ None, COLON, ord('('), T_EQ, ]:
+                self.expandsp()
+            return True
+        return False
