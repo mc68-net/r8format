@@ -116,8 +116,7 @@ Contact the author, Curt Sampson (usually known as 'cjs') if you have
 questions, comments, feature requests, or just want help using this. The
 following are good places to get in touch, more or less in order of
 preference:
-- The ["MSX Center"](https://discord.gg/rg4fWAj) or "The MSX Channel"
-  servers on [Discord], in the `#development` group of either.
+- The "The MSX Channel" server on [Discord], in the `#development` group.
 - `cjs_cynic` on [Telegram]
 - `0cjs` on [Gitter]. (A Gitter group could be set up for this, if there's
   any demand.)
