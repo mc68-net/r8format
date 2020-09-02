@@ -1,0 +1,18 @@
+from    bastok.blines import blines
+import  pytest
+
+@pytest.mark.parametrize('result, input', [
+    #   Ignore lines before first bline
+    ([],                        ['']),
+    ([],                        ['foo']),
+    (['56 ef'],                 ['ab', '', 'cd', '56 ef',]),
+    #   Leading/trailing spaces, comments and blank lines stripped.
+    (['123'],                   ['  123  ']),
+    (['123'],                   ['123 ‖ comment']),
+    (['123'],                   ['', '', '123', '' '']),
+    #   Multiple lines.
+    (['123 ab cd', '456 ef gh'],
+        ['', '123', 'ab', 'cd', '456', '', 'ef', '', '', 'gh', '']),
+])
+def test_blines(result, input):
+    assert result == blines(input)
