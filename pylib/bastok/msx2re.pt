@@ -1,0 +1,20 @@
+from    bastok.msx2re  import *
+import  pytest
+
+charmap = None # XXX
+
+@pytest.mark.parametrize('lineno, tokens, line', [
+    (10, b'\x8F',                   '10 REM'),
+   #(20, b'\x91: \x8Fark=:=',       '20 PRINT: REMark=:='),
+])
+def test_tokline(lineno, tokens, line):
+    assert (lineno, tokens) == tokline(charmap, line)
+
+@pytest.mark.xfail(strict=True) # XXX
+def test_tokenize():
+    inlines = [ "10 REM",      "20 PRINT", ]
+    tlines  = ( (10, b'\x8F'), (20, b'\x91') )
+    assert tlines == tokenize(charmap, inlines)
+
+def test_tokenize_duplicate_lines():
+    pass # XXX

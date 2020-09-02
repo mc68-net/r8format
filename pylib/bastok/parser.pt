@@ -1,0 +1,90 @@
+from    bastok.parser  import *
+import  pytest
+
+def test_PState_basic():
+    p = PState('hi')
+    assert ('hi', 0, [], False) == (p.input, p.pos, p.olist, p.finished())
+    p.pos = 2
+    assert p.finished()
+
+@pytest.mark.parametrize('output, olist', [
+    ('01234',           ['01', '2', '3', '4']),
+    (b'\x00\x01\x02',   [b'\x00', b'\x01\x02']),
+    #   XXX It's not clear what we should give for the output if we can't
+    #   figure out what type it should be, so for the moment, just None.
+    (None,              []),
+])
+def test_PState_output(output, olist):
+    p = PState('');
+    p.olist.extend(olist)
+    assert output == p.output()
+
+def test_peek():
+    p = PState('hi')
+    pass      ; assert ('h', 0) == (peek(p), p.pos)
+    p.pos += 1; assert ('i', 1) == (peek(p), p.pos)
+    p.pos += 1; assert None is peek(p)
+
+def test_byte_noargs():
+    p = PState('hi')
+    assert ('h', 'i', None) == (byte(p), byte(p), byte(p, eof=None))
+    with pytest.raises(p.ParseError) as ex:
+        byte(p)
+    assert ex.match('unexpected EOF')
+
+def test_byte_genf():
+    p = PState(b'hi')
+    byte(p, genf=chr)
+    byte(p, genf=lambda b: chr(b+1))
+    assert 'hj' == p.output()
+
+def test_spaces():
+    p = PState( 'hi');      assert (None, 0) == (spaces(p), p.pos)
+    p = PState( '   x ');   assert (None, 3) == (spaces(p), p.pos)
+    p = PState(b' y');      assert (None, 1) == (spaces(p), p.pos)
+
+@pytest.mark.parametrize('n, pos, s', [
+    (0, 1, '0'), (0, 3, '000'),
+    (17, 2, '17'), (17, 5, '00017'), (76543210, 8, '76543210'),
+    (0, 1, '0 '), (0, 1, '0:'), (0, 1, '0a'), (0, 1, '0x'),
+])
+def test_decimal_success(n, pos, s):
+    p = PState(s)
+    assert (n, pos) == (decimal(p), p.pos)
+
+def test_decimal_failure():
+    p = PState('bleh')
+    assert None == decimal(p)
+    with pytest.raises(p.ParseError) as ex:
+        decimal(p, err='decimal')
+    assert ex.match('decimal')
+
+TT_TABLE = (
+    ('foobar',  b'\x10\x20'),
+    ('foo',     b'\x01'),
+    ('bar',     b'\x02'),
+    ('f',       b''),
+)
+
+def test_toktrans():
+    def tt(**kw): return toktrans(p, TT_TABLE, **kw)
+    p = PState('ZfoofoobarbarffZ')
+
+    assert None is tt(); byte(p)
+
+    assert    'foo' == tt(); assert     b'\x01'== p.olist[-1]
+    assert 'foobar' == tt(); assert b'\x10\x20'== p.olist[-1]
+    assert    'bar' == tt(); assert     b'\x02'== p.olist[-1]
+    assert      'f' == tt(); assert        b'' == p.olist[-1]
+    assert      'f' == tt(); assert        b'' == p.olist[-1]
+
+    #   No match.
+    assert 5 == len(p.olist)
+    assert (None, 5, 'Z') == (tt(), len(p.olist), peek(p))
+    #   XXX Do we need a version that raises an error on no match?
+
+    #   No more input.
+    p.pos += 1; assert p.finished()
+    assert (None, 5) == (tt(), len(p.olist))
+
+    assert b'\x01\x10\x20\x02' == p.output()

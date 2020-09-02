@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+
+from    os.path  import abspath, dirname, join
+from    site  import addsitedir
+BASEDIR = dirname(dirname(abspath(__file__)))
+if __name__ == '__main__': addsitedir(join(BASEDIR, 'pylib'))
+
+from    argparse  import ArgumentParser
+from    sys  import argv
+
+from    bastok.blines  import blines
+from    bastok.msx2re  import tokenize
+from    bastok.msxchars import CHARMAP
+
+####################################################################
+
+def parseargs():
+    p = ArgumentParser(description='MSX-BASIC tokenizer')
+    arg = p.add_argument
+
+    arg('-c', '--charset', default='ja',
+        help='MSX charset: ja (default), int, ar, ru, etc.')
+    arg('-e', '--unexpand', action='store_true',
+        help='remove spaces to reduce code size')
+    arg('input', help='input file (required)')
+    arg('output', help='output file (required)')
+
+    return p.parse_args()
+
+def main(args):
+    charmap = CHARMAP.get(args.charset)
+    if charmap is None:
+        die(3, 'Unknown MSX charset: {}'.format(args.charset),
+            'Known charsets:',
+            *[ ' {:>4}: {}'.format(k, v.description)
+               for k, v in sorted(CHARMAP.items()) ]
+            )
+
+    with open(args.input, encoding='UTF-8') as f:
+        tlines = tokenize(charmap, blines(f.readlines()))
+    with open(args.output, 'wb') as f:
+        tlines.write_to(f)
+
+if __name__ == '__main__':
+    main(parseargs())
+
