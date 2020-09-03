@@ -4,8 +4,8 @@ import  pytest
 charmap = None # XXX
 
 @pytest.mark.parametrize('lineno, tokens, line', [
-    (10, b'\x8F',                   '10 REM'),
-   #(20, b'\x91: \x8Fark=:=',       '20 PRINT: REMark=:='),
+    ( 10, b'\x8F',                  '10 REM'),
+    ( 20, b'\x91: \x8Fark=:=',      '30 PRINT: REMark=:='),
 ])
 def test_tokline(lineno, tokens, line):
     assert (lineno, tokens) == tokline(charmap, line)

@@ -1,4 +1,28 @@
-''' XXX
+''' Parser Framework.
+
+    This consists of class `PState`, multable instances of which hold
+    parser state, and some generic parsing functions that operate on it.
+    Typically further special-purpose parsing functions will be added by
+    each particular parser.
+
+    Parsing functions always take a `PState` as the first parameter. They
+    may do (almost) any combination of the following:
+    - *Consume* input, updating `pos` if successful.
+    - *Generate* output, appending the output fragment to `PState.olist`.
+    - *Return* a value.
+    - *Fail*, consuming and generating nothing and returning an indication
+      of failure (but not throwing an exception).
+    - *Error*, consuming nothing and raising an exception.
+
+    Typical additional parameters that parsing functions may have are:
+    - Something to match. The parser will fail or error if the input at the
+      current position does not match this parameter.
+    - `genf`: A generator function that is passed the data about to be
+      consumed; its return value will be appended to `olist`.
+    - `err`: Failure/error flag. When unable to successfully parse the
+      input `err=None` will return a failure and anything else will raise
+      an error with the that value in the error message/exception.
+
 '''
 
 class PState:
@@ -10,19 +34,20 @@ class PState:
         - A `list` `olist` of fragments of parser-dependent type (usually
           `bytes` or `str`) that when joined together are the output of
           the parser.
-
-        Parsing functions always take a `PState` as the first parameter.
-        They may update `pos` and/or append to `olist` if successful.
+        - An optional `Charset` for translating between Unicode and
+          native-encoded characters, for those parser functions that
+          need to do this.
 
         To enhance modularity and avoid name conflicts, this class does
         not include any parsing functions, just basic handling of
         state and the ability to raise errors.
     '''
 
-    def __init__(self, input):
+    def __init__(self, input, charset=None):
         self.input = input
         self.pos = 0
         self.olist = []
+        self.charset = charset
 
     def finished(self):
         return self.pos >= len(self.input)
@@ -67,21 +92,22 @@ def peek(p):
     else:
         return p.input[p.pos]
 
-def byte(p, *, genf=None, eof='unexpected EOF'):
+def byte(p, *, genf=None, err='unexpected end of input'):
     ''' Return the next item in the input sequence, and advance the parse
         position by 1. Despite the name, the return type is determined by
         the underlying sequence (`int` for `bytes`, `str` for `str`).
 
-        If `eof` is `None`, `None` will be returned on EOF, otherwise a
-        `ParseError` will be raised with `eof` as the message.
+        This function can fail only when there is no further input. If
+        `err` is `None`, `None` will be returned in this case, otherwise a
+        `ParseError` will be raised with `err` as the message.
 
         By default, no output is generated. If `genf` is given the item
         read will be passed to that function and the returned value will be
         appended to the output.
     '''
     if p.finished():
-        if eof is None: return None
-        p.error(eof)
+        if err is None: return None
+        p.error(err)
     x = p.input[p.pos]
     p.pos += 1
     if genf is not None:

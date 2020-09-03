@@ -27,10 +27,10 @@ def test_peek():
 
 def test_byte_noargs():
     p = PState('hi')
-    assert ('h', 'i', None) == (byte(p), byte(p), byte(p, eof=None))
+    assert ('h', 'i', None) == (byte(p), byte(p), byte(p, err=None))
     with pytest.raises(p.ParseError) as ex:
         byte(p)
-    assert ex.match('unexpected EOF')
+    assert ex.match('unexpected end of input')
 
 def test_byte_genf():
     p = PState(b'hi')
