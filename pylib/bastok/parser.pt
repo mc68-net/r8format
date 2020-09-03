@@ -60,14 +60,31 @@ def test_decimal_failure():
     assert ex.match('decimal')
 
 TT_TABLE = (
-    ('foobar',  b'\x10\x20'),
-    ('foo',     b'\x01'),
-    ('bar',     b'\x02'),
-    ('f',       b''),
+    (b'\x02',       'bar',      None),
+    (b'',           'f',        None),
+    (b'\x01',       'foo',      None),
+    (b'\x10\x20',   'foobar',   None),
 )
 
+def test_toksort_0_1():
+    assert (
+        (b'\x10\x20',   'foobar',   ),
+        (b'\x02',       'bar'       ),
+        (b'\x01',       'foo'       ),
+        (b'',           'f'         ),
+    ) == toksort(TT_TABLE)
+
+def test_toksort_1_0():
+    assert (
+        ('foobar',  b'\x10\x20'),
+        ('bar',     b'\x02'),
+        ('foo',     b'\x01'),
+        ('f',       b''),
+    ) == toksort(TT_TABLE, 1, 0)
+
 def test_toktrans():
-    def tt(**kw): return toktrans(p, TT_TABLE, **kw)
+    toktab = toksort(TT_TABLE, 1, 0)
+    def tt(**kw): return toktrans(p, toktab, **kw)
     p = PState('ZfoofoobarbarffZ')
 
     assert None is tt(); byte(p)

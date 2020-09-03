@@ -113,6 +113,24 @@ def decimal(p, err=None):
         c = byte(p); s = s + c
     return int(s)
 
+#sorted([ (kw,tok) for tok,kw in TOKENS ],
+#       key = lambda t: len(t[0]),
+#       reverse = True)
+
+def toksort(toktab, field0=0, field1=1):
+    ''' Given a sequence of tuples `toktab`, return a new sequence of
+        pairs consisting of index `field0` followed by index `field1`
+        of each input tuple, sorted by length of the `field0` entry.
+
+        Regardless of the type of the input sequence and its tuples,
+        a `tuple` of `tuple` is always returned.
+
+        This is used to build a token table for use with `toktrans()`
+        that matches longer prefixes before shorter.
+    '''
+    res = [ (f[field0], f[field1]) for f in toktab ]
+    return tuple(sorted(res, key=lambda t: len(t[0]), reverse=True))
+
 def toktrans(p, toktab):
     ''' Given a translation table `toktab` of *(x,y)* pairs, try to match
         each *x* in turn against the input at the current parse position.
