@@ -1,0 +1,35 @@
+from    bastok.charset  import *
+from    re  import escape
+import  pytest
+
+####################################################################
+#   Charset
+
+def test_charset():
+    ' This coverage is currently provided by msxchars.test_charmap. '
+
+####################################################################
+#   UTCharset
+
+@pytest.mark.parametrize('n, u', [
+    (0x00, '\uF000'), (0x17, '\uF017'), (0xFF, '\uF0FF'),
+])
+def test_UTCharset_good(n, u):
+    uc = UTCharset()
+    assert (n, u) == (uc.native(u), uc.trans(n))
+
+def test_UTCharset_trans_err():
+    uc = UTCharset()
+    AE = pytest.raises(AssertionError)
+
+    with AE as ex: uc.trans(-1)
+    assert ex.match('-0x1')
+
+    with AE as ex: uc.trans(0x100)
+    assert ex.match('0x100')
+
+@pytest.mark.parametrize('u', [' ', '~', '\uEFFF', '\uF100', '\uF000\uF000' ])
+def test_UTCharset_native_err(u):
+    uc = UTCharset()
+    with pytest.raises(AssertionError) as ex: uc.native(u)
+    assert ex.match(escape(repr(u)))
