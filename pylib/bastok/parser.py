@@ -113,10 +113,6 @@ def decimal(p, err=None):
         c = byte(p); s = s + c
     return int(s)
 
-#sorted([ (kw,tok) for tok,kw in TOKENS ],
-#       key = lambda t: len(t[0]),
-#       reverse = True)
-
 def toksort(toktab, field0=0, field1=1):
     ''' Given a sequence of tuples `toktab`, return a new sequence of
         pairs consisting of index `field0` followed by index `field1`

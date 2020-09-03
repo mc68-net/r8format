@@ -10,11 +10,10 @@ charmap = None # XXX
 def test_tokline(lineno, tokens, line):
     assert (lineno, tokens) == tokline(charmap, line)
 
-@pytest.mark.xfail(strict=True) # XXX
 def test_tokenize():
     inlines = [ "10 REM",      "20 PRINT", ]
     tlines  = ( (10, b'\x8F'), (20, b'\x91') )
-    assert tlines == tokenize(charmap, inlines)
+    assert tlines == tuple(tokenize(charmap, inlines).lines())
 
 def test_tokenize_duplicate_lines():
     pass # XXX
