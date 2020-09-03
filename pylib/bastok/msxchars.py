@@ -1,3 +1,5 @@
+from    bastok.charset  import *
+
 __all__ = [ 'Charset', 'CHARMAP' ]
 
 ####################################################################
@@ -36,32 +38,6 @@ C7F = '\u25B3'  # △ WHITE UP-POINTING TRIANGLE (dg:uT)
 C90 = '\u280F'  # ⠏ DOTS-1234 (sd:b4)
 CA0 = '\u2817'  # ⠗ DOTS-1235 (sd:b5)
 CFE = '\u2827'  # ⠧ DOTS-1236 (sd:b6)
-
-####################################################################
-
-def chrsub(codechars, replacement):
-    ''' Replace a code-character mapping in a list of such mappings.
-
-        `codechars` is a sequence of (`int`,`str`) pairs, each a native
-        code point and its associated Unicode character, and `replacement`
-        a single pair to replace (at the same position) the pair in
-        `codechars` with a matching code point. A new sequence with that
-        code pont replaced is returned.
-
-        A `LookupError` will be raised if the replacement code point
-        is not found in `codechars`.
-    '''
-    replaced = False
-    ret = []
-    for mapping in codechars:
-        if mapping[0] == replacement[0]:
-            ret.append(replacement)
-            replaced = True
-        else:
-            ret.append(mapping)
-    if not replaced:
-        raise LookupError('code point {} not replaced'.format(replacement))
-    return tuple(ret)
 
 ####################################################################
 #   ASCII characters
@@ -145,80 +121,7 @@ C_JA = tuple(zip(range(0x00, 0x20), LO_ja)) \
      + ()
 
 ####################################################################
-#   Charset classes
-
-class Charset:
-    ''' A mapping between a native character set, encoded as single
-        bytes from 0x00 through 0xFF, and an arbitrary set of
-        Unicode characters (1-character `str`s).
-    '''
-
-    def __init__(self, description, *maps):
-        self.description = description
-        self._nu = {}   # native (int) to Unicode (str) map
-        self._un = {}   # Unicode (str) to native (int) map
-        for m in maps: self.setchars(m)
-        nlen = len(self._nu); ulen = len(self._un)
-        if not (nlen == ulen == 0x100):
-            raise RuntimeError(
-                'Incomplete Charset: n=0x{:02X} ({}) u=0x{:02X} ({}) chars'
-                .format(nlen, nlen, ulen, ulen))
-
-    def _ncheck(self, n):
-        ' Raise error if `n` is not a valid native char code. '
-        if n < 0 or n > 0xFF:
-            raise ValueError('Bad native char code {:02X}'.format(n))
-
-    def _ucheck(self, u):
-        ' Raise error if `u` is not a single Unicode character. '
-        if not isinstance(u, str):
-            raise ValueError('Unicode char not a str: {}'.format(repr(u)))
-        if len(u) != 1:
-            raise ValueError('str not length 1: {}'.format(repr(u)))
-
-    def setchars(self, map):
-        ''' Set character mappings in this Charset. `map` is a collection
-            of pairs of (native character code, 1-char (unicode) string).
-
-            This quietly overwrites existing values in order to make it
-            easy to create custom charsets by modifying the standard ones.
-        '''
-        for n, u in map:
-            self._ncheck(n); self._ucheck(u)
-            #   When debugging you may uncomment this to help find duplicates.
-            #if u in self._un: raise RuntimeError('Dup ' + repr(u))
-            self._nu[n] = u
-            self._un[u] = n
-
-    def trans(self, n):
-        ''' Return the translated version (a Unicode `str`) of native code
-            point `n` (an `int` from 0x00 through 0xFF).
-
-            Note that native points 0x00 through 0x1F are encoded as [0x01,
-            0x40+`n`] in MSX BASIC; this takes the code point itself, not
-            the encoded version of it.
-        '''
-        self._ncheck(n)
-        return self._nu[n]
-
-    def native(self, u):
-        ''' Translate Unicode character `u`, a single-character `str`, to a
-            `bytes` containing the MSX-BASIC encoding of that character.
-            The result will be a single byte from 0x40 through 0xFF or two
-            bytes, 0x01 followed by an "extended" character code from 0x40
-            through 0x5F.
-        '''
-        self._ucheck(u)
-        return bytes([self._un[u]])
-
-class Unimplemented:
-    def __init__(self, name, description):
-        self.name = name
-        self.description = description + ' (not yet implemented)'
-    def unimpl(self):
-        raise NotImplementedError("charset '{}' ".format(self.name))
-    def trans(self, n):            self.unimpl()
-    def native(self, u):        self.unimpl()
+#   Dictionary of all standard charset/Unicode mappings
 
 CHARMAP = {
     'int':  #Charset("International (North America/Europe), C_INT), # incomplete
