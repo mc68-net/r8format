@@ -5,27 +5,14 @@ from    site  import addsitedir
 BASEDIR = dirname(dirname(abspath(__file__)))
 if __name__ == '__main__': addsitedir(join(BASEDIR, 'pylib'))
 
-from    argparse  import ArgumentParser
-from    functools  import partial
-from    io  import TextIOWrapper
-from    sys  import argv, stdin, stdout
+from    argparse  import ArgumentParser, FileType
+from    sys  import argv, stdin, stdout, stderr
 
 from    bastok.blines  import blines
 from    bastok.msx2re  import tokenize
 from    bastok.msxchars import CHARMAP
 
 ####################################################################
-
-def openarg(**kwargs):
-    ''' Return a function that, given a `str` filename, returns
-        a function that will call `open()` on that filename with
-        the additional `kwargs`. This can be passed as the ``type``
-        parameter to `ArgumentParser.add_argument()` to produce
-        a function callable with ``with f as file_handle:``.
-    '''
-    def opener(filename):
-        return partial(open, filename, **kwargs)
-    return opener
 
 def parseargs():
     p = ArgumentParser(description='MSX-BASIC tokenizer')
@@ -35,14 +22,17 @@ def parseargs():
         help='MSX charset: ja (default), int, ar, ru, etc.')
     arg('-e', '--unexpand', action='store_true',
         help='remove spaces to reduce code size')
-    arg('input', nargs='?', type=openarg(encoding='UTF-8'),
-        default=lambda: TextIOWrapper(stdin.buffer, encoding='UTF-8'),
-        help='input file (default stdin)')
-    arg('output', nargs='?', type=openarg(mode='wb'),
-        default=lambda: stdout.buffer,
-        help='output file (default stdout)')
+    arg('input', type=FileType(encoding='UTF-8'),
+        help='input file, always UTF-8 (`-` for stdin)')
+    arg('output', nargs='?', type=FileType('wb'), default=stdout.buffer,
+        help='output file, always binary (default stdout)')
 
-    return p.parse_args()
+    args = p.parse_args()
+    if hasattr(args.output, 'buffer'):
+        #   If the argument was '-', FileType('wb') ignores the 'b' when
+        #   wrapping stdout. Fix that by grabbing the underlying binary writer.
+        args.output = args.output.buffer
+    return args
 
 def main(args):
     charmap = CHARMAP.get(args.charset)
@@ -53,11 +43,8 @@ def main(args):
                for k, v in sorted(CHARMAP.items()) ]
             )
 
-    with args.input() as f:
-        tlines = tokenize(charmap, blines(f.readlines()))
-    with args.output() as f:
-        tlines.write_to(f)
-    # If stdin and/or stdout were used, they are now closed.
+    tlines = tokenize(charmap, blines(args.input.readlines()))
+    tlines.write_to(args.output)
 
 if __name__ == '__main__':
     main(parseargs())
