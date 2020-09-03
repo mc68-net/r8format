@@ -6,7 +6,9 @@ BASEDIR = dirname(dirname(abspath(__file__)))
 if __name__ == '__main__': addsitedir(join(BASEDIR, 'pylib'))
 
 from    argparse  import ArgumentParser
-from    sys  import argv
+from    functools  import partial
+from    io  import TextIOWrapper
+from    sys  import argv, stdin, stdout
 
 from    bastok.blines  import blines
 from    bastok.msx2re  import tokenize
@@ -22,8 +24,10 @@ def parseargs():
         help='MSX charset: ja (default), int, ar, ru, etc.')
     arg('-e', '--unexpand', action='store_true',
         help='remove spaces to reduce code size')
-    arg('input', help='input file (required)')
-    arg('output', help='output file (required)')
+    arg('input', nargs='?',
+        help='input file (default stdin)')
+    arg('output', nargs='?',
+        help='output file (default stdout)')
 
     return p.parse_args()
 
@@ -36,10 +40,19 @@ def main(args):
                for k, v in sorted(CHARMAP.items()) ]
             )
 
-    with open(args.input, encoding='UTF-8') as f:
+    if args.input is None:
+        open_input = lambda: TextIOWrapper(stdin.buffer, encoding='UTF-8')
+    else:
+        open_input = partial(open, args.input, encoding='UTF-8')
+    with open_input() as f:
         tlines = tokenize(charmap, blines(f.readlines()))
-    with open(args.output, 'wb') as f:
+    # stdin is now closed if that's what we used
+
+    open_output = lambda: stdout.buffer if args.output is None \
+             else partial(open, args.output, 'wb')
+    with open_output() as f:
         tlines.write_to(f)
+    # stdout is now closed if that's what we used
 
 if __name__ == '__main__':
     main(parseargs())
