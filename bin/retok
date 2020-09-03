@@ -16,6 +16,17 @@ from    bastok.msxchars import CHARMAP
 
 ####################################################################
 
+def openarg(**kwargs):
+    ''' Return a function that, given a `str` filename, returns
+        a function that will call `open()` on that filename with
+        the additional `kwargs`. This can be passed as the ``type``
+        parameter to `ArgumentParser.add_argument()` to produce
+        a function callable with ``with f as file_handle:``.
+    '''
+    def opener(filename):
+        return partial(open, filename, **kwargs)
+    return opener
+
 def parseargs():
     p = ArgumentParser(description='MSX-BASIC tokenizer')
     arg = p.add_argument
@@ -24,9 +35,11 @@ def parseargs():
         help='MSX charset: ja (default), int, ar, ru, etc.')
     arg('-e', '--unexpand', action='store_true',
         help='remove spaces to reduce code size')
-    arg('input', nargs='?',
+    arg('input', nargs='?', type=openarg(encoding='UTF-8'),
+        default=lambda: TextIOWrapper(stdin.buffer, encoding='UTF-8'),
         help='input file (default stdin)')
-    arg('output', nargs='?',
+    arg('output', nargs='?', type=openarg(mode='wb'),
+        default=lambda: stdout.buffer,
         help='output file (default stdout)')
 
     return p.parse_args()
@@ -40,19 +53,11 @@ def main(args):
                for k, v in sorted(CHARMAP.items()) ]
             )
 
-    if args.input is None:
-        open_input = lambda: TextIOWrapper(stdin.buffer, encoding='UTF-8')
-    else:
-        open_input = partial(open, args.input, encoding='UTF-8')
-    with open_input() as f:
+    with args.input() as f:
         tlines = tokenize(charmap, blines(f.readlines()))
-    # stdin is now closed if that's what we used
-
-    open_output = lambda: stdout.buffer if args.output is None \
-             else partial(open, args.output, 'wb')
-    with open_output() as f:
+    with args.output() as f:
         tlines.write_to(f)
-    # stdout is now closed if that's what we used
+    # If stdin and/or stdout were used, they are now closed.
 
 if __name__ == '__main__':
     main(parseargs())
