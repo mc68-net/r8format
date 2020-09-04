@@ -21,7 +21,8 @@ def tokline(charmap, line):
             if t == 'REM': chars(p) # consume/generate remainder of line
             continue
 
-        #   XXX translate here
+        if string_literal(p, err=None) is not None: continue
+
         byte(p, genf=lambda c: bytes([ord(c)]))
 
     return (lineno, p.output())
@@ -61,9 +62,29 @@ def char(p, err='unexpected end of input'):
         encoded = bytes([0x01, n+0x40])
     else:
         encoded = bytes([n])
-    p.olist.append(encoded)
+    generate(p, encoded)
     return c
 
 def chars(p):
     ' Do char() until EOF. '
     while char(p, err=None): pass
+
+def string_literal(p, err='unexpected input'):
+    ''' Consume a string literal starting with `"` and ending with the next
+        `"` or end of input, generating its Parser.charset conversion and
+        MSX-BASIC encoding. The intial and final quotes are not
+        charset-converted.
+
+        Return the consumed input string, including quotes.
+    '''
+    DQUOTE = '"'
+    s = ''
+    if peek(p) != DQUOTE:
+        if err is None: return None
+        raise p.ParseError('{}: {}'.format(err, repr(peek(p))))
+    byte(p); generate(p, b'"'); s += DQUOTE
+    while True:
+        c = peek(p)
+        if c == None: return s
+        if c == DQUOTE: byte(p); generate(p, b'"'); return s + DQUOTE
+        s += char(p)

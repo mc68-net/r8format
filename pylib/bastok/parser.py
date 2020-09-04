@@ -83,6 +83,10 @@ class PState:
 #
 #   These will operate on any state conforming to the interface above.
 
+def generate(p, x):
+    ' Append an output item to `PState.olist`. '
+    p.olist.append(x)
+
 def peek(p):
     ''' Return the next item in the input sequence or `None` if there is
         no input left. The parse position is not moved.
@@ -111,7 +115,7 @@ def byte(p, *, genf=None, err='unexpected end of input'):
     x = p.input[p.pos]
     p.pos += 1
     if genf is not None:
-        p.olist.append(genf(x))
+        generate(p, genf(x))
     return x
 
 def spaces(p):
@@ -170,6 +174,6 @@ def toktrans(p, toktab):
     for x, y in toktab:
         if p.input[p.pos:].startswith(x):
             p.pos += len(x)
-            p.olist.append(y)
+            generate(p, y)
             return x
     return None

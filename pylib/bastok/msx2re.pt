@@ -3,6 +3,10 @@ from    bastok.msxchars  import UTCharset, CHARMAP
 from    re  import escape
 import  pytest
 
+#   When we don't need to have distinguishable Unicode and native
+#   codepoints, this is easier to use.
+ja_charmap = CHARMAP['ja']
+
 ####################################################################
 
 @pytest.mark.parametrize('s, b', [
@@ -35,21 +39,47 @@ def test_chars():
     chars(p)
     assert b'abc' == p.output()
 
+@pytest.mark.parametrize('s, b', [
+    ('""',          b'""'),
+    ('""x',         b'""'),
+    ('"',           b'"'),
+    ('"xyz',        b'"xyz'),
+    ('"Aaあ年".',   b'"Aa\x91\x01\x48"'),
+    ('"Aaあ年',     b'"Aa\x91\x01\x48'),
+])
+def test_string_literal_success(s, b):
+    p = PState(s, ja_charmap)
+    string_literal(p)
+    assert b == p.output()
+
+def test_string_literal_error():
+    p = PState('a')
+    with pytest.raises(p.ParseError) as ex:
+        string_literal(p)
+    assert ex.match("unexpected input: 'a'")
+    assert None is string_literal(p, err=None)
+
 ####################################################################
 
-charmap = CHARMAP['ja']
+
+#   XXX what should we be doing about lower case in program text?
+#   Maybe add an `insensitive` property to PState and have parse functions
+#   use that to determine if they're "liberal" in what they accept, e.g.,
+#   toktrans() will do a case-insensitive comparision on strings.
 
 @pytest.mark.parametrize('lineno, tokens, line', [
     ( 10, b'\x8F',                  '10 REM'),
     ( 20, b'\x91: \x8Fark=:=',      '20 PRINT: REMark=:='),
+    ( 30, b'A$\xEF"a"\xF1"\x91"',   '30 A$="a"+"あ"'),
+    #  41 24 ef 22 61 22 f1 22 91 22
 ])
 def test_tokline(lineno, tokens, line):
-    assert (lineno, tokens) == tokline(charmap, line)
+    assert (lineno, tokens) == tokline(ja_charmap, line)
 
 def test_tokenize():
     inlines = [ "10 REM",      "20 PRINT", ]
     tlines  = ( (10, b'\x8F'), (20, b'\x91') )
-    assert tlines == tuple(tokenize(charmap, inlines).lines())
+    assert tlines == tuple(tokenize(ja_charmap, inlines).lines())
 
 def test_tokenize_duplicate_lines():
     pass # XXX
