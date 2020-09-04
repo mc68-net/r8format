@@ -10,12 +10,16 @@
 '''
 
 class Charset:
-    ''' A mapping between a native character set, encoded as single
-        bytes from 0x00 through 0xFF, and an arbitrary set of
-        Unicode characters (1-character `str`s).
+    ''' A mapping between a native character set, encoded as integers from
+        0x00 through 0xFF, and an arbitrary set of Unicode characters
+        (1-character `str`s).
     '''
 
     def __init__(self, description, *maps):
+        ''' Create a Charset with human-readable description `description`,
+            passing each map in `maps` to `setchars()` and then confirming
+            that the charset maps all native codepoints 0x00 through 0xFF.
+        '''
         self.description = description
         self._nu = {}   # native (int) to Unicode (str) map
         self._un = {}   # Unicode (str) to native (int) map
@@ -40,7 +44,7 @@ class Charset:
 
     def setchars(self, map):
         ''' Set character mappings in this Charset. `map` is a collection
-            of pairs of (native character code, 1-char (unicode) string).
+            of pairs (`int` native codepoint, `str` Unicode character).
 
             This quietly overwrites existing values in order to make it
             easy to create custom charsets by modifying the standard ones.
@@ -65,13 +69,10 @@ class Charset:
 
     def native(self, u):
         ''' Translate Unicode character `u`, a single-character `str`, to a
-            `bytes` containing the MSX-BASIC encoding of that character.
-            The result will be a single byte from 0x40 through 0xFF or two
-            bytes, 0x01 followed by an "extended" character code from 0x40
-            through 0x5F.
+            an `int` native charset code point.
         '''
         self._ucheck(u)
-        return bytes([self._un[u]])
+        return self._un[u]
 
 ####################################################################
 #   Generic charsets for special purposes
