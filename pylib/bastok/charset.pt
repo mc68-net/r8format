@@ -6,7 +6,15 @@ import  pytest
 #   Charset
 
 def test_charset():
-    ' This coverage is currently provided by msxchars.test_charmap. '
+    cs = Charset('test_charset',
+        [ (n, chr(n)) for n in range(0, 0x100) ])
+    for i in range(0, 0x100):
+        assert (chr(i), i) == (cs.trans(i), cs.native(chr(i)))
+
+    cs.setchars([ (0x40, '\u0020'), (0x20, '\u0040') ])
+    assert ('\u0020', '\u0040', 0x20, 0x40) \
+        == (cs.trans(0x40), cs.trans(0x20),
+                cs.native('\u0040'), cs.native('\u0020'))
 
 ####################################################################
 #   UTCharset
