@@ -41,3 +41,13 @@ def test_UTCharset_native_err(u):
     uc = UTCharset()
     with pytest.raises(AssertionError) as ex: uc.native(u)
     assert ex.match(escape(repr(u)))
+
+def test_UTCharset_offset():
+    uc = UTCharset(0)
+
+    assert (0x00, '\u0000') == (uc.native('\u0000'), uc.trans(0x00))
+
+    AE = pytest.raises(AssertionError)
+    with AE: uc.native('\u0100')
+    with AE: uc.trans(-1)
+    with AE: uc.trans(0x100)

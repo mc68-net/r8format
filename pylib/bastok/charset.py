@@ -122,13 +122,17 @@ class UTCharset:
         that helps ensure that the CUT is using `str` where it should be.
     '''
 
+    def __init__(self, offset=0xF000):
+        self.offset = offset
+
     def trans(self, n):
         assert n >= 0 and n < 0x100, hex(n)
-        return chr(0xF000+n)
+        return chr(self.offset+n)
 
     def native(self, u):
-        assert len(u) == 1 and u >= chr(0xF000) and u < chr(0xF100), repr(u)
-        return ord(u) - 0xF000
+        min, max = chr(self.offset), chr(self.offset + 0xFF)
+        assert len(u) == 1 and u >= min and u <= max, repr(u)
+        return ord(u) - self.offset
 
 
 ####################################################################
