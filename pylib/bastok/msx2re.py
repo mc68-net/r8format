@@ -18,7 +18,7 @@ def tokline(charmap, line):
         t = toktrans(p, ENCTOKENS)
         if t is not None:
             #   Only a few tokens have an argument that needs special parsing.
-            if t == 'REM': rem(p)
+            if t == 'REM': chars(p) # consume/generate remainder of line
             continue
 
         #   XXX translate here
@@ -36,15 +36,34 @@ def tokenize(charmap, lines):
 
 class EncodingError(ValueError): pass
 
-def char(p):
+def char(p, err='unexpected end of input'):
     ''' Consume a Unicode character from the input, translate it to an
-        native character using the `PState` `p`'s `charmap`, generate
-        it to the output using MSX encoding, and return `None`. (XXX
-        Because we don't know what makes sense to return yet.)
+        native character using the `PState` `p`'s `charmap`, generate the
+        native character to the output using MSX encoding, and return the
+        Unicode character read.
+
+        If no character is available from the input a `ParseError` with
+        message `err` will be raised. `err` may be set to `None` to instead
+        fail by returning `None`.
 
         MSX code points are encoded as follows:
         - 0x20-0x7E, 0x80-0xFF: One byte containing the code point.
-        - 0x00-0x1F: A 0x01 byte followed a a byte containing the
-          code point plus 0x40.
+        - 0x00-0x1F: 0x01 byte followed a byte with the code point + 0x40.
         - 0x7F: Cannot be encoded; raises `EncodingError`.
     '''
+    c = byte(p, err=err)
+    if c is None: return None
+
+    n = p.charset.native(c)
+    if n == 0x7F:
+        raise EncodingError('cannot encode char 0x7F')
+    if n < 0x20:
+        encoded = bytes([0x01, n+0x40])
+    else:
+        encoded = bytes([n])
+    p.olist.append(encoded)
+    return c
+
+def chars(p):
+    ' Do char() until EOF. '
+    while char(p, err=None): pass

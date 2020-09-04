@@ -1,11 +1,47 @@
 from    bastok.msx2re  import *
+from    bastok.msxchars  import UTCharset, CHARMAP
+from    re  import escape
 import  pytest
 
-charmap = None # XXX
+####################################################################
+
+@pytest.mark.parametrize('s, b', [
+    ('\uF000', b'\x01\x40'),
+    ('\uF01F', b'\x01\x5F'),
+    ('\uF020', b'\x20'),
+    ('\uF080', b'\x80'),
+    ('\uF0FF', b'\xFF'),
+])
+def test_char_good(s, b):
+    p = PState(s, UTCharset())
+    char(p)
+    assert b == p.output()
+
+def test_char_encodingerror():
+    p = PState('\uF07F', UTCharset())
+    with pytest.raises(EncodingError) as ex:
+        char(p)
+    assert ex.match('0x7F')
+
+def test_char_eoi():
+    p = PState('', None)
+    with pytest.raises(p.ParseError) as ex:
+        char(p)
+    assert ex.match('unexpected end of input')
+    assert None is char(p, err=None)
+
+def test_chars():
+    p = PState('bcd', UTCharset(1))
+    chars(p)
+    assert b'abc' == p.output()
+
+####################################################################
+
+charmap = CHARMAP['ja']
 
 @pytest.mark.parametrize('lineno, tokens, line', [
     ( 10, b'\x8F',                  '10 REM'),
-    ( 20, b'\x91: \x8Fark=:=',      '30 PRINT: REMark=:='),
+    ( 20, b'\x91: \x8Fark=:=',      '20 PRINT: REMark=:='),
 ])
 def test_tokline(lineno, tokens, line):
     assert (lineno, tokens) == tokline(charmap, line)
