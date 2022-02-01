@@ -1,3 +1,23 @@
 #!/usr/bin/env bash
 
-. ./activate -q
+die() {
+    local exitcode="$1"; shift
+    [[ -z $1 ]] || echo 1>&2 "$@"
+    exit $exitcode
+}
+
+#   Unit Tests
+$b8tool pytest -- "$@"
+
+#   Functional tests are run only if we ran all unit tests. (This is not
+#   the best way to avoid running them when unwanted, but it's a convenient
+#   hack for the moment.)
+[[ ${#@} = 0 ]] && {
+    #   The cmtconv tests are very noisy, so we just dump the output into a
+    #   file for the moment until we clean them up and make them quieter.
+    #   The log file must not be in the subdir because the subdir is
+    #   cleared by the test script before it runs the tests. Also note that
+    #   the stdout/err order is not preserved here.
+    ./b8tool/pylib/cmtconv/Test >"$BUILDDIR/cmtconv-test.log" 2>&1 \
+        || die $? "FAILED: cmtconv/Test (exitcode=$?)"
+} || true
