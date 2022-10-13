@@ -134,9 +134,6 @@ Caveats and Todo Items
   These should not be difficult to add for someone familiar with this
   charset and its multilingual use.
 
-* This currently doesn't handle `'` as an (inexact) synonym for `REM`.
-  (It's tokenized differently, as `3A 8F E6`.)
-
 * It might be reasonable to be able to decode native characters, especially
   control sequences, to a multi-character Unicode sequence, e.g., 0x00 to
   `‹00›` and 0x08 to `‹H›` (those characters are are U+2039 and U+203A,
