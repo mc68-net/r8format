@@ -5,6 +5,7 @@ from    struct  import unpack
 
 TOKENS = (
     (b':\xA1',      'ELSE',         ),
+    (b':\x8F\xE6',  "'",            ),  # alternative form of REM
     (b'\x81',       'END',          ),
     (b'\x82',       'FOR',          ),
     (b'\x83',       'NEXT',         ),
@@ -205,6 +206,8 @@ COMMA   = ord(',')
 COLON   = ord(':')
 T_DATA  = tokbytes('DATA')[0]
 T_REM   = tokbytes('REM')[0]
+T_QREM1 = tokbytes("'")[1]      # tokens for the single-quote alternative
+T_QREM2 = tokbytes("'")[2]      #   form of REM, without leading ':'
 T_ELSE1 = tokbytes('ELSE')[1]   # without leading ':'
 T_EQ    = tokbytes('=')[0]
 MAX_LINENO = 65529
@@ -458,15 +461,23 @@ class Detokenizer:
             self.char()
 
     def colon(self):
+        ''' Colon has some special cases when followed by a particular
+            tokenization.
+        '''
         b = self.byte()
         if b != COLON: self.terror()
-        if self.peek() != T_ELSE1:
-            self.expandnl(); self.genasc(b); self.expandsp()
-        else:
-            #   ELSE is a special case; it's always encoded as colon
-            #   followed by the ELSE token
+        if self.peek() == T_ELSE1:
+            #   ELSE is always encoded as colon followed by the ELSE token
             self.byte()
             self.expandsp(); self.genasc('ELSE'); self.expandsp()
+        elif self.peek() == T_QREM1:
+            #   Single-quote alternative form of REM
+            self.byte(); self.byte(T_QREM2)
+            self.genasc("'")
+            self.remcontents()
+        else:
+            #   It's just a colon.
+            self.expandnl(); self.genasc(b); self.expandsp()
 
     def int16(self):
         ''' Consume two bytes and return them as an unsigned `int`. '''

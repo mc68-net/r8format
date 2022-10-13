@@ -288,9 +288,10 @@ def test_data(t, s):
     (b'A\xEF\x1F\x43\x12\x30\x00\x00\x00\x00\x00',  'A=123#'),
     #   ELSE is a weird special case
     (b'\x3A\xA1',        'ELSE'),
-    #   Quoted strings, REM
+    #   Quoted strings, REM, single-quote alterantive for REM
     (b'\x91"\x91":\x91"\x91',       'PRINT"\uF091":PRINT"\uF091'),
     (b'\x8F\x91',                   'REM\uF091'),
+    (b':\x8F\xE6\x91',              "'\uF091"),
     #   DATA
     (b'\x84\x84,"\x84"\x84:\x84',   'DATA\uF084,"\uF084"\uF084:DATA'),
     #   Multi-byte tokens
