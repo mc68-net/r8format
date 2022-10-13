@@ -4,7 +4,7 @@ from    struct  import unpack
 #   https://github.com/Konamiman/MSX2-Technical-Handbook/blob/master/md/Chapter2.md/#table-220--list-of-intermediate-codes
 
 TOKENS = (
-    (b'\x3A\xA1',   'ELSE',         ),
+    (b':\xA1',      'ELSE',         ),
     (b'\x81',       'END',          ),
     (b'\x82',       'FOR',          ),
     (b'\x83',       'NEXT',         ),
@@ -190,18 +190,23 @@ DETOKENS = sorted(TOKENS, key=lambda t: len(t[0]), reverse=True)
 
 TOKTAB = dict(TOKENS)
 
-def toklastbyte(s):
-    ' Return the last token byte of tokenized keyword `s`. '
-    return [ t for t, k in TOKENS if k == s ][0][-1]
+def tokbytes(s):
+    ' Return the bytes of the token for the given keyword `s`. '
+    bytes_list = [ t for t, k in TOKENS if k == s ]
+    if len(bytes_list) != 1:
+        raise RuntimeError(
+            'Internal token table error: {} has {} entries: {}' \
+            .format(s, len(bytes_list), bytes_list))
+    return bytes_list[0]
 
 SPACE   = ord(' ')
 DQUOTE  = ord('"')
 COMMA   = ord(',')
 COLON   = ord(':')
-T_DATA  = toklastbyte('DATA')
-T_REM   = toklastbyte('REM')
-T_ELSE1 = toklastbyte('ELSE')   # without leading ':'
-T_EQ    = toklastbyte('=')
+T_DATA  = tokbytes('DATA')[0]
+T_REM   = tokbytes('REM')[0]
+T_ELSE1 = tokbytes('ELSE')[1]   # without leading ':'
+T_EQ    = tokbytes('=')[0]
 MAX_LINENO = 65529
 
 class Detokenizer:
