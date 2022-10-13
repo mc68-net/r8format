@@ -395,10 +395,7 @@ class Detokenizer:
                 self.data()
             elif b == T_REM:
                 asc(b, 'REM')
-                #   Consume the remainder of tline and generate its
-                #   charset-converted contents.
-                while self.peek() is not None:
-                    self.char()
+                self.remcontents()
             elif self.token():
                 pass
             else:
@@ -452,6 +449,13 @@ class Detokenizer:
             Raise a ParseError if the input does not match.
         '''
         for b in bs: self.byte(b)
+
+    def remcontents(self):
+        ''' Consume the remainder of tline and generate its
+            charset-converted contents.
+        '''
+        while self.peek() is not None:
+            self.char()
 
     def colon(self):
         b = self.byte()
