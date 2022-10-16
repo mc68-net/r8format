@@ -156,6 +156,9 @@ Caveats and Todo Items
   tokenized version of the program, and "compression" (to remove
   unnecessary spaces, etc.) when tokenizing.
 
+* `DEF USRn` with a number _n_ is currently detokenised with a space before
+  the number, e.g., `DEF USR 3=&HDE00`. This is an aesthetic issue only; it
+  works the same in MSX-BASIC with or without spaces there.
 
 
 <!-------------------------------------------------------------------->
