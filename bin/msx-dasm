@@ -10,7 +10,7 @@
     we pass those non-loaded bytes to the disassembler anyway just in case
     there's anything useful in them.
 
-    BASEDIR/info/ is checked for files with the filename of the input
+    ./info/ is checked for files with the filename of the input
     file and ``.sym`` and ``.block`` extensions; if these exist they
     will be passed to z80dasm
 
@@ -27,8 +27,11 @@ import  sys
 
 BASEDIR = dirname(dirname(abspath(__file__)))
 
-def die(exitcode, *msgparts):
+def warn(*msgparts):
     print(' '.join(msgparts), file=sys.stderr)
+
+def die(exitcode, *msgparts):
+    warn(msgparts)
     exit(exitcode)
 
 def disasm(input, tmpdir):
@@ -52,13 +55,17 @@ def disasm(input, tmpdir):
     dasm.append('-l')
     dasm.extend(['--origin', hex(load_addr)])
 
-    symfile = join(BASEDIR, 'info', basename(input) + '.sym')
+    symfile = join('info', basename(input) + '.sym')
     if exists(symfile):
         dasm.extend(['--sym-input', symfile])
+    else:
+        warn('No symbol info file: {}'.format(symfile))
 
-    blockfile = join(BASEDIR, 'info', basename(input) + '.block')
+    blockfile = join('info', basename(input) + '.block')
     if exists(blockfile):
         dasm.extend(['--block-def', blockfile])
+    else:
+        warn('No block info file: {}'.format(blockfile))
 
     dasm.append(obj)
     run(dasm)
