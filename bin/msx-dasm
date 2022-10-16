@@ -34,10 +34,15 @@ def disasm(input, tmpdir):
         type_byte = fin.read(1)
         if type_byte != b'\xFE':
             die(1, 'Bad type byte', str(type_byte), 'for', input)
-        load_addr = unpack('<H', fin.read(2))[0]
-        fin.read(4)
+        load_addr  = unpack('<H', fin.read(2))[0]
+        end_addr   = unpack('<H', fin.read(2))[0]
+        entry_addr = unpack('<H', fin.read(2))[0]
         with open(obj, 'wb') as fnohdr:
             fnohdr.write(fin.read())
+
+    comment = '; msx-dasm load=${:04X} end=${:04X} entry=${:04X}' \
+        .format(load_addr, end_addr, entry_addr)
+    print(comment, flush=True)      # assumes no `-o` option to z80dasm
 
     dasm = ['z80dasm']
     dasm.append('-l')
