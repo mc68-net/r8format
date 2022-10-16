@@ -6,6 +6,10 @@
     address. The load address will be used as the start point of the
     disassembly.
 
+    Though an MSX machine will not load past the end address in the header,
+    we pass those non-loaded bytes to the disassembler anyway just in case
+    there's anything useful in them.
+
     BASEDIR/info/ is checked for files with the filename of the input
     file and ``.sym`` and ``.block`` extensions; if these exist they
     will be passed to z80dasm
