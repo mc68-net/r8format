@@ -19,6 +19,7 @@
     https://www.tablix.org/~avian/blog/articles/z80dasm/
 '''
 
+from    argparse import ArgumentParser
 from    os.path  import abspath, basename, dirname, exists, join
 from    struct  import unpack
 from    subprocess  import run
@@ -34,13 +35,13 @@ def die(exitcode, *msgparts):
     warn(*msgparts)
     exit(exitcode)
 
-def disasm(input, tmpdir):
+def disasm(args, tmpdir):
     obj = join(tmpdir, 'obj')
 
-    with open(input, 'rb') as fin:
+    with open(args.input, 'rb') as fin:
         type_byte = fin.read(1)
         if type_byte != b'\xFE':
-            die(1, 'Bad type byte', str(type_byte), 'for', input)
+            die(1, 'Bad type byte', str(type_byte), 'for', args.input)
         load_addr  = unpack('<H', fin.read(2))[0]
         end_addr   = unpack('<H', fin.read(2))[0]
         entry_addr = unpack('<H', fin.read(2))[0]
@@ -55,26 +56,36 @@ def disasm(input, tmpdir):
     dasm.append('-l')
     dasm.extend(['--origin', hex(load_addr)])
 
-    symfile = join('info', basename(input) + '.sym')
+    symfile = join('info', basename(args.input) + '.sym')
     if exists(symfile):
         dasm.extend(['--sym-input', symfile])
     else:
         warn('No symbol info file: {}'.format(symfile))
 
-    blockfile = join('info', basename(input) + '.block')
+    blockfile = join('info', basename(args.input) + '.block')
     if exists(blockfile):
         dasm.extend(['--block-def', blockfile])
     else:
         warn('No block info file: {}'.format(blockfile))
 
+    if args.address: dasm.append('-a')
+    if args.source: dasm.append('-t')
     dasm.append(obj)
     run(dasm)
 
 def main():
-    if len(sys.argv) != 2:
-        die(2, 'Argument required')
+    p = ArgumentParser(description=\
+        "Use z80dasm to disassemble an MSX-BASIC 'BLOAD' format file.")
+    a = p.add_argument
+    a('-a', '--address', action='store_true',
+        help='Comment the address for each line')
+    a('-t', '--source', action='store_true',
+        help='Comment the binary data for each line.')
+    a('input', help='input file (required)')
+    args = p.parse_args()
+
     with TemporaryDirectory() as tmpdir:
-        disasm(sys.argv[1], tmpdir)
+        disasm(args, tmpdir)
 
 if __name__ == '__main__':
     main()
