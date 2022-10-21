@@ -31,7 +31,7 @@ def warn(*msgparts):
     print(' '.join(msgparts), file=sys.stderr)
 
 def die(exitcode, *msgparts):
-    warn(msgparts)
+    warn(*msgparts)
     exit(exitcode)
 
 def disasm(input, tmpdir):
