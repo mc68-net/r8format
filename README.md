@@ -116,10 +116,9 @@ Contact the author, Curt Sampson (usually known as 'cjs') if you have
 questions, comments, feature requests, or just want help using this. The
 following are good places to get in touch, more or less in order of
 preference:
-- The "The MSX Channel" server on [Discord], in the `#development` group.
-- `cjs_cynic` on [Telegram]
-- `0cjs` on [Gitter]. (A Gitter group could be set up for this, if there's
-  any demand.)
+- The "The MSX2 Channel" server on [Discord], in the `#development` group.
+  (Feel free to start a thread if the question is not trivially answered.)
+- [`@cjs_cynic`] on [Telegram]
 - `cjs#6537` on Discord.
 - Email to <cjs@cynic.net>, but a reply from that might take days.
 
@@ -168,8 +167,8 @@ Caveats and Todo Items
 [msx-basic]: https://en.wikipedia.org/wiki/MSX_BASIC
 [msx]: https://en.wikipedia.org/wiki/MSX
 
+[`@cjs_cynic`]: https://t.me/cjs_cynic
 [discord]: https://discord.com
-[gitter]: https://gitter.im
 [telegram]: https://telegram.org
 
 [brackets]: https://en.wikipedia.org/wiki/Bracket#Encoding_in_digital_media
