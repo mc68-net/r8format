@@ -36,6 +36,17 @@ MSXCP   = MSXCodePoint()
 
 ####################################################################
 
+def test_tokbytes():
+    ''' XXX This should probably be genericised for use with other token
+        sets.
+        XXX This does not currently test that it correctly detects
+        multiple entries.
+    '''
+    assert b'\x82'                          == tokbytes('FOR')
+    assert b'\xFF\x85' b'ER' b'\xFF\x94'    == tokbytes('INTERVAL')
+    with pytest.raises(LookupError):
+        tokbytes('NOT FOUND')
+
 def test_toktab():
     assert 'LEFT$' == TOKTAB[b'\xFF\x81']
 

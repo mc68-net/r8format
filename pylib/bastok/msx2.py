@@ -192,10 +192,12 @@ DETOKENS = sorted(TOKENS, key=lambda t: len(t[0]), reverse=True)
 TOKTAB = dict(TOKENS)
 
 def tokbytes(s):
-    ' Return the bytes of the token for the given keyword `s`. '
+    ''' Return the bytes (1 or more) of the token for the given keyword `s`.
+        The token must exist in the table or LookupError will be thrown.
+    '''
     bytes_list = [ t for t, k in TOKENS if k == s ]
     if len(bytes_list) != 1:
-        raise RuntimeError(
+        raise LookupError(
             'Internal token table error: {} has {} entries: {}' \
             .format(s, len(bytes_list), bytes_list))
     return bytes_list[0]
