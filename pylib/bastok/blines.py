@@ -27,7 +27,7 @@ def blines(plines, commentchar='‖'):
             bline = []                      # clear current BASIC line
         cpos = pline.find(commentchar)      # non-BASIC comment?
         if cpos != -1:
-            pline = pline[0:cpos].rstrip(' ')# remove it
+            pline = pline[0:cpos].rstrip()  # remove it
         if pline == '': continue            # blank lines do not insert space
         bline.append(pline)
 
