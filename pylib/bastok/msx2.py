@@ -216,8 +216,11 @@ MAX_LINENO = 65529
 
 class Detokenizer:
     ''' A detokenizer for MSX-BASIC. Instantiate this with a tokenized
-        line and call `detokenize()` for the detokenized result.
+        line and call `detokenized()` for the detokenized result.
     '''
+
+    ####################################################################
+    #   Public API
 
     def __init__(self, charset, tline, lineno=None, *, expand=False):
         ''' Set up a detokenizer.
@@ -242,17 +245,20 @@ class Detokenizer:
         self.expand = expand
         self.reset()
 
+    def detokenized(self):
+        ''' Return the detokenized version of `tline`. This will return a
+            `str` if a ``charset`` was given, or a `bytes` in MSX character
+            set otherwise.
+        '''
+        if not self._output:
+            self.parse_tline()
+        return self.output()
+
     class TokenError(ValueError):
         ' Invalid input. '
-    def terror(self):
-        ' Throw a tokenization error at the current position. '
-        raise self.TokenError('Bad tokenized data: ' + self.pstate())
 
     class ParseError(RuntimeError):
         ' Probably a bug in our parser. '
-    def parseerror(self):
-        ' Throw a parse error at the current position. '
-        raise self.ParseError('Internal error: ' + self.pstate())
 
     def pstate(self):
         ''' Return a string with information about the current parser state.
@@ -264,26 +270,36 @@ class Detokenizer:
         return 'lineno={} pos={} consumed=...{} next={}... output=...{}' \
             .format(self.lineno, p, consumed, next, self._output[-4:])
 
-    def reset(self):
-        ' Clear the output and reset the detokenization pointer to the start. '
-        self._output = []
-        self.p = 0              # current parse offset in input
+    ####################################################################
+    #   The remaining parsing API is generally for internal use,
+    #   but may be driven externally for testing or other purposes.
+    ####################################################################
 
-        if self.lineno is not None:
-            self.genasc('{:{width}}'.format(self.lineno,
-               width=5 if self.expand else 0))
-            self.genasc(' ')
+    ####################################################################
+    #   Low-level output generation routines; these do not read input
 
     def output(self):
-        ''' Return the generated output. If `lineno` is `True`, the output
-            will be prefixed by the line number given at instantiation. If
-            no line number was given, a `ValueError` will be raised.
+        ''' Return the current generated output as `str` if a ``charset``
+            was given, or a `bytes` in MSX character set otherwise.
         '''
         if self.charset is None:
             empty = bytes()
         else:
             empty = str()
         return empty.join(self._output)
+
+    def terror(self):
+        ' Throw a tokenization error at the current position. '
+        raise self.TokenError('Bad tokenized data: ' + self.pstate())
+
+    def parseerror(self):
+        ' Throw a parse error at the current position. '
+        raise self.ParseError('Internal error: ' + self.pstate())
+
+    def reset(self):
+        ' Clear the output and reset the detokenization pointer to the start. '
+        self._output = []
+        self.p = 0              # current parse offset in input
 
     def genasc(self, a):
         ''' Append an ASCII character or characters to the output.
@@ -331,9 +347,12 @@ class Detokenizer:
         if self.expand:
             self.genasc('\n    ')
 
-    def detokenize(self):
-        ''' Return a `str` containing the detokenized version of the
-            tokenized line, prefixed by `lineno` if that was provided.
+    ####################################################################
+    #   Parsing routines
+
+    def parse_tline(self):
+        ''' Generate the detokenized version of the tokenized line,
+            prefixed by `lineno` if that was provided.
         '''
         #   Allow use of these without `self.` prefix.
         def genasc(s):      return self.genasc(s)
@@ -342,6 +361,12 @@ class Detokenizer:
         def int16():        return self.int16()
 
         self.reset()
+
+        if self.lineno is not None:
+            self.genasc('{:{width}}'.format(self.lineno,
+               width=5 if self.expand else 0))
+            self.genasc(' ')
+
         while True:
             b = self.peek()
             if b is None:

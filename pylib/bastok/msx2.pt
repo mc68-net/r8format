@@ -308,9 +308,9 @@ def test_data(t, s):
     #   Multi-byte tokens
     (b'\xFF\x84(A) \xF1 \xFF\x85(B)',   'SGN(A) + INT(B)'),
 ])
-def test_detokenize(t, s):
+def test_detokenized(t, s):
     dt = Detokenizer(UTCS, t, 12345)
-    assert '12345 ' + s == dt.detokenize()
+    assert '12345 ' + s == dt.detokenized()
 
 @pytest.mark.parametrize('t, err', [
     #   Line numbers
@@ -325,7 +325,7 @@ def test_detokenize(t, s):
 def test_detokenize_bad(t, err):
     with pytest.raises(Detokenizer.TokenError):
         dt = Detokenizer(UTCS, t)
-        dt.detokenize()
+        dt.detokenized()
 
 @pytest.mark.parametrize('ln, t, s', [
     (    0, b'\x91""',      '    0 PRINT ""'),
@@ -347,7 +347,7 @@ def test_detokenize_bad(t, err):
 ])
 def test_detokenize_expand(ln, t, s):
     dt = Detokenizer(MSXCP, t, lineno=ln, expand=True)
-    assert s == dt.detokenize()
+    assert s == dt.detokenized()
 
 def test_repl():
     pass
