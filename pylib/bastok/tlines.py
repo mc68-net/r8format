@@ -1,13 +1,26 @@
 import  struct
 
 class TLines:
-    ''' A sequence of tokenized lines. The data for each line is typically
-        tokenized BASIC program text, but may be any sequence of bytes
-        (including 0x00 bytes); this class handles only the line numbers
-        and offsets.
+    ''' A sequence of tokenized BASIC lines.
 
-        Symbol names such as `txttab` are taken from Microsoft or other
-        documentation or source code, where possible.
+        Each line has an associated decimal line number and opaque (to this
+        class) tokenized data. The data are typical tokenized BASIC program
+        text lines, but they may be any sequence of bytes including 0x00
+        bytes).
+
+        The sequence also has a `txttab` memory address for the start point
+        used when reading or generating a "program image": the binary format
+        used in ``.BAS`` save files and in memory starting at ``TXTTAB``.
+
+        Functions:
+        - `__init__()`: Create a new sequence, either empty or from a
+          program image that will be passed to `parsetext()`.
+        - `parsetext()`: Add lines from a program image to the list.
+        - `setline()`: Add a single line to the program image.
+        - `lines()`: Return the line numbers and data as a sequence
+          of``(int,bytes)`` tuples.
+        - `text()`: Generate a program image starting at `txttab`.
+        - `write_to()`: Write a filetype byte and program image to a stream.
 
         Attributes:
         - `linemap`: A dictionary mapping `int` line number to the line
@@ -21,10 +34,6 @@ class TLines:
         Issues:
         - This currently assumes little-endian format, which is fine for
           8080 or 6502, but not for 6800.
-        - `parsetext()` assumes that an initial 0xFF byte in the data is
-          a file type byte from a disk save file. This could also be the
-          start of a 250 byte line, but I don't think that any versions of
-          MS-BASIC allow a line that long.
         - `maxlin` defaults to 65529, which is correct for MSX-BASIC and
           GW-BASIC, but not for early 6502 BASIC (63999).
     '''
@@ -54,7 +63,7 @@ class TLines:
             line number as an existing line will overwrite the existing line.
 
             `text` must not include the initial file type byte (usually
-            0xFF) that usually starts a saved BASIC image.
+            0xFF) that usually starts a .BAS file.
 
             `txttab` must be the correct start address for the system
             that saved the data.
