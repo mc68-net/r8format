@@ -10,9 +10,9 @@ def blines(plines, commentchar='‖'):
         EOL; any spaces in front of them `commentchar` are also removed.
 
         A pline is considered to start a BASIC line if it starts with a
-        decimal number and is followed at least one non-numeric character
+        decimal number that is followed at least one non-numeric character
         that is not a comma. This allows for continuation lines for DATA
-        statements of numeric values, e.g., `DATA 12` followed by `34` or
+        statements of numeric values, e.g., `DATA 12,` followed by `34` or
         `34, 56`.
     '''
 
