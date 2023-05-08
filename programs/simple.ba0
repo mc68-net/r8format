@@ -1,5 +1,5 @@
 10 'bastok test data
-20 REM
+20 REM ひらか゛なもある。
 30 FORI=0TO3:READA$:PRINTI,A$:NEXTI
-40 DATA abc,def,"gh,i",jkl
+40 DATA abc,金π♠,"gh,i",jkl
 99 END

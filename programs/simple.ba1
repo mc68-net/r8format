@@ -1,8 +1,8 @@
    10 'bastok test data
-   20 REM
+   20 REM ひらか゛なもある。
    30 FOR I=0 TO 3
     : READ A$
     : PRINT I,A$
     : NEXT I
-   40 DATA  abc, def, "gh,i", jkl
+   40 DATA  abc, 金π♠, "gh,i", jkl
    99 END
