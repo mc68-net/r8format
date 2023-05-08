@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -eu -o pipefail
 
+PASSED=false
+trap 'ec=$?; $PASSED || { echo 1>&2 "*** FAILED (exitcode=$ec)"; }' 0
+
 basedir=$(cd "$(dirname "$0")" && pwd -P)
 cd "$basedir"
 
@@ -9,4 +12,6 @@ cd "$basedir"
 export PYTHONPATH="$basedir/pylib"
 
 [[ ${#@} -eq 0 ]] && set pylib/
-exec pytest -q "$@"
+pytest -q "$@"
+
+PASSED=true
