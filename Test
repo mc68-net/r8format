@@ -23,10 +23,10 @@ pytest -q "$@"
 ftdata=.build/programs/
 mkdir -p $ftdata
 
-bin/detok    programs/simple.bas >$ftdata/simple.ba-compact
-diff -u {$ftdata,programs}/simple.ba-compact
+bin/detok    programs/simple.bas >$ftdata/simple.ba0
+diff -u {$ftdata,programs}/simple.ba0
 
-bin/detok -e programs/simple.bas >$ftdata/simple.ba-expanded
-diff -u {$ftdata,programs}/simple.ba-expanded
+bin/detok -e programs/simple.bas >$ftdata/simple.ba1
+diff -u {$ftdata,programs}/simple.ba1
 
 PASSED=true
