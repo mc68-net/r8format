@@ -19,6 +19,7 @@ sets, but they may also be useful for people developing software in BASIC.
 - `Test`: A Bash script to set up a Python virtual environment and run the
   unit tests. Any parameters passed to this will be passed on to `pytest`.
 - `pylib/bastok/`: A Python module containing the (de-)tokenization tools.
+- `programs/`: Test programs, both tokenised and ASCII.
 
 
 Character Sets

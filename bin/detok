@@ -62,7 +62,7 @@ def main(args):
     if args.dos_text: endline = b'\r\n'
     for lineno, tline in tl.lines():
         detok = Detokenizer(cmap, tline, lineno, expand=args.expand)
-        line = detok.detokenize()
+        line = detok.detokenized()
         if not args.binary:
             line = bytes(line, 'UTF-8')
         out.write(line)

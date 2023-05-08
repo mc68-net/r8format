@@ -11,7 +11,15 @@ cd "$basedir"
 . ./pactivate -q
 export PYTHONPATH="$basedir/pylib"
 
+####################################################################
+#   Unit Tests
+
 [[ ${#@} -eq 0 ]] && set pylib/
 pytest -q "$@"
+
+####################################################################
+#   Functional Tests
+
+diff -u programs/simple.ba <(bin/detok -e programs/simple.bas)
 
 PASSED=true
