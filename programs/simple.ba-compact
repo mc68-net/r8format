@@ -1,0 +1,5 @@
+10 'bastok test data
+20 REM
+30 FORI=0TO3:READA$:PRINTI,A$:NEXTI
+40 DATA abc,def,"gh,i",jkl
+99 END
