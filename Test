@@ -47,6 +47,9 @@ qecho "------ detok -e simple.bas"
 bin/detok -e programs/simple.bas >$ftdata/detok/simple.ba1
 diff -u {$ftdata/detok,programs}/simple.ba1
 
+bin/retok    programs/simple.bas >$ftdata/detok/simple.ba1
+bin/retok -e programs/simple.bas >$ftdata/detok/simple.ba0
+
 {
     f="binchars"
     qecho "====== detok --binary $f.bas"
