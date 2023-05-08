@@ -21,12 +21,12 @@ pytest -q "$@"
 #   Functional Tests
 
 ftdata=.build/programs/
-mkdir -p $ftdata
+mkdir -p $ftdata/detok
 
-bin/detok    programs/simple.bas >$ftdata/simple.ba0
-diff -u {$ftdata,programs}/simple.ba0
+bin/detok    programs/simple.bas >$ftdata/detok/simple.ba0
+diff -u {$ftdata/detok,programs}/simple.ba0
 
-bin/detok -e programs/simple.bas >$ftdata/simple.ba1
-diff -u {$ftdata,programs}/simple.ba1
+bin/detok -e programs/simple.bas >$ftdata/detok/simple.ba1
+diff -u {$ftdata/detok,programs}/simple.ba1
 
 PASSED=true
