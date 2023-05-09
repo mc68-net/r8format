@@ -4,10 +4,20 @@ set -eu -o pipefail
 PASSED=false
 trap 'ec=$?; $PASSED || { echo 1>&2 "*** FAILED (exitcode=$ec)"; }' 0
 
+qecho() {
+    [[ -n $quiet ]] && return
+    echo "$@"
+}
+
 basedir=$(cd "$(dirname "$0")" && pwd -P)
 cd "$basedir"
 
+#   -C (clean) must be first argument if present
 [[ ${#@} -gt 0 && $1 == -C ]] && { shift; rm -rf .build/; }
+#   -q anywhere in the command line (even with -v!) sets functests quiet.
+quiet=
+for arg in "$@"; do [[ $arg == -q ]] && quiet=-q; done
+
 . ./pactivate -q
 export PYTHONPATH="$basedir/pylib"
 
@@ -23,9 +33,11 @@ pytest -q "$@"
 ftdata=.build/programs/
 mkdir -p $ftdata/detok
 
+qecho "------ detok    simple.bas"
 bin/detok    programs/simple.bas >$ftdata/detok/simple.ba0
 diff -u {$ftdata/detok,programs}/simple.ba0
 
+qecho "------ detok -e simple.bas"
 bin/detok -e programs/simple.bas >$ftdata/detok/simple.ba1
 diff -u {$ftdata/detok,programs}/simple.ba1
 
