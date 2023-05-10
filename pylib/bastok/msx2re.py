@@ -4,6 +4,17 @@ from    bastok.msx2  import TOKENS
 
 ENCTOKENS = toksort(TOKENS, 1, 0)
 
+def tokenize(charmap, lines, txttab=0x8001):
+    ''' Tokenise a sequence of lines of BASIC code, returning them in
+        a `TLines` object with a start address of `txttab`.
+    '''
+    tl = TLines(txttab)
+    for l in lines:
+        #   XXX check for duplicate line no?
+        lineno, tokens = tokline(charmap, l)
+        tl.setline(lineno, tokens)
+    return tl
+
 def tokline(charmap, line):
     ''' Tokenize a line of BASIC. Return an `(int, bytes)` tuple with
         the line number and tokenized line data or raise a `ParseError`
@@ -27,15 +38,11 @@ def tokline(charmap, line):
 
     return (lineno, p.output())
 
-def tokenize(charmap, lines):
-    tl = TLines(0x8001)
-    for l in lines:
-        #   XXX check for duplicate line no?
-        lineno, tokens = tokline(charmap, l)
-        tl.setline(lineno, tokens)
-    return tl
-
 class EncodingError(ValueError): pass
+
+def chars(p):
+    ' Do char() until EOF. '
+    while char(p, err=None): pass
 
 def char(p, err='unexpected end of input'):
     ''' Consume a Unicode character from the input, translate it to an
@@ -64,10 +71,6 @@ def char(p, err='unexpected end of input'):
         encoded = bytes([n])
     generate(p, encoded)
     return c
-
-def chars(p):
-    ' Do char() until EOF. '
-    while char(p, err=None): pass
 
 def string_literal(p, err='unexpected input'):
     ''' Consume a string literal starting with `"` and ending with the next
