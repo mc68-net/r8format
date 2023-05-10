@@ -59,7 +59,7 @@ class PState:
             of the first object in the list. E.g., if the first object is
             `b'0x01'`, `bytes().join(olist)` will be called.
 
-            If `olist` is empty, `None will be returned. (XXX This may not
+            If `olist` is empty, `None` will be returned. (XXX This may not
             be the correct behaviour for this case.)
         '''
         if len(self.olist) == 0:
