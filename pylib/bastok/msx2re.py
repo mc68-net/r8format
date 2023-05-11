@@ -26,10 +26,14 @@ def tokline(charmap, line):
     lineno = decimal(p, err='line number')
     spaces(p)
     while not p.finished():
+        #   Start by checking for a token, since any string matching a
+        #   token takes priority over anything else.
         t = toktrans(p, ENCTOKENS)
         if t is not None:
             #   Only a few tokens have an argument that needs special parsing.
-            if t == 'REM': chars(p) # consume/generate remainder of line
+            #   These consume and generate the remainder of the line.
+            if t == 'REM':  chars(p)
+            if t == 'DATA': data(p)
             continue
 
         if string_literal(p, err=None) is not None: continue
@@ -39,6 +43,9 @@ def tokline(charmap, line):
     return (lineno, p.output())
 
 class EncodingError(ValueError): pass
+
+def data(p):
+    p.error('XXX Write DATA parser!')
 
 def chars(p):
     ' Do char() until EOF. '
