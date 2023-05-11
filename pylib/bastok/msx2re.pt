@@ -59,6 +59,7 @@ def test_string_literal_error():
     assert ex.match("unexpected input: 'a'")
     assert None is string_literal(p, err=None)
 
+
 ####################################################################
 
 

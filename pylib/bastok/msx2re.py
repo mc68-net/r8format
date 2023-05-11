@@ -47,6 +47,26 @@ class EncodingError(ValueError): pass
 def data(p):
     p.error('XXX Write DATA parser!')
 
+def string_literal(p, err='unexpected input'):
+    ''' Consume a string literal starting with `"` and ending with the next
+        `"` or end of input, generating its Parser.charset conversion and
+        MSX-BASIC encoding. The intial and final quotes are not
+        charset-converted.
+
+        Return the consumed input string, including quotes.
+    '''
+    DQUOTE = '"'
+    s = ''
+    if p.peek() != DQUOTE:
+        if err is None: return None
+        raise p.ParseError('{}: {}'.format(err, repr(p.peek())))
+    byte(p); p.generate(b'"'); s += DQUOTE
+    while True:
+        c = p.peek()
+        if c == None: return s
+        if c == DQUOTE: byte(p); p.generate(b'"'); return s + DQUOTE
+        s += char(p)
+
 def chars(p):
     ' Do char() until EOF. '
     while char(p, err=None): pass
@@ -78,23 +98,3 @@ def char(p, err='unexpected end of input'):
         encoded = bytes([n])
     p.generate(encoded)
     return c
-
-def string_literal(p, err='unexpected input'):
-    ''' Consume a string literal starting with `"` and ending with the next
-        `"` or end of input, generating its Parser.charset conversion and
-        MSX-BASIC encoding. The intial and final quotes are not
-        charset-converted.
-
-        Return the consumed input string, including quotes.
-    '''
-    DQUOTE = '"'
-    s = ''
-    if p.peek() != DQUOTE:
-        if err is None: return None
-        raise p.ParseError('{}: {}'.format(err, repr(p.peek())))
-    byte(p); p.generate(b'"'); s += DQUOTE
-    while True:
-        c = p.peek()
-        if c == None: return s
-        if c == DQUOTE: byte(p); p.generate(b'"'); return s + DQUOTE
-        s += char(p)
