@@ -50,7 +50,46 @@ class PState:
         self.charset = charset
 
     def finished(self):
+        ' Return `true` if we have consumed all input. '
         return self.pos >= len(self.input)
+
+    def consume(self, n=1):
+        ''' Consume _n_ elements of the input (default 1)
+            and return the consumed input.
+            Raise a `ParseError` if we try to consume past end of input.
+        '''
+        if self.pos + n > len(self.input):
+            self.error('Consumed past end of input: {} > {}' \
+                .format(self.pos + n, len(self.input)))
+        self.pos += n
+        return self.input[self.pos-n:self.pos]
+
+    def peek(self):
+        ''' Return the next element of the the input sequence, or `None` if
+            there is no input left. The parse position is not moved.
+
+            XXX Should this raise an exception if no more input? Perhaps
+            should take param like byte().
+        '''
+        if self.pos >= len(self.input):
+            return None
+        else:
+            return self.input[self.pos]
+
+    def remain(self):
+        ' Return the remaining unconsumed input. '
+        return self.input[self.pos:]
+
+    def generate(self, x):
+        ''' Append an output element to `olist`.
+            All elements in the list must be the same type or a subtype
+            of the first element added or a `ParseError` will be raised.
+        '''
+        if len(self.olist) == 0 or isinstance(x, type(self.olist[0])):
+            self.olist.append(x)
+        else:
+            self.error('Cannot generate {}: {} not an instance of {}.' \
+                .format(repr(x), type(x), type(self.olist[0])))
 
     def output(self):
         ''' Return the joined-together `olist`.
@@ -83,19 +122,6 @@ class PState:
 #
 #   These will operate on any state conforming to the interface above.
 
-def generate(p, x):
-    ' Append an output item to `PState.olist`. '
-    p.olist.append(x)
-
-def peek(p):
-    ''' Return the next item in the input sequence or `None` if there is
-        no input left. The parse position is not moved.
-    '''
-    if p.pos >= len(p.input):
-        return None
-    else:
-        return p.input[p.pos]
-
 def byte(p, *, genf=None, err='unexpected end of input'):
     ''' Return the next item in the input sequence, and advance the parse
         position by 1. Despite the name, the return type is determined by
@@ -112,10 +138,9 @@ def byte(p, *, genf=None, err='unexpected end of input'):
     if p.finished():
         if err is None: return None
         p.error(err)
-    x = p.input[p.pos]
-    p.pos += 1
+    x = p.consume()[0]
     if genf is not None:
-        generate(p, genf(x))
+        p.generate(genf(x))
     return x
 
 def spaces(p):
@@ -123,8 +148,8 @@ def spaces(p):
         This works on any input containing `str(' ')` or `ord(' ')` values,
         including `str` and `bytes`.
     '''
-    while peek(p) in (' ', ord(' ')):
-        p.pos += 1
+    while p.peek() in (' ', ord(' ')):
+        p.consume()
 
 def decimal(p, err=None):
     ''' Consume an unsigned decimal number and return it as an `int`.
@@ -136,10 +161,10 @@ def decimal(p, err=None):
         p.error('expected ' + err)
     digits = ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
 
-    if peek(p) not in digits: return fail()
+    if p.peek() not in digits: return fail()
     s = ''
     while True:
-        if peek(p) not in digits: break
+        if p.peek() not in digits: break
         c = byte(p); s = s + c
     return int(s)
 
@@ -172,8 +197,8 @@ def toktrans(p, toktab):
         The input sequence must support the `startswith` function.
     '''
     for x, y in toktab:
-        if p.input[p.pos:].startswith(x):
-            p.pos += len(x)
-            generate(p, y)
+        if p.remain().startswith(x):
+            p.consume(len(x))
+            p.generate(y)
             return x
     return None

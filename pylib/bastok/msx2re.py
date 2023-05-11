@@ -69,7 +69,7 @@ def char(p, err='unexpected end of input'):
         encoded = bytes([0x01, n+0x40])
     else:
         encoded = bytes([n])
-    generate(p, encoded)
+    p.generate(encoded)
     return c
 
 def string_literal(p, err='unexpected input'):
@@ -82,12 +82,12 @@ def string_literal(p, err='unexpected input'):
     '''
     DQUOTE = '"'
     s = ''
-    if peek(p) != DQUOTE:
+    if p.peek() != DQUOTE:
         if err is None: return None
-        raise p.ParseError('{}: {}'.format(err, repr(peek(p))))
-    byte(p); generate(p, b'"'); s += DQUOTE
+        raise p.ParseError('{}: {}'.format(err, repr(p.peek())))
+    byte(p); p.generate(b'"'); s += DQUOTE
     while True:
-        c = peek(p)
+        c = p.peek()
         if c == None: return s
-        if c == DQUOTE: byte(p); generate(p, b'"'); return s + DQUOTE
+        if c == DQUOTE: byte(p); p.generate(b'"'); return s + DQUOTE
         s += char(p)

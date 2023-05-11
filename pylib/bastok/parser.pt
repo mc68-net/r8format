@@ -1,11 +1,31 @@
 from    bastok.parser  import *
 import  pytest
 
-def test_PState_basic():
-    p = PState('hi')
-    assert ('hi', 0, [], False) == (p.input, p.pos, p.olist, p.finished())
-    p.pos = 2
-    assert p.finished()
+####################################################################
+#   PState reading/consumption
+
+def test_PState_read_consume():
+    p = PState('abcdef')
+
+    assert (0, 'a', 'abcdef') == (p.pos, p.peek(), p.remain())
+
+    s = p.consume()
+    assert ('a', 1, 'b', 'bcdef') == (s, p.pos, p.peek(), p.remain())
+    assert 'abcdef' == p.input, 'input should not be modified'
+
+    s = p.consume(3)
+    assert ('bcd', 4, 'e', 'ef') == (s, p.pos, p.peek(), p.remain())
+
+    s = p.consume(2)
+    assert ('ef', 6    , True        , True            , '') \
+        == (s   , p.pos, p.finished(), None is p.peek(), p.remain())
+
+    with pytest.raises(p.ParseError) as ex:
+        p.consume()
+    assert ex.match('Consumed past end of input: 7 > 6')
+
+####################################################################
+#   PState output generation
 
 @pytest.mark.parametrize('output, olist', [
     ('01234',           ['01', '2', '3', '4']),
@@ -14,16 +34,24 @@ def test_PState_basic():
     #   figure out what type it should be, so for the moment, just None.
     (None,              []),
 ])
-def test_PState_output(output, olist):
+def test_PState_generate_output(output, olist):
     p = PState('');
-    p.olist.extend(olist)
+    for o in olist:
+        p.generate(o)
     assert output == p.output()
 
-def test_peek():
-    p = PState('hi')
-    pass      ; assert ('h', 0) == (peek(p), p.pos)
-    p.pos += 1; assert ('i', 1) == (peek(p), p.pos)
-    p.pos += 1; assert None is peek(p)
+def test_PState_generate_outputtype():
+    p = PState('');
+    p.generate(b'0')
+    p.generate(b'1')
+    with pytest.raises(p.ParseError) as ex:
+        p.generate('a')
+    assert ex.match('Cannot generate '
+        "'a': <class 'str'> not an instance of <class 'bytes'>")
+    assert b'01' == p.output(), "should not have added 'a'"
+
+####################################################################
+#   Separate Parsing Routines
 
 def test_byte_noargs():
     p = PState('hi')
@@ -58,6 +86,9 @@ def test_decimal_failure():
     with pytest.raises(p.ParseError) as ex:
         decimal(p, err='decimal')
     assert ex.match('decimal')
+
+####################################################################
+#   Token sorting
 
 TT_TABLE = (
     (b'\x02',       'bar',      None),
@@ -97,7 +128,7 @@ def test_toktrans():
 
     #   No match.
     assert 5 == len(p.olist)
-    assert (None, 5, 'Z') == (tt(), len(p.olist), peek(p))
+    assert (None, 5, 'Z') == (tt(), len(p.olist), p.peek())
     #   XXX Do we need a version that raises an error on no match?
 
     #   No more input.
