@@ -53,17 +53,25 @@ def test_PState_generate_outputtype():
 ####################################################################
 #   Separate Parsing Routines
 
-def test_byte_noargs():
+def test_byte_str():
     p = PState('hi')
-    assert ('h', 'i', None) == (byte(p), byte(p), byte(p, err=None))
+
+    assert 'h' == byte(p)
+    assert None is p.output()
+
+    assert 'i' == byte(p, genf=lambda x: x)
+    assert 'i' == p.output()
+
+    assert None is byte(p, err=None)
+
     with pytest.raises(p.ParseError) as ex:
         byte(p)
     assert ex.match('unexpected end of input')
 
-def test_byte_genf():
+def test_byte_bytes():
     p = PState(b'hi')
-    byte(p, genf=chr)
-    byte(p, genf=lambda b: chr(b+1))
+    assert 0x68 == byte(p, genf=chr)
+    assert 0x69 == byte(p, genf=lambda b: chr(b+1))
     assert 'hj' == p.output()
 
 def test_spaces():
