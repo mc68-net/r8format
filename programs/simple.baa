@@ -1,6 +1,11 @@
 10 'bastok test data
 20 REM ë÷–Þåó‘ù¡
 30 FORI=0TO3:READA$:PRINTI,A$:NEXTI
-40 DATA abc,EP€,"gh,i",jkl
+35 RESTORE
+40 FOR I = 0 TO 3
+50   READ  A$
+60   PRINT I, A$
+70 NEXT I
+80 DATA abc,EP€,"gh,i",jkl
 99 END
 

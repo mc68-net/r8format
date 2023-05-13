@@ -331,9 +331,14 @@ class Detokenizer:
         self._output.append(c)
 
     def expandsp(self):
-        ' If we are in expand mode, generate a space. '
-        if self.expand:
-            self.genasc(' ')
+        ''' If we are in expand mode, generate a space, unless the previous
+            or next character is already a space, in which case it's not
+            necessary.
+        '''
+        if not self.expand:             return
+        if self._output[-1][-1] == ' ': return  # already printed a space
+        if self.peek() == ord(' '):     return  # next char will print a space
+        self.genasc(' ')
 
     def expandnl(self):
         '''' If we are in expand mode, generate a (Unix) newline and indent

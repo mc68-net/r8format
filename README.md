@@ -99,15 +99,14 @@ as:
         : NEXT I
 
 This is far from perfect (in the above example clearly the line split
-should be before the `ELSE`, not the preceeding `: NEXT I`, and there are
-several cases where spacing is not introduced when it ought be or vice
-versa) but since in most workflows the developer will do further manual
-reformatting to better express the code as she reverse-engineers the
-program, this is fine to kickstart the process.
+should be before the `ELSE`, not the preceeding `: NEXT I`) but since in
+most workflows the developer will do further manual reformatting to better
+express the code as she reverse-engineers the program, this is fine to
+kickstart the process.
 
 The (re-)tokenizer, when written will read programs in the above format and
 be able to "compress" them back to a tokenized version without unnecessary
-whitespace.
+spaces.
 
 
 Support

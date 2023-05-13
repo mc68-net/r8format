@@ -344,6 +344,10 @@ def test_detokenize_bad(t, err):
     (None, b'\xFF\x85' b'ER' b'\xFF\x94' b'\xEF' b'\x0F\x1E',
            'INTERVAL=30'),
     (None, b'\x91:\x91', 'PRINT\n    : PRINT'),
+
+    #   Spaces should not be added if there's already space there.
+    (None, b'\x8B X\xEF\x12 \xDAY\xEF\x13   :\xA1Z\xEF\x14',
+           'IF X=1 THEN Y=2   ELSE Z=3'),
 ])
 def test_detokenize_expand(ln, t, s):
     dt = Detokenizer(MSXCP, t, lineno=ln, expand=True)

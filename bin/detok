@@ -26,7 +26,7 @@ def parseargs():
     arg('-c', '--charset', default='ja',
         help='MSX charset: ja (default), int, ar, ru, etc.')
     arg('-e', '--expand', action='store_true',
-        help='add spacing for readability')
+        help='add spaces for readability')
     arg('-z', '--dos-text', action='store_true',
         help='Use DOS textfile format (CR+LF EOL, ^Z at EOF)')
     arg('input', help='input file (required); use `-` for stdin')
