@@ -29,7 +29,7 @@ def parseargs():
         help='add spacing for readability')
     arg('-z', '--dos-text', action='store_true',
         help='Use DOS textfile format (CR+LF EOL, ^Z at EOF)')
-    arg('input', help='input file (required)')
+    arg('input', help='input file (required); use `-` for stdin')
 
     return p.parse_args()
 
@@ -49,11 +49,16 @@ def main(args):
                    for k, v in sorted(CHARMAP.items()) ]
                 )
 
-    with open(args.input, 'rb') as f:
-        type = f.read(1)[0]
-        if type != 0xFF:
-            raise RuntimeError('bad type byte ${:02X}'.format(type))
-        tl = TLines(0x8001, f.read())
+    if args.input == '-':
+        f = sys.stdin.buffer
+    else:
+        f = open(args.input, 'rb')
+
+    type = f.read(1)[0]
+    if type != 0xFF:
+        raise RuntimeError('bad type byte ${:02X}'.format(type))
+    tl = TLines(0x8001, f.read())
+    f.close()
 
     #   We always write in binary mode, printing `str` output explictly
     #   as UTF-8 rather than letting the locale decide.
