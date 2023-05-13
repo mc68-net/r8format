@@ -1,0 +1,393 @@
+from    bastok.parser  import *
+from    bastok.charset  import UTCharset
+import  struct
+import  pytest
+
+####################################################################
+#   Support routines
+
+DIGITS_2 = set(['0', '1'])
+DIGITS_8 = DIGITS_2 | set(['2', '3', '4', '5', '6', '7'])
+DIGITS_10 = DIGITS_8 | set(['8', '9'])
+DIGITS_16 = DIGITS_10 \
+    | set(['A', 'a', 'B', 'b', 'C', 'c', 'D', 'd', 'E', 'e', 'F', 'f'])
+
+@pytest.mark.parametrize('base, digitchars', [
+    (2, DIGITS_2), (8, DIGITS_8), (10, DIGITS_10), (16, DIGITS_16),
+])
+def test_basedigits(base, digitchars):
+    print(sorted(digitchars))
+    assert digitchars == basedigits(base)
+
+####################################################################
+#   Minimal parser functionality on which other tests depend
+
+def test_strinput():
+    assert     Parser('').strinput
+    assert not Parser(b'').strinput
+    assert not Parser(None).strinput
+
+def test_encode_elem_str():
+    p = Parser('')
+    assert '1' == p.encode_elem('1')
+    with pytest.raises(ValueError) as ex:
+        p.encode_elem('23')
+    assert ex.match("encode_elem argument length 2 != 1 for '23'")
+
+def test_encode_seq_str():
+    p = Parser('')
+    assert '1' == p.encode_seq('1')
+    assert '23' == p.encode_seq('23')
+
+def test_encode_elem_bytes():
+    p = Parser(b'', TestCodec())
+    assert 49 == p.encode_elem('1')
+    with pytest.raises(ValueError) as ex:
+        p.encode_elem('23')
+    assert ex.match("encode_elem argument length 2 != 1 for '23'")
+
+def test_encode_seq_bytes():
+    p = Parser(b'', TestCodec())
+    assert b'1' == p.encode_seq('1')
+    assert b'23' == p.encode_seq('23')
+
+def test_parser_consume_str():
+    p = Parser('abcdef')
+    c = p.consume
+    assert ('a', 'bc') == (c(1), c(2))
+    with pytest.raises(p.ParseError) as ex:
+        c(4)
+    assert ex.match('Unexpected end of input: 7 > 6')
+    assert    'def' == p.remain()
+    assert 'abcdef' == p.uncommitted()
+    p.commit()
+    assert    'def' == p.remain()
+
+def test_parser_consume_bytes():
+    p = Parser(b'abcdef')
+    c = p.consume
+    assert (b'a', b'bc') == (c(1), c(2))
+    with pytest.raises(p.ParseError) as ex:
+        c(4)
+    assert ex.match('Unexpected end of input: 7 > 6')
+    assert b'abcdef' == p.uncommitted()
+    p.commit()
+    assert b'def' == p.remain()
+
+def test_Parser_commit():
+    p = Parser(b'abcd')
+    c = p.consume
+    g = p.generate
+
+    assert not p.pending()
+    assert b'abcd' == p.remain();       assert None == p.output_pending()
+    assert b'abcd' == p.uncommitted();  assert None == p.output()
+
+    p.rollback()
+    assert not p.pending()
+    assert (b'a', b'bcd', b'abcd') == (c(), p.remain(), p.uncommitted())
+    assert     p.pending()
+    assert (b'b',  b'cd', b'abcd') == (c(), p.remain(), p.uncommitted())
+    assert (None,    'x', None)    == (g('x'), p.output_pending(), p.output(1))
+    assert (None,   'xy', None)    == (g('y'), p.output_pending(), p.output(1))
+    assert     p.pending()
+
+    p.rollback()
+    assert not p.pending()
+    assert (None,    'z', None)    == (g('z'), p.output_pending(), p.output(1))
+    assert     p.pending()
+    assert (None,   'zw', None)    == (g('w'), p.output_pending(), p.output(1))
+    assert (b'a', b'bcd', b'abcd') == (c(), p.remain(), p.uncommitted())
+    assert (b'b',  b'cd', b'abcd') == (c(), p.remain(), p.uncommitted())
+    assert     p.pending()
+
+    p.commit()
+    assert not p.pending()
+    assert b'cd' == p.remain();         assert None == p.output_pending()
+    assert b'cd' == p.uncommitted();    assert 'zw' == p.output()
+
+    p.rollback()
+    assert (b'c', b'd', b'cd') == (c(), p.remain(), p.uncommitted())
+    assert (None,  'v', 'zw')  == (g('v'), p.output_pending(), p.output(1))
+    with pytest.raises(RuntimeError) as ex:
+        p.output()
+    assert ex.match('uncommited output not committed or rolled back')
+
+def test_parser_transactional_failure():
+    p = Parser('abcd');  outpend = p.output_pending
+    @Parser.transactional
+    def pt_failure(p):  p.generate(p.consume(2)); return p.failure()
+    assert (         None,     'abcd',      None,          'abcd',       None) \
+        == (pt_failure(p), p.remain(), outpend(), p.uncommitted(), p.output())
+
+def test_parser_transactional_success():
+    p = Parser('abcd');  outpend = p.output_pending
+    @Parser.transactional
+    def pt_success(p, retval='ef'):
+        p.generate(p.consume(2))
+        return p.success(retval)
+    assert (         'ef',       'cd',      None,            'cd',       'ab') \
+        == (pt_success(p), p.remain(), outpend(), p.uncommitted(), p.output())
+    assert 'gh' == pt_success(p, 'gh')
+
+def test_parser_transactional_no_commit_or_rollback():
+    p = Parser('abcd')
+    @Parser.transactional
+    def pt_neither(p):  p.generate(p.consume(2)); return None
+    with pytest.raises(RuntimeError) as ex:
+        pt_neither(p)
+    assert ex.match('transactional parser did not return success or failure')
+
+def test_parser_transactional_start_with_pending():
+    p = Parser('abcd')
+    @Parser.transactional
+    def pt(p):  return p.success(True)
+    p.consume(1)
+    with pytest.raises(RuntimeError) as ex:
+        pt(p)
+    assert ex.match('with pending')
+
+def test_parser_transactional_nested():
+    p = Parser('abcd')
+    @Parser.transactional
+    def pt_outer(p):  pt_inner(p)
+    @Parser.transactional
+    def pt_inner(p):  return p.success(True)
+    with pytest.raises(RuntimeError) as ex:
+        pt_outer(p)
+    assert ex.match('attempt to nest transactions')
+
+def test_parser_transactional_success_cannot_return_none():
+    p = Parser('abcd')
+    @Parser.transactional
+    def pt(p):  return p.success(None)
+    with pytest.raises(RuntimeError) as ex:
+        pt(p)
+    assert ex.match('cannot return None')
+
+def test_parser_without_ASCII():
+    ''' Test the parser with a codec that cannot convert any ASCII
+        characters. Some parsing routines (e.g., `digits()`) won't work
+        with such a codec, but so long as those are not called, we should
+        still work fine.
+    '''
+    p = Parser(b'x', UTCharset())
+    assert b'x' == p.consume(1)
+
+####################################################################
+#   Parser output generation.
+
+@pytest.mark.parametrize('output, olist', [
+    ('01234',           ['01', '2', '3', '4']),
+    (b'\x00\x01\x02',   [b'\x00', b'\x01\x02']),
+    #   XXX It's not clear what we should give for the output if we can't
+    #   figure out what type it should be, so for the moment, just None.
+    (None,              []),
+])
+def test_Parser_generate_output_types(output, olist):
+    p = Parser('');
+    for o in olist:
+        assert None is p.output_pending()
+        p.generate(o)
+        assert o == p.output_pending()
+        p.commit()
+    assert output == p.output()
+
+def test_Parser_generate_type_error():
+    p = Parser('');
+    p.generate(b'0')
+    p.generate(b'1')
+    with pytest.raises(p.ParseError) as ex:
+        p.generate('a')
+    assert ex.match('Cannot generate '
+        "'a': <class 'str'> not an instance of <class 'bytes'>")
+    p.commit()
+    assert b'01' == p.output(), "should not have added 'a'"
+
+def test_Parser_generate_commit():
+    p = Parser('')
+    p.generate(b'a1');  assert    None is p.output(1)
+    p.commit();         assert   b'a1' == p.output()
+    p.generate(b'b2');  assert   b'a1' == p.output(1)
+    p.commit();         assert b'a1b2' == p.output()
+
+
+####################################################################
+#   Parser control tests
+
+def test_Parser_finished():
+    assert Parser('').finished()
+
+    p = Parser('1');    assert not p.finished()
+    p.consume();        assert     p.finished()
+    p.commit();         assert     p.finished()
+
+def test_parser_reset_noarg():
+    p = Parser('abc123');   assert 'abc' == p.consume(3)
+    p.commit();             assert '123' == p.consume(3)
+    p.reset();              assert 'abc' == p.consume(3)
+
+def test_parser_reset_newinput_same_type():
+    p = Parser(b'abc');     assert b'abc' == p.consume(3)
+    p.reset(b'def');        assert b'def' == p.consume(3)
+
+def test_parser_reset_newinput_different_type():
+    p = Parser(b'abc')
+    with pytest.raises(ValueError) as ex:
+        p.reset('abc')
+    assert ex.match("reset: new input sequence type <class 'str'>" \
+        " not instance of old input sequence type <class 'bytes'>")
+
+    p = Parser([1, 2, 3])
+    with pytest.raises(ValueError) as ex:
+        p.reset([1.1, 2.2, 3.3])
+    assert ex.match("reset: new input element type <class 'float'>" \
+        " not instance of old input element type <class 'int'>")
+
+    p.reset([])
+
+    p = Parser([])
+    p.reset(['a', 'b', 'c'])
+
+
+
+####################################################################
+#   Parsing Routine Tests
+#   From here on we generally test using `bytes` input to help
+#   ensure that everything is using the codec properly.
+
+class TestCodec:
+    def trans(self, n):
+        raise NotImplementedError("We don't think we need this.")
+    def native(self, s):
+        #   We rely on `ord()` to check that length of `s` is 1.
+        return ord(s)
+
+def test_Parser_peek():
+    p = Parser(b'a', TestCodec())
+    assert ord(b'a') == p.peek()
+    assert b'a' == p.string('a')
+    assert None == p.peek()
+
+def test_Parser_string_str():
+    p = Parser('abcd')
+    s = p.string
+    assert (   'a' ,     'bc' ,   None ,    'd') \
+        == ( s('a'),   s('bc'),  s('e'),  s('d') )
+    assert 'abcd' == p.uncommitted()
+    p.commit()
+    assert '' == p.remain()
+
+def test_Parser_string_bytes():
+    p = Parser(b'abcd', TestCodec())
+    s = p.string
+    assert ( b'a',   b'bc',    None,  b'd') \
+        == (s('a'), s('bc'), s('e'), s('d'))
+    assert b'abcd' == p.uncommitted()
+    p.commit()
+    assert b'' == p.remain()
+
+def test_parser_string_in():
+    p = Parser(b'abcd', TestCodec())
+    #   Any iterable should work, so we use several different ones.
+
+    p.rollback();
+    assert b'ab' == p.string_in(set(['ab']))
+    assert b'cd' == p.string_in(('cd',))
+
+    p.rollback()
+    assert  None is p.string_in(['xx', 'cd', 'xx'])
+    assert b'ab' == p.string_in(['xx', 'ab', 'xx'])
+    assert  None is p.string_in(['xx', 'ab', 'xx'])
+
+def test_parser_re_match():
+    p = Parser('123abc')
+
+    m = p.re_match(r'\d+')
+    assert (3, '123') == (m.end(), m.group()), 'matches'
+
+    m = p.re_match(r'\d+')
+    assert (3, '123') == (m.end(), m.group()), 'no consumption'
+
+    m = p.re_match(re.compile(r'\d+'))
+    assert (3, '123') == (m.end(), m.group()), 'pre-compiled REs work'
+
+    p.consume(m.end())
+    assert None is p.re_match(r'\d+'), 'consumption works'
+
+def test_parser_match_bytes():
+    p = Parser(b'123abc', TestCodec())
+
+    m = p.re_match(r'\d+')
+    assert (3, b'123') == (m.end(), m.group()), 'matches'
+
+    m = p.re_match(p.re_compile(r'\d+'))
+    assert (3, b'123') == (m.end(), m.group()), 'matches'
+
+
+@pytest.mark.parametrize('base, input, retvals', [
+    #   The '5' below ensures we are not "using up" an iterator produced
+    #   by map() in __init_constants, but have turned it into real data.
+    (10, b'195ab',  (b'1', b'9', b'5', None)),
+    ( 2, b'0123',   (b'0', b'1', None)),
+    (16, b'aF0g',   (b'a', b'F', b'0', None)),
+    ( 8, b'9',      (None,)),
+    (10, b'',       (None,)),
+])
+def test_Parser_digit_bytes(base, input, retvals):
+    p = Parser(input, TestCodec())
+    assert retvals == tuple(( p.digit(base) for i in retvals ))
+
+def test_Parser_digit_str():
+    p = Parser('195ab', TestCodec())
+    expected = ('1', '9', '5', None)
+    assert expected == tuple(( p.digit(10) for i in expected ))
+
+def test_Parser_digits():
+    assert b'19' == Parser(b'19a', TestCodec()).digits()
+    assert  None is Parser(b'',    TestCodec()).digits()
+
+####################################################################
+#   Token sorting and translation
+
+TT_TABLE = (
+    (b'\x02',       'bar',      None),
+    (b'',           'f',        None),
+    (b'\x01',       'foo',      None),
+    (b'\x10\x20',   'foobar',   None),
+)
+
+def test_toksort_0_1():
+    assert (
+        (b'\x10\x20',   'foobar',   ),
+        (b'\x02',       'bar'       ),
+        (b'\x01',       'foo'       ),
+        (b'',           'f'         ),
+    ) == toksort(TT_TABLE)
+
+def test_toksort_1_0():
+    assert (
+        ('foobar',  b'\x10\x20'),
+        ('bar',     b'\x02'),
+        ('foo',     b'\x01'),
+        ('f',       b''),
+    ) == toksort(TT_TABLE, 1, 0)
+
+def test_Parser_token():
+    p = Parser(b'ZfoofoobarbarffZ', TestCodec(), TT_TABLE)
+
+    assert None is p.token()
+    assert b'Z' == p.consume()
+
+    def check(token, tokenized):
+        assert token == p.token()
+        p.commit()
+        assert tokenized == p.olist_committed[-1]
+
+    check('foo',    b'\x01')
+    check('foobar', b'\x10\x20')
+    check('bar',    b'\x02')
+    check('f',      b'')
+    check('f',      b'')
+
+    assert b'Z' == p.consume()

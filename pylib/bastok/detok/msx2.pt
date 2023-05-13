@@ -368,6 +368,19 @@ def test_detokenize_expand(ln, toks, compact, expanded):
     dte = Detokenizer(MSXCP, toks, lineno=ln, expand=True)
     assert expanded == dte.detokenized()
 
-def test_repl():
-    pass
-    #assert [] == DETOKENS[0:8]
+def test_detoken_sort():
+    test_tokens = (
+        (b'\xAA\xCC', '', 0),
+        (b'\xAA',     '', 0),
+        (b'\xAA\xBB', '', 0),
+    )
+    assert (b'\xAA\xCC', b'\xAA\xBB', b'\xAA') \
+        == tuple( tok for (tok, text) in detok_sort(test_tokens) )
+
+def test_detokens():    # XXX BROKEN
+    l = len(DETOKENS[0][1])     # length of text (ASCII) form of first token
+    for tok, asc in DETOKENS:
+        l1 = len(tok)
+        assert len(tok) <= l, \
+            "DETOKENS not monotonically decreasing at {}".format(tok)
+        l = min(l, l1)

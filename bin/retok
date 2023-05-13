@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+
+from    os.path  import abspath, dirname, join
+from    site  import addsitedir
+BASEDIR = dirname(dirname(abspath(__file__)))
+if __name__ == '__main__': addsitedir(join(BASEDIR, 'pylib'))
+
+from    argparse  import ArgumentParser, FileType
+from    sys  import argv, stdin, stdout, stderr
+
+from    bastok.blines  import blines, stripeol
+from    bastok.retok.msx2  import tokenize
+from    bastok.charset.msx import CHARMAP
+
+####################################################################
+
+def parseargs():
+    p = ArgumentParser(description='MSX-BASIC tokenizer')
+    arg = p.add_argument
+
+    arg('-b', '--binary', action='store_true',
+        help='do not do charset conversion and use DOS text CR/LF/^Z;'
+             'expanded input not allowed')
+    arg('-c', '--charset', default='ja',
+        help='MSX charset: ja (default), int, ar, ru, etc.')
+    arg('-s', '--squeeze', action='store_true',
+        help='remove spaces to reduce code size')
+    arg('input',
+        help='input file (`-` for stdin); always UTF-8 except in --binary mode')
+    arg('output', nargs='?', type=FileType('wb'), default=stdout.buffer,
+        help='output file, always binary (default stdout)')
+
+    args = p.parse_args()
+    if hasattr(args.output, 'buffer'):
+        #   If the argument was '-', FileType('wb') ignores the 'b' when
+        #   wrapping stdout. Fix that by grabbing the underlying binary writer.
+        args.output = args.output.buffer
+    return args
+
+def main(args):
+    if args.binary:
+        cmap = CHARMAP.get('int')   # must be ASCII-compatible!
+    else:
+        cmap = CHARMAP.get(args.charset)
+        if cmap is None:
+            die(3, 'Unknown MSX charset: {}'.format(args.charset),
+                'Known charsets:',
+                *[ ' {:>4}: {}'.format(k, v.description)
+                   for k, v in sorted(CHARMAP.items()) ]
+                )
+
+    if not args.binary:
+        with open(args.input, 'r') as f:
+            lines = blines(f.readlines())
+    else:
+        with open(args.input, 'rb') as f:
+            lines = stripeol(f.readlines())
+    tlines = tokenize(cmap, lines, squeeze=args.squeeze)
+    tlines.write_to(args.output)
+
+if __name__ == '__main__':
+    main(parseargs())

@@ -1,0 +1,4 @@
+1 'SAVE"00ja-rem.bas"
+43520 REM SAVE in comment shows it's not tokenised
+43536 REM ひらか゛なもある。
+43552 END

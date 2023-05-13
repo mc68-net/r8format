@@ -4,6 +4,9 @@ set -eu -o pipefail
 PASSED=false
 trap 'ec=$?; $PASSED || { echo 1>&2 "*** FAILED (exitcode=$ec)"; }' 0
 
+####################################################################
+#   Functions
+
 qecho() {
     [[ -n $quiet ]] && return
     echo "$@"
@@ -15,6 +18,34 @@ hexdiff() {
         --label   "$1"  --label   "$2" \
         <(xxd -c8 -g1 "$1") <(xxd -c8 -g1 "$2")
 }
+
+whexdiff() {
+    local builddir="$1" local expected="$2" local actual="$3"
+    cmp "$expected" "$actual" && return 0
+    #   Create temporary files for the hexdumps because that makes it easier
+    #   to use `meld` or similar graphical tools on them after a failure.
+    local hexpected="$builddir/$(basename "$expected").exp.dump"
+    local hactual="$builddir/$(basename "$actual").act.dump"
+    bin/basdump "$expected" > "$hexpected"
+    bin/basdump "$actual" > "$hactual"
+
+    local ecolor=2  # expected values color: green
+    local acolor=1  #   actual values color: red
+
+    echo "--- expected: $(tput setaf $ecolor)$hexpected$(tput sgr0)"
+    echo "---   actual: $(tput setaf $acolor)$hactual$(tput sgr0)"
+    #   Feeding a unified diff into wdiff gives us a bit of context
+    #   in the output, which can be helpful.
+    echo XXX
+    diff -U2 --label '' --label '' "$hexpected" "$hactual" \
+        | wdiff -d \
+            -w "$(tput setaf $ecolor)" -x "$(tput sgr0)" \
+            -y "$(tput setaf $acolor)" -z "$(tput sgr0)"
+    echo YYY
+}
+
+####################################################################
+#   Main
 
 basedir=$(cd "$(dirname "$0")" && pwd -P)
 cd "$basedir"
@@ -36,27 +67,54 @@ pytest -q -o testpaths=pylib/ "$@"
 ####################################################################
 #   Functional Tests
 
-ftdata=.build/programs/
-mkdir -p $ftdata/detok
+ftdata=.build/programs
+mkdir -p $ftdata/detok $ftdata/retok
 
 echo "====== bastok"
 
 qecho "------ basdump  basdump.bas"
 bin/basdump  programs/basdump.bas | diff - programs/basdump.dump
 
-qecho "------ detok    simple.bas"
-bin/detok    programs/simple.bas >$ftdata/detok/simple.ba0
-diff -u {$ftdata/detok,programs}/simple.ba0
+for bas in programs/[0-9][0-9]*.bas; do
+    f=$(basename $bas .bas)
 
-qecho "------ detok -e simple.bas"
-bin/detok -e programs/simple.bas >$ftdata/detok/simple.ba1
-diff -u {$ftdata/detok,programs}/simple.ba1
+    qecho "====== detok    $f.bas"
+    bin/detok    programs/$f.bas >$ftdata/detok/$f.ba0
+    diff -u {$ftdata/detok,programs}/$f.ba0
+
+    qecho "------ detok -e $f.bas"
+    bin/detok -e programs/$f.bas >$ftdata/detok/$f.ba1
+    diff -u {$ftdata/detok,programs}/$f.ba1
+
+    qecho "------ retok    $f.ba0"
+    bin/retok                 programs/$f.ba0 >$ftdata/retok/$f.bas0
+    whexdiff  "$ftdata/retok" programs/$f.bas  $ftdata/retok/$f.bas0
+
+    qecho "------ retok -s $f.ba1"
+    bin/retok -s              programs/$f.ba1 >$ftdata/retok/$f.bas1
+    whexdiff  "$ftdata/retok" programs/$f.bas  $ftdata/retok/$f.bas1
+
+    [[ -e programs/$f.ba2 ]] && {
+        qecho "------ retok -s $f.ba2"
+        bin/retok -s              programs/$f.ba2 >$ftdata/retok/$f.bas2
+        whexdiff  "$ftdata/retok" programs/$f.bas  $ftdata/retok/$f.bas2
+    }
+
+    #   XXX `detok -e` is broken: it assumes the .bas file is fully compressed
+    #   and adds extra space even where there's already space, e.g., `PRINT X`
+    #   → `PRINT  X`. We need to fix this before we can do a round-trip test.
+#   diff -u programs/$f.ba1 <(bin/detok -e $ftdata/retok/$f.bas1)
+done
 
 {
     f="binchars"
     qecho "------ detok --binary $f.bas"
     bin/detok --binary programs/$f.bas >$ftdata/detok/$f.baa
     hexdiff {$ftdata/detok,programs}/$f.baa
+
+    qecho "====== retok --binary $f.baa"
+    bin/retok --binary programs/$f.baa >$ftdata/retok/$f.bas
+    hexdiff {$ftdata/retok,programs}/$f.bas
 }
 
 echo "====== cmtconv"

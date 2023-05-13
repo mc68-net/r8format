@@ -1,0 +1,377 @@
+from    bastok.retok.msx2  import *
+from    bastok.charset.msx  import UTCharset, CHARMAP
+from    re  import escape
+from    struct  import pack
+import  pytest
+
+#   When we don't need to have distinguishable Unicode and native
+#   codepoints, this is easier to use.
+ja_charmap  = CHARMAP['ja']
+int_charmap = CHARMAP['int']
+
+####################################################################
+
+@pytest.mark.parametrize('s, b', [
+    ('\uF000', b'\x01\x40'),
+    ('\uF01F', b'\x01\x5F'),
+    ('\uF020', b'\x20'),
+    ('\uF080', b'\x80'),
+    ('\uF0FF', b'\xFF'),
+])
+def test_char_good(s, b):
+    p = Parser(s, UTCharset())
+    assert s == char(p)
+    assert b == p.output_pending()
+    assert p.finished()
+
+def test_char_bytes():
+    p = Parser(b'a', int_charmap)
+    assert b'a' == char(p)
+    assert b'a' == p.output_pending()
+    assert p.finished()
+
+def test_char_encodingerror():
+    p = Parser('\uF07F', UTCharset())
+    with pytest.raises(EncodingError) as ex:
+        char(p)
+    assert ex.match('0x7F')
+
+def test_char_eoi():
+    p = Parser('', None)
+    with pytest.raises(p.ParseError) as ex:
+        char(p)
+    assert ex.match('Unexpected end of input')
+
+def test_chars():
+    p = Parser('bcd', UTCharset(1))
+    chars(p)
+    assert b'abc' == p.output_pending()
+    assert p.finished()
+
+
+@pytest.mark.parametrize('s, b, r', [
+    ('x'    , None  , 'x'),
+    ('  x'  , b'  ' , 'x'),
+    (''     , None  , ''),
+    ('  '   , b'  ' , ''),
+])
+def test_spaces(s, b, r):
+    p = Parser(s, ja_charmap); spaces(p, generate=True)
+    assert (b, r) == (p.output_pending(), p.remain())
+
+    p = Parser(s, ja_charmap); spaces(p, generate=False)
+    assert (None, r) == (p.output_pending(), p.remain())
+
+def test_spaces_default():
+    p = Parser('  x', ja_charmap)
+    spaces(p); assert (b'  ', 'x') == (p.output_pending(), p.remain())
+
+@pytest.mark.parametrize('input, remain, generated', [
+    ('""',           '' ,   b'""'),
+    ('""x',         'x',    b'""'),
+    ('"',            '' ,   b'"'),
+    ('"xyz',         '' ,   b'"xyz'),
+    ('"Aaあ年".',   '.' ,   b'"Aa\x91\x01\x48"'),
+    ('"Aaあ年',      '' ,   b'"Aa\x91\x01\x48'),
+])
+def test_string_literal_success(input, remain, generated):
+    p = Parser(input, ja_charmap)
+    assert (             True,          generated, remain) \
+        == (string_literal(p), p.output_pending(), p.remain())
+
+def test_string_literal_error():
+    p = Parser('a')
+    assert (             None, 'a') \
+        == (string_literal(p), 'a')   # no error thrown, no parse, no consume
+
+    p = Parser('a')
+    with pytest.raises(p.ParseError) as ex:
+        string_literal(p, 'Unexpected input')
+    assert ex.match("Unexpected input: 'a'")
+
+def test_string_literal_bytes():
+    p = Parser(b'a', ja_charmap)
+    assert (None, b'a') == (string_literal(p), p.remain())
+
+    p = Parser(b'"abc"d', ja_charmap);
+    assert (             True,           b'"abc"',       b'd') \
+        == (string_literal(p), p.output_pending(), p.remain())
+
+@pytest.mark.parametrize('n, remain, s', [
+    (0, '', '0'), (0, '', '000'),
+    (17, '', '17'), (17, '', '00017'), (65529, '', '65529'),
+    (0, ' ', '0 '), (0, ':', '0:'), (0, 'a', '0a'), (0, 'x', '0x'),
+    (-32767, '', '-32767'), # bogus, but tokeniser leaves it for interpreter
+    #(6553, 5, '65530'), (6553, 5, '65536'),  # tokeniser does this!
+])
+def test_linenum_success(n, remain, s):
+    p = Parser(s)
+    tok = b'\xF2' if n < 0 else b''
+    tok += b'\x0E' + pack('<H', abs(n))
+    assert (n         , tok        , remain) \
+        == (linenum(p), p.output() , p.remain())
+
+def test_linenum_bytes():
+    p = Parser(b'12345 PRINT', ja_charmap)
+    assert (12345, b'\x0E\x39\x30', b' PRINT') \
+        == (linenum(p), p.output(), p.remain())
+
+def test_linenum_nogen():
+    p = Parser('258')
+    assert 258 == linenum(p, False)
+    assert None is p.output()
+
+def test_linenum_failure_letters():
+    p = Parser('=123')
+    assert None == linenum(p)
+    with pytest.raises(p.ParseError) as ex:
+        linenum(p, err='linenum')
+    assert ex.match('linenum')
+
+def test_linenum_failure_size():
+    p = Parser('65530')
+    with pytest.raises(p.ParseError) as ex:
+        #   Should raise error even if not generating.
+        linenum(p, gen=False, err='xyz')
+    assert ex.match('65530 outside linenum range at')
+
+def test_linenum_failure_badnum_pending():
+    ' Generates a parse failure after the parse is partially successful. '
+    p = Parser('-X')
+    assert None is linenum(p, gen=True)
+    assert '-X' == p.remain()
+    p.commit()
+    assert '-X' == p.remain()
+
+@pytest.mark.parametrize('s, i, gen, remain', [
+    ('',                      None,            None,  ''    ),
+    ('01',                    None,            None,  '01'  ),
+    ('&H0',                      0,  b'\x0C\x00\x00', ''    ),
+    ('&H',                       0,  b'\x0C\x00\x00', ''    ),
+    ('&HG',                      0,  b'\x0C\x00\x00', 'G'   ),
+    ('&ha',                   0x0A,  b'\x0C\x0A\x00', ''    ),
+    ('&HffffG',             0xFFFF,  b'\x0C\xFF\xFF', 'G'   ),
+    ('&O778',                 0o77,  b'\x0B\x3F\x00', '8'   ),
+    ('&o177777',             65535,  b'\x0B\xFF\xFF', ''    ),
+    ('&B1012',               0b101,  b'&B101',        '2'   ),
+    ('&b1111000011110000',  0xF0F0,  b'&B1111000011110000', '' ),
+    ('&b2',                      0,  b'&B',           '2'),
+])
+def test_ampersand_literal(s, i, gen, remain):
+    p = Parser(s, ja_charmap)
+    assert (                   i,        gen,   remain) \
+        == (ampersand_literal(p), p.output(), p.remain())
+
+@pytest.mark.parametrize('s, msg', [
+    ('&h10000',     "7:'' after …'&h10000'"),
+    ('&o200000',    "8:'' after …'&o200000'"),
+    ('&o1777767',   "9:'' after …'&o1777767'"),
+   #'&b11110000111100001',
+])
+def test_ampersand_literal_overflow(s, msg):
+    p = Parser(s)
+    with pytest.raises(p.ParseError) as ex:
+        print(ampersand_literal(p))
+    assert ex.match('Overflow at ' + msg)
+
+def test_ampersand_literal_bytes():
+    p = Parser(b'&b10&hf', ja_charmap)
+    assert (2, 15, b'&B10\x0C\x0F\x00') \
+        == (ampersand_literal(p), ampersand_literal(p), p.output())
+
+@pytest.mark.parametrize('s, d', [
+    (              '',  None),
+    #               consume, neg,    int,  frac,  type, exp
+    (             '0',  ( 1,   0,    '0',  None, None, None)),
+    (          '1234',  ( 4,   0, '1234',  None, None, None)),
+    (           '2.%',  ( 3,   0,    '2',    '',  '%', None)),
+    (            '-1',  ( 2,  -1,    '1',  None, None, None)),
+    (           '.3',   ( 2,   0,     '',   '3', None, None)),
+    (          '-.3',   ( 3,  -1,     '',   '3', None, None)),
+    (            '3e',  ( 2,   0,    '3',  None,  'e',    0)),
+    (        '3.1E12',  ( 6,   0,    '3',   '1',  'e',   12)),
+    (       '3.2E+13',  ( 7,   0,    '3',   '2',  'e',   13)),
+    (         '3.23D',  ( 5,   0,    '3',  '23',  'd',    0)),
+    (        '3.d-13',  ( 6,   0,    '3',    '',  'd',  -13)),
+    (  '-123.456e-78',  (12,  -1,  '123', '456',  'e',  -78)),
+])
+def test_match_number(s, d):
+    p = Parser(s);       assert d == match_number(p)
+    p = Parser(s + 'a'); assert d == match_number(p)
+
+def test_match_number_bytes():
+    p = Parser(b'3.1E12', int_charmap)
+    assert (6, 0, '3', '1', 'e', 12) == match_number(p)
+
+
+def test_match_digits_exp_and_type():
+    ''' We test above that random chars after the number are not consumed
+        by the parse, but we want to make quite sure that we're not allowing
+        both an exponent _and_ a type.
+    '''
+    s = '-123.456e-78#'     # `#` at should not be parsed/consumed
+    p = Parser(s)
+    assert (len(s)-1, -1, '123', '456', 'e', -78) == match_number(p)
+
+@pytest.mark.parametrize('s, remain, ok, tok', [
+    # input,  remaining unparsed, value returned,              tokenised data
+    (  'a',  'a',  None,  None),        # letter is not a number
+    (   '',   '',  None,  None),        # EOF is not a number
+    ( '0x',  'x',  'OK',  b'\x11'),     # leaves stuff after number unparsed
+])
+def test_number_misc(s, remain, ok, tok):
+    p = Parser(s)
+    assert (number(p),                 tok,     remain) \
+        == (       ok,  p.output_pending(), p.remain())
+
+@pytest.mark.parametrize('s, tok', [
+    #              input,   tokenised data
+
+    #   1-digit ints
+    (                '0',   b'\x11'),
+    (                '9',   b'\x1A'),
+    (               '-3',   b'\xF2\x14'),
+    (              '-8%',   b'\xF2\x19'),
+    (            '-8.9%',   b'\xF2\x19'),
+
+    #   1-byte ints
+    (               '10',   b'\x0F\x0A'),
+    (              '99%',   b'\x0F\x63'),
+    (             '-255',   b'\xF2\x0F\xFF'),
+
+    #   2-byte ints
+    (              '256',   b'\x1C\x00\x01'),
+    (            '32767',   b'\x1C\xFF\x7F'),
+    (           '-32767',   b'\xF2\x1C\xFF\x7F'),
+    (          '-32767%',   b'\xF2\x1C\xFF\x7F'),
+    (      '-32767.999%',   b'\xF2\x1C\xFF\x7F'),
+
+    #   explicit float
+    (              '-3!',   b'\xF2\x1D\x41\x30\x00\x00'),
+    (             '3e0' ,       b'\x1D\x41\x30\x00\x00'),
+    (             '.03!',       b'\x1D\x3F\x30\x00\x00'),
+    (            '3e-2' ,       b'\x1D\x3F\x30\x00\x00'),
+    (              '30!',       b'\x1D\x42\x30\x00\x00'),
+    (             '3e1' ,       b'\x1D\x42\x30\x00\x00'),
+    (            '3e+1' ,       b'\x1D\x42\x30\x00\x00'),
+    (      '-4.12345e20',   b'\xF2\x1D\x55\x41\x23\x45'),   # max sig for short
+    #   forcing double because significant > 6 significant digits
+    (      '4.123456e20',       b'\x1F\x55\x41\x23\x45\x60\x00\x00\x00'),
+    #   nDm ignores sig digs, always saves double
+    (          '5.123d3',       b'\x1F\x44\x51\x23\x00\x00\x00\x00\x00'),
+
+    #   implict float
+    (            '32768',   b'\x1D\x45\x32\x76\x80'),
+    (           '-32768',   b'\xF2\x1D\x45\x32\x76\x80'),
+    (            '12.34',   b'\x1D\x42\x12\x34\x00'),
+    (             '0.05',   b'\x1D\x3F\x50\x00\x00'),
+
+    #   proper counting of sig digs
+    (             '0.12',   b'\x1D\x40\x12\x00\x00'),
+    (     '0000000012.3',   b'\x1D\x42\x12\x30\x00'),
+    (      '0.000000012',   b'\x1D\x39\x12\x00\x00'),
+    (      '0.001234567',   b'\x1F\x3E\x12\x34\x56\x70\x00\x00\x00'),
+
+    #   proper rounding
+    (        '12345678!',   b'\x1D\x48\x12\x34\x57'),
+    (       '0.1999999!',   b'\x1D\x40\x20\x00\x00'),   # = .2
+    (       '0.9999999!',   b'\x1D\x40\x10\x00\x00'),   # = .1 (MS)
+   #(       '0.9999999!',   b'\x1D\x41\x20\x00\x00'),   # = 1  (reality)
+
+#   ('-123456.789012e34',   b'\xF2\x1F6812345678901200'),
+
+#   (    '-3!',        b'\xF2\x1D................'),   # XXX leaves !
+#   (    '-3#',        b'\xF2\x1F................'),   # XXX leaves #
+#   (    '3.1',            b'\x1F................'),
+
+#   (   '5e0',         b'XXX'),
+#   (    '6e',         b'XXX'),
+
+#   #   XXX need to push back trailing % here?
+#   (  '1e2%',       b'XXX'),
+])
+def test_number(s, tok):
+    p = Parser(s)
+    assert (number(p), tok) == ('OK',  p.output_pending())
+
+def test_number_bytes():
+    p = Parser(b'-255%x', int_charmap)
+    ok = number(p)
+    assert ('OK',     b'\xF2\x0F\xFF',       b'x') \
+        == (  ok,  p.output_pending(), p.remain())
+
+    p.reset(b'87654321!')
+    ok = number(p)
+    assert ('OK',  b'\x1D\x48\x87\x65\x43',        b'') \
+        == (  ok,       p.output_pending(), p.remain())
+
+@pytest.mark.parametrize('s', [ '32768%', '-32768%', '32768.1234%' ])
+def test_digits_int_overflow(s):
+    p = Parser(s)
+    with pytest.raises(p.ParseError) as ex:
+        number(p)
+    assert ex.match('int Overflow: 32768')
+
+@pytest.mark.parametrize('squeeze, input, expected', [  # TS = "trailing spaces"
+    (0, '',                     b''),
+    (0, 'a,  b b  , " c, " ,d,e', b'a,  b b  , " c, " ,d,e'),
+    (0, ' ":a" , b : PRINT',        b' ":a" , b :'),
+    (1,  '',                    b''),
+    (2,  ' a',                  b'a'),
+    (3,  ' ":a", b : PRINT',    b'":a",b:'),    # XXX consume/gen colon, too?
+    (4,  ' " a,b " , c ',       b'" a,b ",c'),  # TS removed after str, not EOL
+    (5,  ' a b, c d ',          b'a b,c d'),    # TS kept when not EOL
+   #(True,  'a,  b b  , " c, " ,d,e',      b'a,b b," c, ",d,e'),
+   # tests w/ `:` followed by more BASIC
+])
+def test_data(squeeze, input, expected):
+    p = Parser(input, ja_charmap)
+    p.generate(b''); p.commit() # set output data type
+    data(p, squeeze)
+    assert expected == p.output()
+
+####################################################################
+
+TLPARSER = Parser('', ja_charmap, TOKENS)
+
+@pytest.mark.parametrize('lineno, tokens, line', [
+    ( 10, b'\x8F SAVE',             '10 REM SAVE'),
+    ( 10, b':\x8F\xE6 SAVE',        "10 ' SAVE"),
+    ( 20, b'\x91: \x8Fark=:=',      '20 PRINT: REMark=:='),
+    ( 30, b'A2$\xEF"a"\xF1"\x91"',  '30 A2$="a"+"あ"'),
+    #   $0E is prefix for a 16-bit little-endian int.
+    ( 40, b'\x89\x20\x0E\x2E\x16',  '40 GOTO 5678'), # 5678=$162E
+    #  41 24 ef 22 61 22 f1 22 91 22
+])
+def test_tokline(lineno, tokens, line):
+    TLPARSER.reset(line)
+    assert (lineno, tokens) == tokline(TLPARSER)
+
+def test_tokline_bytes():
+    #   We cannot use the ja_charmap here because it's not quite ASCII: the
+    #   backslash has been replaced by the yen symbol. But the integer
+    #   division symbol is a backslash, so when converting the tokens to
+    #   `bytes`, ja_charmap.native('\\') complains that there is no native
+    #   conversion for backslash. It's all the same character code in the
+    #   MSX ASCII saves, so when reading non-Unicode we just need always to
+    #   use a charset compatible with ASCII.
+
+    p = Parser(b'10 REM SAVE', int_charmap, TOKENS)
+    assert (10, b'\x8F SAVE') == tokline(p)
+
+@pytest.mark.parametrize('line, msg', [
+    ('REM',                 'line number at 0'),
+])
+def test_tokline_error(line, msg):
+    TLPARSER.reset(line)
+    with pytest.raises(Parser.ParseError) as ex:
+        tokline(TLPARSER)
+    assert ex.match('expected ' + msg)
+
+def test_tokenize():
+    inlines = [ "10 REM",      "20 PRINT", ]
+    tlines  = ( (10, b'\x8F'), (20, b'\x91') )
+    assert tlines == tuple(tokenize(ja_charmap, inlines).lines())
+
+def test_tokenize_duplicate_lines():
+    pass # XXX

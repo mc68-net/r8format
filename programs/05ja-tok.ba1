@@ -1,0 +1,4 @@
+    1 'SAVE"05ja-tok.bas"
+   10 PRINT
+   20 CALL SYSTEM
+   30 _SYSTEM
