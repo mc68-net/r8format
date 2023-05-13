@@ -212,6 +212,8 @@ T_ELSE1 = tokbytes('ELSE')[1]   # without leading ':'
 T_EQ    = tokbytes('=')[0]
 MAX_LINENO = 65529
 
+NEGATIVE = tokbytes('-')
+
 class Detokenizer:
     ''' A detokenizer for MSX-BASIC. Instantiate this with a tokenized
         line and call `detokenized()` for the detokenized result.
@@ -398,7 +400,7 @@ class Detokenizer:
                 i = self.byte()
                 if i < 10: terror()
                 genasc(str(i))
-            elif b <= 0x1A:            # single-digit int
+            elif b <= 0x1A:            # $11 through $1A are ints 0-9
                 asc(b, str(b - 0x11))
             elif b == 0x1B:            # unused
                 terror()

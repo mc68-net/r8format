@@ -1,4 +1,4 @@
-from    bastok.blines import blines
+from    bastok.blines import blines, stripeol
 import  pytest
 
 @pytest.mark.parametrize('result, input', [
@@ -29,3 +29,17 @@ import  pytest
 ])
 def test_blines(result, input):
     assert result == blines(input)
+
+def test_stripeol():
+    stripeol([bytearray(b'abc')])
+
+    assert [] == stripeol([])
+
+    with pytest.raises(AttributeError):
+        stripeol(('a', 'b'))
+
+    lines    = (b'', b'\x1A', b'0', b'1\n', b'2\r', b'3\r\n', b'4\n\r', b'\x1A')
+    expected = [b'', b'\x1A', b'0', b'1',   b'2',   b'3',     b'4\n',          ]
+    assert expected == stripeol(lines)
+
+    assert [bytearray(b'ab')] == stripeol([bytearray(b'ab\r\n')])

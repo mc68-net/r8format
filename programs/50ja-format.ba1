@@ -1,0 +1,9 @@
+    1 'SAVE"50ja-for.bas"
+   10 FOR I=0 TO 3
+    : PRINT I;
+    : NEXT I
+    : PRINT
+   20 FOR I = 0 TO 3
+   30   PRINT I;
+   40 NEXT I 
+    : PRINT
