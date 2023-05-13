@@ -18,7 +18,8 @@
     - Something to match. The parser will fail or error if the input at the
       current position does not match this parameter.
     - `genf`: A generator function that is passed the data about to be
-      consumed; its return value will be appended to `olist`.
+      consumed; its return value will be appended to `olist`. Nothing
+      is generated if ``genf=None``.
     - `err`: Failure/error flag. When unable to successfully parse the
       input `err=None` will return a failure and anything else will raise
       an error with the that value in the error message/exception.
@@ -142,14 +143,6 @@ def byte(p, *, genf=None, err='unexpected end of input'):
     if genf is not None:
         p.generate(genf(x))
     return x
-
-def spaces(p):
-    ''' Consume zero or more space characters, generating no output.
-        This works on any input containing `str(' ')` or `ord(' ')` values,
-        including `str` and `bytes`.
-    '''
-    while p.peek() in (' ', ord(' ')):
-        p.consume()
 
 def decimal(p, err=None):
     ''' Consume an unsigned decimal number and return it as an `int`.

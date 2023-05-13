@@ -39,6 +39,22 @@ def test_chars():
     chars(p)
     assert b'abc' == p.output()
 
+@pytest.mark.parametrize('s, b, r', [
+    ('x'    , None  , 'x'),
+    ('  x'  , b'  ' , 'x'),
+    (''     , None  , ''),
+    ('  '   , b'  ' , ''),
+])
+def test_spaces(s, b, r):
+    p = PState(s, ja_charmap)
+    spaces(p);        assert (b, r) == (p.output(), p.remain())
+    p = PState(s, ja_charmap)
+    spaces(p, False); assert (None, r) == (p.output(), p.remain())
+
+def test_spaces_default():
+    p = PState('  x', ja_charmap)
+    spaces(p); assert (b'  ', 'x') == (p.output(), p.remain())
+
 @pytest.mark.parametrize('s, b', [
     ('""',          b'""'),
     ('""x',         b'""'),

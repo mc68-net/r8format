@@ -74,11 +74,6 @@ def test_byte_bytes():
     assert 0x69 == byte(p, genf=lambda b: chr(b+1))
     assert 'hj' == p.output()
 
-def test_spaces():
-    p = PState( 'hi');      assert (None, 0) == (spaces(p), p.pos)
-    p = PState( '   x ');   assert (None, 3) == (spaces(p), p.pos)
-    p = PState(b' y');      assert (None, 1) == (spaces(p), p.pos)
-
 @pytest.mark.parametrize('n, pos, s', [
     (0, 1, '0'), (0, 3, '000'),
     (17, 2, '17'), (17, 5, '00017'), (76543210, 8, '76543210'),

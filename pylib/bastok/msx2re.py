@@ -24,7 +24,7 @@ def tokline(charmap, line):
     #   fragments that do not start with a line number.
     p = PState(line, charmap)
     lineno = decimal(p, err='line number')
-    spaces(p)
+    spaces(p, False)
     while not p.finished():
         #   Start by checking for a token, since any string matching a
         #   token takes priority over anything else.
@@ -67,6 +67,17 @@ def string_literal(p, err='unexpected input'):
         if c == DQUOTE: byte(p); p.generate(b'"'); return s + DQUOTE
         s += char(p)
 
+def spaces(p, generate=True):
+    ''' Consume zero or more Unicode space characters.
+
+        If `generate` is `True` these will be generated into the output
+        (using the usual Unicode to native translation), otherwise they
+        will be silenty consumed.
+    '''
+    while p.peek() in (' ', ord(' ')):
+        if generate: char(p)
+        else:        p.consume()
+
 def chars(p):
     ' Do char() until EOF. '
     while char(p, err=None): pass
@@ -89,7 +100,10 @@ def char(p, err='unexpected end of input'):
     c = byte(p, err=err)
     if c is None: return None
 
-    n = p.charset.native(c)
+    if not p.charset:
+        p.error('No charset provided for translation')
+    else:
+        n = p.charset.native(c)
     if n == 0x7F:
         raise EncodingError('cannot encode char 0x7F')
     if n < 0x20:
