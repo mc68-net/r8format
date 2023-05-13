@@ -400,7 +400,7 @@ class Detokenizer:
                 i = self.byte()
                 if i < 10: terror()
                 genasc(str(i))
-            elif b <= 0x1A:            # single-digit int
+            elif b <= 0x1A:            # $11 through $1A are ints 0-9
                 asc(b, str(b - 0x11))
             elif b == 0x1B:            # unused
                 terror()
