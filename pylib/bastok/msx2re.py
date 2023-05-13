@@ -23,7 +23,7 @@ def tokline(charmap, line):
     #   Possibly we want to change this API so that we can tokenize line
     #   fragments that do not start with a line number.
     p = PState(line, charmap)
-    lineno = decimal(p, err='line number')
+    lineno = uint16(p, gen=False, err='line number')
     spaces(p, False)
     while not p.finished():
         #   Start by checking for a token, since any string matching a
@@ -35,6 +35,7 @@ def tokline(charmap, line):
             if t == 'REM':  chars(p)
             if t == "'":    chars(p)
             if t == 'DATA': chars(p)    # XXX no space compression yet!
+            if t == 'GOTO': spaces(p); uint16(p, err='line number after GOTO')
             continue
         if string_literal(p, err=None) is not None: continue
         byte(p, genf=lambda c: bytes([ord(c)]))

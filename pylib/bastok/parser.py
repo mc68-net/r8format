@@ -26,6 +26,8 @@
 
 '''
 
+import  struct
+
 class PState:
     ''' A mutable parser state, consisting of:
 
@@ -144,10 +146,17 @@ def byte(p, *, genf=None, err='unexpected end of input'):
         p.generate(genf(x))
     return x
 
-def decimal(p, err=None):
-    ''' Consume an unsigned decimal number and return it as an `int`.
+def uint16(p, gen=True, err=None):
+    ''' Consume the ASCII representation of an unsigned 16-bit integer and
+        return it as an `int`.
+
+        If `gen` is true, generate the MSX-BASIC tokenised representation
+        of the number: $0E followed by a little-endian word.
+
         If `err` is `None`, return `None` on failure, otherwise raise a
-        `ParseError` with message 'expecting `err`'.
+        `ParseError` with message 'expecting `err`' if the number was
+        unparsable, or 'too large for uint16' if the number was parsed
+        but is < 0 or > 65535.
     '''
     def fail():
         if err is None: return None
@@ -159,7 +168,13 @@ def decimal(p, err=None):
     while True:
         if p.peek() not in digits: break
         c = byte(p); s = s + c
-    return int(s)
+    n = int(s)
+    try:
+        uint_16 = struct.pack('<H', n)
+    except struct.error:
+        p.error('{} outside uint16 range'.format(n))
+    if gen: p.generate(b'\x0E' + uint_16)
+    return n
 
 def toksort(toktab, field0=0, field1=1):
     ''' Given a sequence of tuples `toktab`, return a new sequence of

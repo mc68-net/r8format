@@ -1,4 +1,5 @@
 from    bastok.parser  import *
+import  struct
 import  pytest
 
 ####################################################################
@@ -76,19 +77,33 @@ def test_byte_bytes():
 
 @pytest.mark.parametrize('n, pos, s', [
     (0, 1, '0'), (0, 3, '000'),
-    (17, 2, '17'), (17, 5, '00017'), (76543210, 8, '76543210'),
+    (17, 2, '17'), (17, 5, '00017'), (65535, 5, '65535'),
     (0, 1, '0 '), (0, 1, '0:'), (0, 1, '0a'), (0, 1, '0x'),
 ])
-def test_decimal_success(n, pos, s):
+def test_uint16_success(n, pos, s):
     p = PState(s)
-    assert (n, pos) == (decimal(p), p.pos)
+    tok = b'\x0E' + struct.pack('<H', n)
+    assert (n        , tok        , pos) \
+        == (uint16(p), p.output() , p.pos)
 
-def test_decimal_failure():
-    p = PState('bleh')
-    assert None == decimal(p)
+def test_uint16_nogen():
+    p = PState('258')
+    assert 258 == uint16(p, False)
+    assert None is p.output()
+
+def test_uint16_failure_letters():
+    p = PState('-123')
+    assert None == uint16(p)
     with pytest.raises(p.ParseError) as ex:
-        decimal(p, err='decimal')
-    assert ex.match('decimal')
+        uint16(p, err='uint16')
+    assert ex.match('uint16')
+
+def test_uint16_failure_size():
+    p = PState('65536')
+    with pytest.raises(p.ParseError) as ex:
+        #   Should raise error even if not generating.
+        uint16(p, gen=False, err='xyz')
+    assert ex.match('65536 outside uint16 range at')
 
 ####################################################################
 #   Token sorting
