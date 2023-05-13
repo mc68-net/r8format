@@ -69,11 +69,12 @@ def test_string_literal_success(s, b):
     assert b == p.output()
 
 def test_string_literal_error():
+    p = PState('a'); assert None is string_literal(p)   # no errors
+
     p = PState('a')
     with pytest.raises(p.ParseError) as ex:
-        string_literal(p)
+        string_literal(p, 'unexpected input')
     assert ex.match("unexpected input: 'a'")
-    assert None is string_literal(p, err=None)
 
 
 ####################################################################

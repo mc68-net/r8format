@@ -37,7 +37,7 @@ def tokline(charmap, line):
             if t == 'DATA': chars(p)    # XXX no space compression yet!
             if t == 'GOTO': spaces(p); uint16(p, err='line number after GOTO')
             continue
-        if string_literal(p, err=None) is not None: continue
+        if string_literal(p) is not None: continue
         byte(p, genf=lambda c: bytes([ord(c)]))
 
     return (lineno, p.output())
@@ -47,7 +47,7 @@ class EncodingError(ValueError): pass
 def data(p):
     p.error('XXX Write DATA parser!')
 
-def string_literal(p, err='unexpected input'):
+def string_literal(p, err=None):
     ''' Consume a string literal starting with `"` and ending with the next
         `"` or end of input, generating its Parser.charset conversion and
         MSX-BASIC encoding. The intial and final quotes are not
