@@ -1,0 +1,7 @@
+    1 'SAVE"70ja-dat.bas"
+   30 FOR I=0 TO 3
+    : READ A$
+    : PRINT I,A$
+    : NEXT I
+   80 DATA abc, 金π♠, "gh,i", jkl
+   99 END

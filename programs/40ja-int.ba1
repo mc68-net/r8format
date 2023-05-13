@@ -1,0 +1,5 @@
+    1 'SAVE"40ja-int.bas"
+   10 PRINT 0,1,9,10,255,256,32767
+   20 COLOR 15,0,1
+   30 GOTO 50
+    : GOTO 1234

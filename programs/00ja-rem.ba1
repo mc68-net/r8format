@@ -1,0 +1,4 @@
+    1 'SAVE"00ja-rem.bas"
+   10 REM SAVE in comment shows it's not tokenised
+   20 REM ひらか゛なもある。
+   99 END
