@@ -1,4 +1,5 @@
-10 'bastok test data
+1 'SAVE"simple.bas"
+10 REM SAVE in comment shows it's not tokenised
 20 REM ë÷–Þåó‘ù¡
 30 FORI=0TO3:READA$:PRINTI,A$:NEXTI
 35 RESTORE
