@@ -20,7 +20,7 @@ def parseargs():
 
     arg('-c', '--charset', default='ja',
         help='MSX charset: ja (default), int, ar, ru, etc.')
-    arg('-e', '--unexpand', action='store_true',
+    arg('-s', '--squeeze', action='store_true',
         help='remove spaces to reduce code size')
     arg('input', type=FileType(encoding='UTF-8'),
         help='input file, always UTF-8 (`-` for stdin)')

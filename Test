@@ -49,12 +49,12 @@ diff -u {$ftdata/detok,programs}/simple.ba1
 
 qecho "------ retok    simple.ba0"
 bin/retok    programs/simple.ba0 >$ftdata/detok/simple.bas0
-qecho "------ retok -e simple.ba0"
-bin/retok -e programs/simple.ba0 >$ftdata/detok/simple.bas0ue
+qecho "------ retok -s simple.ba0"
+bin/retok -s programs/simple.ba0 >$ftdata/detok/simple.bas0ue
 qecho "------ retok    simple.ba1"
 bin/retok    programs/simple.ba1 >$ftdata/detok/simple.bas1
-qecho "------ retok -e simple.ba1"
-bin/retok -e programs/simple.ba1 >$ftdata/detok/simple.bas1ue
+qecho "------ retok -s simple.ba1"
+bin/retok -s programs/simple.ba1 >$ftdata/detok/simple.bas1ue
 
 {
     f="binchars"
