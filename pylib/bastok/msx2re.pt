@@ -85,7 +85,8 @@ def test_string_literal_error():
 #   toktrans() will do a case-insensitive comparision on strings.
 
 @pytest.mark.parametrize('lineno, tokens, line', [
-    ( 10, b'\x8F',                  '10 REM'),
+    ( 10, b'\x8F SAVE',             '10 REM SAVE'),
+    ( 10, b':\x8F\xE6 SAVE',        "10 ' SAVE"),
     ( 20, b'\x91: \x8Fark=:=',      '20 PRINT: REMark=:='),
     ( 30, b'A$\xEF"a"\xF1"\x91"',   '30 A$="a"+"あ"'),
     #  41 24 ef 22 61 22 f1 22 91 22
