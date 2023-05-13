@@ -33,11 +33,9 @@ def tokline(charmap, line):
             #   Only a few tokens have an argument that needs special parsing.
             #   These consume and generate the remainder of the line.
             if t == 'REM':  chars(p)
-            if t == 'DATA': data(p)
+            if t == 'DATA': chars(p)    # XXX no space compression yet!
             continue
-
         if string_literal(p, err=None) is not None: continue
-
         byte(p, genf=lambda c: bytes([ord(c)]))
 
     return (lineno, p.output())
