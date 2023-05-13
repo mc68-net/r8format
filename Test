@@ -24,8 +24,7 @@ export PYTHONPATH="$basedir/pylib"
 ####################################################################
 #   Unit Tests
 
-[[ ${#@} -eq 0 ]] && set pylib/
-pytest -q "$@"
+pytest -q -o testpaths=pylib/ "$@"
 
 ####################################################################
 #   Functional Tests
