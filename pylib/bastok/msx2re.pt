@@ -76,6 +76,30 @@ def test_string_literal_error():
         string_literal(p, 'unexpected input')
     assert ex.match("unexpected input: 'a'")
 
+@pytest.mark.parametrize('s, d', [
+    (              '',  None),
+    #                     int,   frac,   exp,  type
+    (             '0',  (    0,  None,  None,  None)),
+    (          '1234',  ( 1234,  None,  None,  None)),
+    (           '2.%',  (    2,     0,  None,   '%')),
+    (            '-1',  (   -1,  None,  None,  None)),
+    (            '3e',  (    3,  None,     0,  None)),
+    (        '3.1E12',  (    3,     1,    12,  None)),
+    (         '3.23D',  (    3,    23,     0,  None)),
+    (        '3.d-13',  (    3,     0,   -13,  None)),
+    ( '-123.456e-78#',  ( -123,   456,   -78,   '#')),
+])
+def test_match_digits(s, d):
+    p = PState(s)
+    assert d == match_digits(p)
+    assert '' == p.remain()
+
+    p = PState(s + 'a')
+    match_digits(p)
+    assert 'a' == p.remain()
+
+def test_digits():
+    assert 0, 'XXX write me!'
 
 ####################################################################
 

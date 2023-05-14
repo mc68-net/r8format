@@ -1,6 +1,7 @@
 from    bastok.tlines  import TLines
 from    bastok.parser  import *
 from    bastok.msx2  import TOKENS
+import  re
 
 ENCTOKENS = toksort(TOKENS, 1, 0)
 
@@ -37,7 +38,8 @@ def tokline(charmap, line):
             if t == 'DATA': chars(p)    # XXX no space compression yet!
             if t == 'GOTO': spaces(p); uint16(p, err='line number after GOTO')
             continue
-        if string_literal(p) is not None: continue
+        if string_literal(p)    is not None: continue
+        if digits(p)            is not None: continue
         byte(p, genf=lambda c: bytes([ord(c)]))
 
     return (lineno, p.output())
@@ -46,6 +48,50 @@ class EncodingError(ValueError): pass
 
 def data(p):
     p.error('XXX Write DATA parser!')
+
+def digits(p, gen=True, err=None):
+    assert 0, 'XXX write me!'
+
+#   The rules are as follows (XXX should be moved to comments in programs/*)
+#   - optional `-` sign; always encodes as token $F2
+#   - digits:
+#     - without trailing `.`, int encoding unless too large
+#     - with trailing `.`: float, unless followed by `%` which makes it int
+#   - `e` always forces float (even with % at end). Minus sign and digits
+#     after are optional; `0` assumed if not present.
+#   - trailing type:
+#     - `%` truncates float portion unless `e` forces float, in which
+#       case the `%` is appended as an ascii char (syntax error) after the
+#       `!` or `#`
+#
+MATCH_DIGITS = re.compile(r'(-?\d+)(\.\d*)?([dDeE]-?\d*)?([%!#])?')
+
+def match_digits(p):
+    ''' Parse basic syntax of number formats for all types of numbers
+        into a 4-tuple, consuming the characters if we're successful.
+
+        If we fail, we return `None`. Otherwise the 4-tuple is three
+        `int`s and a string::
+        - Integer portion: optional leading ``-`` followed by one or
+          more digits. Always present.
+        - Fractional portion: leading ``.`` (which is dropped) followed by
+          optional digits, with ``0`` assumed if no digits follow. `None`
+          if there was no ``.``.
+        - Exponent portion: leading char from ``[dDeE]`` (which is dropped)
+          followed by optional ``-`` and optional digits, with ``0``
+          assumed if no digits follow. `None` if there was no ``[dDeE]``.
+        - Type portion: `None`, ``%``, ``!`` or ``#``.
+    '''
+    m = MATCH_DIGITS.match(p.remain())
+    if m is None: return None
+    def fval(s):
+        ' Return the value from a "field" (`.NNN` or `eNNN`) as an int. '
+        if s is None: return None
+        if len(s) == 1: s += '0'
+        return int(s[1:])
+    retval = (int(m.group(1)), fval(m.group(2)), fval(m.group(3)), m.group(4))
+    p.consume(m.end())  # consume after calculations in case exception raised
+    return retval
 
 def string_literal(p, err=None):
     ''' Consume a string literal starting with `"` and ending with the next
