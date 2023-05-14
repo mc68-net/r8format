@@ -387,6 +387,8 @@ class Detokenizer:
                 asc(b, '&H')
                 genasc(hex(int16())[2:].upper())
             elif b == 0x0D:
+                #   Address in BASIC text area of destination line.
+                #   This conversion is done at/during (?) RUN.
                 raise RuntimeError('XXX write me: line address')
             elif b == 0x0E:
                 asc(b, '')
@@ -417,6 +419,7 @@ class Detokenizer:
                 self.real(8)
             elif b < DQUOTE:
                 asc(b)
+            #   $26 $42: binary numbers use ASCII `&B` followed by digits.
             elif b == DQUOTE:
                 asc(b)
                 self.quoted()
