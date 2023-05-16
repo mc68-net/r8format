@@ -27,7 +27,7 @@ def tokline(charmap, line):
     #   fragments that do not start with a line number.
     p = PState(line, charmap)
     lineno = uint16(p, gen=False, err='line number')
-    spaces(p, False)
+    space(p, False)
     while not p.finished():
         #   Start by checking for a token, since any string matching a
         #   token takes priority over anything else.
@@ -149,6 +149,12 @@ def string_literal(p, err=None):
         if c == None: return s
         if c == DQUOTE: byte(p); p.generate(b'"'); return s + DQUOTE
         s += char(p)
+
+def space(p, generate=True):
+    ' Consume a single space, if present. '
+    if p.peek() in (' ', ord(' ')):
+        if generate: char(p)
+        else:        p.consume()
 
 def spaces(p, generate=True):
     ''' Consume zero or more Unicode space characters.
