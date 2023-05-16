@@ -5,6 +5,12 @@ These programs are used for `bastok` functional tests (in the [top-level
 `/Test`](../Test) script) and manual testing. This directory can be read
 and written in openMSX by starting it with the `-diska programs` option.
 
+Test data notes:
+- These are not expected to test every edge case; the unit tests generally
+  do that.
+- Extra spaces are deliberate; they test that the parser does not remove
+  the programmer's formatting (unless required with the `-s` option).
+
 Filenames are in the format `NNcc-sss.ext` where:
 - `NN` is a decimal number. This is used by `Test` to detect the files
   for tests and determines the order in which the tests are run.
