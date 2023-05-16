@@ -214,6 +214,8 @@ T_ELSE1 = tokbytes('ELSE')[1]   # without leading ':'
 T_EQ    = tokbytes('=')[0]
 MAX_LINENO = 65529
 
+NEGATIVE = tokbytes('-')
+
 class Detokenizer:
     ''' A detokenizer for MSX-BASIC. Instantiate this with a tokenized
         line and call `detokenized()` for the detokenized result.

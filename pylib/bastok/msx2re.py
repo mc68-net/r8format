@@ -1,6 +1,7 @@
 from    bastok.tlines  import TLines
 from    bastok.parser  import *
-from    bastok.msx2  import TOKENS
+from    bastok.msx2  import TOKENS, NEGATIVE
+from    struct  import pack
 import  re
 
 ENCTOKENS = toksort(TOKENS, 1, 0)
@@ -13,6 +14,7 @@ def tokenize(charmap, lines, txttab=0x8001):
     for l in lines:
         #   XXX check for duplicate line no?
         lineno, tokens = tokline(charmap, l)
+        from sys import stderr
         tl.setline(lineno, tokens)
     return tl
 
@@ -50,7 +52,42 @@ def data(p):
     p.error('XXX Write DATA parser!')
 
 def digits(p, gen=True, err=None):
-    assert 0, 'XXX write me!'
+    ''' Convert digits to an appropriate internal representation.
+
+        This is more complex than it seems becuase the type cannot be
+        determined syntactically: the size of the number and presence of an
+        exponent may change the type, sometimes even overriding the
+        trailing type character.
+    '''
+    d = match_digits(p)
+    if d is None: return
+    i, f, e, t = d
+    retval = i
+
+    #   MSX-BASIC numeric representations are always positive, so generate
+    #   a leading ``-`` token for negative numbers and the proceed with the
+    #   positive version.
+    if i < 0:
+        p.generate(NEGATIVE)
+        i = abs(i)
+
+    # print(i,f,e,t) # XXX
+    if i >= 32768 or e is not None or t in ['!', '#']:
+        if e is None: e = 0
+        if f is None: f = 0
+        #   XXX need D vs. E here for 1.2d3! → "\x1F…!"
+        #   XXX also remember: 1e0% → "\x1D…%"
+        return None
+
+    #   Above case catches all floats, so must be an int.
+    assert f is None and e is None and t is None, 'internal program error'
+    if i < 10:
+        p.generate(bytes([0x11 + i]))
+    elif i < 256:
+        p.generate(pack('<BB', 0x0F, i))
+    else:
+        p.generate(pack('<BH', 0x1C, i))
+    return retval
 
 #   The rules are as follows (XXX should be moved to comments in programs/*)
 #   - optional `-` sign; always encodes as token $F2
