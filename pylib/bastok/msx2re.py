@@ -38,9 +38,10 @@ def tokline(charmap, line):
             if t == 'REM':  chars(p)
             if t == "'":    chars(p)
             if t == 'DATA': chars(p)    # XXX no space compression yet!
-            if t == 'GOTO': spaces(p); linenum(p, err='line number after GOTO')
-            if t == 'THEN': spaces(p); linenum(p, err='line number after THEN')
-            if t == 'GOSUB': spaces(p); linenum(p, err='line number after GOSUB')
+            if t == 'GOTO' or t == 'GOSUB':
+                spaces(p); linenum(p, err='line number after GOTO')
+            if t == 'THEN':
+                spaces(p); linenum(p)   # linenum or other tokens
             continue
         if string_literal(p)    is not None: continue
         if digits(p)            is not None: continue

@@ -4,6 +4,7 @@
    30 GOTO 1234
     : GOTO   50
     : GOTO 9
-   40 THEN 123
-    : GOSUB 456
+   40 GOSUB 123
    50 GOTO -789
+   60 THEN 123
+    : THEN XY
