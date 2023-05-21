@@ -103,11 +103,11 @@ def test_linenum_failure_letters():
     assert ex.match('linenum')
 
 def test_linenum_failure_size():
-    p = PState('65536')
+    p = PState('65530')
     with pytest.raises(p.ParseError) as ex:
         #   Should raise error even if not generating.
         linenum(p, gen=False, err='xyz')
-    assert ex.match('65536 outside linenum range at')
+    assert ex.match('65530 outside linenum range at')
 
 @pytest.mark.parametrize('s, d', [
     (              '',  None),

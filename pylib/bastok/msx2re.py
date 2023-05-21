@@ -178,9 +178,7 @@ def linenum(p, gen=True, err=None):
         If `err` is `None`, return `None` on failure, otherwise raise a
         `ParseError` with message 'expecting `err`' if the number was
         unparsable, or 'outside linenum range' if the number was parsed
-        but is < 0 or > 65535.
-
-        XXX max lineno 65529, 65530 parsed as 6553 followed by '0'
+        but is < 0 or > 65529.
     '''
     def fail():
         if err is None: return None
@@ -198,10 +196,9 @@ def linenum(p, gen=True, err=None):
         if p.peek() not in digits: break
         c = byte(p); s = s + c
     n = int(s)
-    try:
-        uint_16 = struct.pack('<H', n)
-    except struct.error:
+    if n > 65529:   # XXX probably should not be hard-coded!
         p.error('{} outside linenum range'.format(n))
+    uint_16 = struct.pack('<H', n)
     if gen:
         if neg: p.generate(NEGATIVE)
         p.generate(b'\x0E' + uint_16)
