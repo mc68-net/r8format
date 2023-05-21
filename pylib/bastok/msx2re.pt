@@ -111,9 +111,12 @@ def test_match_digits_exp_and_type():
 
 @pytest.mark.parametrize('s, remain, n, tok', [
     #   input,  remaining unparsed,  value returned , tokenised data
+
+    # Definitely not numbers
     (      'a',  'a',     None,                    None),
     (      '',    '',     None,                    None),
 
+    # 1-digit ints
     (      '0',   '',        0,                 b'\x11'),
     (      '9',   '',        9,                 b'\x1A'),
     (     '-3',   '',       -3,             b'\xF2\x14'),
@@ -121,16 +124,18 @@ def test_match_digits_exp_and_type():
     (  '-8.9%',    '',      -8,             b'\xF2\x19'),
     (     '0x',   'x',       0,                 b'\x11'),
 
+    # 1-byte ints
     (     '10',   '',       10,             b'\x0F\x0A'),
     (    '99%',   '',       99,             b'\x0F\x63'),
     (   '-255',   '',     -255,         b'\xF2\x0F\xFF'),
 
-    #   Though 16-bit ints range from -32768 to 32767,
-    #   for whatever reason MSX-BASIC tokenises only 0-32767.
+    # 2-byte ints
     (    '256',   '',      256,         b'\x1C\x00\x01'),   # int
     (  '32767',   '',    32767,         b'\x1C\xFF\x7F'),   # int
     ( '-32767',   '',   -32767,     b'\xF2\x1C\xFF\x7F'),   # int
     ('-32767%',   '',   -32767,     b'\xF2\x1C\xFF\x7F'),   # int
+    ('-32767.999%','',  -32767,     b'\xF2\x1C\xFF\x7F'),   # int
+
 #   (  '32768',   '',  32768.0, b'\x1D................'),   # forces float
 
 #   (    '-3!',       -3.0, b'\xF2\x1D................'),   # XXX leaves !

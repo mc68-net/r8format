@@ -84,14 +84,12 @@ def digits(p, gen=True, err=None):
         if neg: return -i
         else:   return i
 
-    #   Forcing int with % truncates any fractional part.
-    if te == '%':
+    if te == '%':   #   Forcing int with % truncates any fractional part.
+        return genint(neg, int(i))
+    if f is None and te is None:
         return genint(neg, int(i))
 
     assert 0    # XXX
-
-    i, f, e, t = d
-    retval = i
 
     #   MSX-BASIC numeric representations are always positive, so generate
     #   a leading ``-`` token for negative numbers and the proceed with the
@@ -107,16 +105,6 @@ def digits(p, gen=True, err=None):
         #   XXX need D vs. E here for 1.2d3! → "\x1F…!"
         #   XXX also remember: 1e0% → "\x1D…%"
         return None
-
-    #   Above case catches all floats, so must be an int.
-    assert f is None and e is None and t is None, 'internal program error'
-    if i < 10:
-        p.generate(bytes([0x11 + i]))
-    elif i < 256:
-        p.generate(pack('<BB', 0x0F, i))
-    else:
-        p.generate(pack('<BH', 0x1C, i))
-    return retval
 
 #   XXX This should also be documented in programs/*?
 ''' Numbers are parsed as follows:
