@@ -76,6 +76,39 @@ def test_string_literal_error():
         string_literal(p, 'unexpected input')
     assert ex.match("unexpected input: 'a'")
 
+@pytest.mark.parametrize('n, pos, s', [
+    (0, 1, '0'), (0, 3, '000'),
+    (17, 2, '17'), (17, 5, '00017'), (65529, 5, '65529'),
+    (0, 1, '0 '), (0, 1, '0:'), (0, 1, '0a'), (0, 1, '0x'),
+    (-32767, 6, '-32767'), # bogus, but tokeniser leaves it for interpreter
+    #(6553, 5, '65530'), (6553, 5, '65536'),  # tokeniser does this!
+])
+def test_linenum_success(n, pos, s):
+    p = PState(s)
+    tok = b'\xF2' if n < 0 else b''
+    tok += b'\x0E' + struct.pack('<H', abs(n))
+    assert (n       , tok        , pos) \
+        == (linenum(p), p.output() , p.pos)
+
+def test_linenum_nogen():
+    p = PState('258')
+    assert 258 == linenum(p, False)
+    assert None is p.output()
+
+def test_linenum_failure_letters():
+    p = PState('=123')
+    assert None == linenum(p)
+    with pytest.raises(p.ParseError) as ex:
+        linenum(p, err='linenum')
+    assert ex.match('linenum')
+
+def test_linenum_failure_size():
+    p = PState('65536')
+    with pytest.raises(p.ParseError) as ex:
+        #   Should raise error even if not generating.
+        linenum(p, gen=False, err='xyz')
+    assert ex.match('65536 outside linenum range at')
+
 @pytest.mark.parametrize('s, d', [
     (              '',  None),
     #                    neg,    int,  frac,  type/exp
@@ -185,7 +218,7 @@ def test_tokline(lineno, tokens, line):
 
 @pytest.mark.parametrize('line, msg', [
     ('GOTO',                'line number at 0'),
-    ('10 GOTO -1',          'line number after GOTO'),
+    ('10 GOTO =1',          'line number after GOTO'),
 ])
 def test_tokline_error(line, msg):
     with pytest.raises(PState.ParseError) as ex:

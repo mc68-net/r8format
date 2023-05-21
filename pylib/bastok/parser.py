@@ -146,36 +146,6 @@ def byte(p, *, genf=None, err='unexpected end of input'):
         p.generate(genf(x))
     return x
 
-def uint16(p, gen=True, err=None):
-    ''' Consume the ASCII representation of an unsigned 16-bit integer and
-        return it as an `int`.
-
-        If `gen` is true, generate the MSX-BASIC tokenised representation
-        of the number: $0E followed by a little-endian word.
-
-        If `err` is `None`, return `None` on failure, otherwise raise a
-        `ParseError` with message 'expecting `err`' if the number was
-        unparsable, or 'too large for uint16' if the number was parsed
-        but is < 0 or > 65535.
-    '''
-    def fail():
-        if err is None: return None
-        p.error('expected ' + err)
-    digits = ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
-
-    if p.peek() not in digits: return fail()
-    s = ''
-    while True:
-        if p.peek() not in digits: break
-        c = byte(p); s = s + c
-    n = int(s)
-    try:
-        uint_16 = struct.pack('<H', n)
-    except struct.error:
-        p.error('{} outside uint16 range'.format(n))
-    if gen: p.generate(b'\x0E' + uint_16)
-    return n
-
 def toksort(toktab, field0=0, field1=1):
     ''' Given a sequence of tuples `toktab`, return a new sequence of
         pairs consisting of index `field0` followed by index `field1`

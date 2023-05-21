@@ -13,9 +13,9 @@ def tokenize(charmap, lines, txttab=0x8001):
     tl = TLines(txttab)
     for l in lines:
         #   XXX check for duplicate line no?
-        lineno, tokens = tokline(charmap, l)
+        ln, tokens = tokline(charmap, l)
         from sys import stderr
-        tl.setline(lineno, tokens)
+        tl.setline(ln, tokens)
     return tl
 
 def tokline(charmap, line):
@@ -26,7 +26,7 @@ def tokline(charmap, line):
     #   Possibly we want to change this API so that we can tokenize line
     #   fragments that do not start with a line number.
     p = PState(line, charmap)
-    lineno = uint16(p, gen=False, err='line number')
+    ln = linenum(p, gen=False, err='line number')
     space(p, False)
     while not p.finished():
         #   Start by checking for a token, since any string matching a
@@ -38,13 +38,15 @@ def tokline(charmap, line):
             if t == 'REM':  chars(p)
             if t == "'":    chars(p)
             if t == 'DATA': chars(p)    # XXX no space compression yet!
-            if t == 'GOTO': spaces(p); uint16(p, err='line number after GOTO')
+            if t == 'GOTO': spaces(p); linenum(p, err='line number after GOTO')
+            if t == 'THEN': spaces(p); linenum(p, err='line number after THEN')
+            if t == 'GOSUB': spaces(p); linenum(p, err='line number after GOSUB')
             continue
         if string_literal(p)    is not None: continue
         if digits(p)            is not None: continue
         byte(p, genf=lambda c: bytes([ord(c)]))
 
-    return (lineno, p.output())
+    return (ln, p.output())
 
 class EncodingError(ValueError): pass
 
@@ -89,7 +91,8 @@ def digits(p, gen=True, err=None):
     if f is None and te is None:
         return genint(neg, int(i))
 
-    assert 0    # XXX
+    p.pos -= 12
+    p.error('XXX write me')
 
     #   MSX-BASIC numeric representations are always positive, so generate
     #   a leading ``-`` token for negative numbers and the proceed with the
@@ -160,6 +163,49 @@ def match_digits(p):
 
     p.consume(m.end())  # consume after calculations in case exception raised
     return (neg, i, f, te)
+
+def linenum(p, gen=True, err=None):
+    ''' Consume the ASCII representation of a line number and return it as
+        an `int`. Like the MS tokeniser, this accepts negative line numbers
+        even though the interpreter will throw a 'Syntax error' when it
+        tries to execute them.
+
+        If `gen` is true, generate the MSX-BASIC tokenised representation
+        of the number: $0E followed by a little-endian word. (Prefixed
+        by a syntactically incorrect `NEGATIVE` token if the number
+        started with ``-``.)
+
+        If `err` is `None`, return `None` on failure, otherwise raise a
+        `ParseError` with message 'expecting `err`' if the number was
+        unparsable, or 'outside linenum range' if the number was parsed
+        but is < 0 or > 65535.
+
+        XXX max lineno 65529, 65530 parsed as 6553 followed by '0'
+    '''
+    def fail():
+        if err is None: return None
+        p.error('expected ' + err)
+    digits = ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
+
+    neg = False
+    if p.peek() == '-':
+        neg = True
+        byte(p)
+
+    if p.peek() not in digits: return fail()
+    s = ''
+    while True:
+        if p.peek() not in digits: break
+        c = byte(p); s = s + c
+    n = int(s)
+    try:
+        uint_16 = struct.pack('<H', n)
+    except struct.error:
+        p.error('{} outside linenum range'.format(n))
+    if gen:
+        if neg: p.generate(NEGATIVE)
+        p.generate(b'\x0E' + uint_16)
+    return -n if neg else n
 
 def string_literal(p, err=None):
     ''' Consume a string literal starting with `"` and ending with the next
