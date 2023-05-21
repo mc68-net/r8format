@@ -98,27 +98,32 @@ def test_match_digits(s, d):
     match_digits(p)
     assert 'a' == p.remain()
 
-@pytest.mark.parametrize('s, n, tok', [
-    (     'a',        None,                    None),
-    (     '',         None,                    None),
+@pytest.mark.parametrize('s, remain, n, tok', [
+    #   input,  remaining unparsed,  value returned , tokenised data
+    (      'a',  'a',     None,                    None),
+    (      '',    '',     None,                    None),
 
-    (     '0',           0,                 b'\x11'),
-    (     '9',           9,                 b'\x1A'),
-    (    '-3',          -3,             b'\xF2\x14'),
+    (      '0',   '',        0,                 b'\x11'),
+    (      '9',   '',        9,                 b'\x1A'),
+    (     '-3',   '',       -3,             b'\xF2\x14'),
+#   (     '9%',    '',       0,                 b'\x11'),
+    (     '0x',   'x',       0,                 b'\x11'),
 
-    (    '10',          10,             b'\x0F\x0A'),
-    (  '-255',        -255,         b'\xF2\x0F\xFF'),
+    (     '10',   '',       10,             b'\x0F\x0A'),
+#   (    '99%',   '',       99,             b'\x0F\x0A'),
+    (   '-255',   '',     -255,         b'\xF2\x0F\xFF'),
 
     #   Though 16-bit ints range from -32768 to 32767,
     #   for whatever reason MSX-BASIC tokenises only 0-32767.
-    (   '256',         256,         b'\x1C\x00\x01'),   # int
-    (  '32767',      32767,         b'\x1C\xFF\x7F'),   # int
-    ( '-32767',     -32767,     b'\xF2\x1C\xFF\x7F'),   # int
-#   (  '32768',    32768.0, b'\x1D................'),   # forces float
+    (    '256',   '',      256,         b'\x1C\x00\x01'),   # int
+    (  '32767',   '',    32767,         b'\x1C\xFF\x7F'),   # int
+    ( '-32767',   '',   -32767,     b'\xF2\x1C\xFF\x7F'),   # int
+#   ('-32767%',   '',   -32767,     b'\xF2\x1C\xFF\x7F'),   # int
+#   (  '32768',   '',  32768.0, b'\x1D................'),   # forces float
 
-#   (   '-3!',        -3.0, b'\xF2\x1D................'),
-#   (   '-3#',        -3.0, b'\xF2\x1F................'),
-#   (   '3.1',         3.1,     b'\x1F................'),
+#   (    '-3!',       -3.0, b'\xF2\x1D................'),   # XXX leaves !
+#   (    '-3#',       -3.0, b'\xF2\x1F................'),   # XXX leaves #
+#   (    '3.1',        3.1,     b'\x1F................'),
 
 #   (   '5e0',         5.0,                b'XXX'),
 #   (    '6e',         6.0,                b'XXX'),
@@ -126,10 +131,10 @@ def test_match_digits(s, d):
 #   #   XXX need to push back trailing % here?
 #   (  '1e2%',       100.0,                b'XXX'),
 ])
-def test_digits(s, n, tok):
+def test_digits(s, remain, n, tok):
     p = PState(s)
     nn = digits(p)
-    assert (n, tok) == (nn, p.output())
+    assert (remain, n, tok) == (p.remain(), nn, p.output())
 
 ####################################################################
 
