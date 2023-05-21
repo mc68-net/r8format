@@ -61,6 +61,35 @@ def digits(p, gen=True, err=None):
     '''
     d = match_digits(p)
     if d is None: return
+    neg, i, f, te = d
+
+    def genint(neg, i):
+        ''' BASIC 16-bit int format is always non-negative 0-32767, with
+            a prefixed `NEGATIVE` token if negative. For convenience this
+            returns i, made negative if `neg`.
+        '''
+        if neg: p.generate(NEGATIVE)
+        if i > 32767:
+            #   XXX Sadly, the number was consumed by match_digits() so our
+            #   parse pointer is wrong, and the 'after' part in the message
+            #   doesn't cover the whole int for reasons that need to be
+            #   investigated. Not clear how to fix this yet.
+            p.error('int Overflow: {}'.format(i))
+        if i < 10:
+            p.generate(bytes([0x11 + i]))
+        elif i < 256:
+            p.generate(pack('<BB', 0x0F, i))
+        else:
+            p.generate(pack('<BH', 0x1C, i))
+        if neg: return -i
+        else:   return i
+
+    #   Forcing int with % truncates any fractional part.
+    if te == '%':
+        return genint(neg, int(i))
+
+    assert 0    # XXX
+
     i, f, e, t = d
     retval = i
 

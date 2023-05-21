@@ -117,11 +117,12 @@ def test_match_digits_exp_and_type():
     (      '0',   '',        0,                 b'\x11'),
     (      '9',   '',        9,                 b'\x1A'),
     (     '-3',   '',       -3,             b'\xF2\x14'),
-#   (     '9%',    '',       0,                 b'\x11'),
+    (    '-8%',    '',      -8,             b'\xF2\x19'),
+    (  '-8.9%',    '',      -8,             b'\xF2\x19'),
     (     '0x',   'x',       0,                 b'\x11'),
 
     (     '10',   '',       10,             b'\x0F\x0A'),
-#   (    '99%',   '',       99,             b'\x0F\x0A'),
+    (    '99%',   '',       99,             b'\x0F\x63'),
     (   '-255',   '',     -255,         b'\xF2\x0F\xFF'),
 
     #   Though 16-bit ints range from -32768 to 32767,
@@ -129,7 +130,7 @@ def test_match_digits_exp_and_type():
     (    '256',   '',      256,         b'\x1C\x00\x01'),   # int
     (  '32767',   '',    32767,         b'\x1C\xFF\x7F'),   # int
     ( '-32767',   '',   -32767,     b'\xF2\x1C\xFF\x7F'),   # int
-#   ('-32767%',   '',   -32767,     b'\xF2\x1C\xFF\x7F'),   # int
+    ('-32767%',   '',   -32767,     b'\xF2\x1C\xFF\x7F'),   # int
 #   (  '32768',   '',  32768.0, b'\x1D................'),   # forces float
 
 #   (    '-3!',       -3.0, b'\xF2\x1D................'),   # XXX leaves !
@@ -146,6 +147,13 @@ def test_digits(s, remain, n, tok):
     p = PState(s)
     nn = digits(p)
     assert (remain, n, tok) == (p.remain(), nn, p.output())
+
+@pytest.mark.parametrize('s', [ '32768%', '-32768%', '32768.1234%' ])
+def test_digits_int_overflow(s):
+    p = PState(s)
+    with pytest.raises(p.ParseError) as ex:
+        digits(p)
+    assert ex.match('int Overflow: 32768')
 
 ####################################################################
 
