@@ -89,46 +89,60 @@ def digits(p, gen=True, err=None):
         p.generate(pack('<BH', 0x1C, i))
     return retval
 
-#   The rules are as follows (XXX should be moved to comments in programs/*)
-#   - optional `-` sign; always encodes as token $F2
-#   - digits:
-#     - without trailing `.`, int encoding unless too large
-#     - with trailing `.`: float, unless followed by `%` which makes it int
-#   - `e` always forces float (even with % at end). Minus sign and digits
-#     after are optional; `0` assumed if not present.
-#   - trailing type:
-#     - `%` truncates float portion unless `e` forces float, in which
-#       case the `%` is appended as an ascii char (syntax error) after the
-#       `!` or `#`
-#
-MATCH_DIGITS = re.compile(r'(-?\d+)(\.\d*)?([dDeE]-?\d*)?([%!#])?')
+#   XXX This should also be documented in programs/*?
+''' Numbers are parsed as follows:
+    1. Optional leading `-` sign; always encodes as token $F2.
+    2. Integer portion, at least 1 digit required if no fractional
+       portion. (The regexp does not handle this latter requirement.)
+    3. Optional fractional portion: `.` followed by 0 or more digits.
+    4. Optional type or exponent, but never both.
+       - Type is one of ``[%!#]``. (`%` truncates fractional portion.)
+       - Exponent is one of ``[dDeE]``, an optional minus sign, and
+         optional digits. Note that the ``D`` and ``E`` are considered
+         equivalent: BASIC always uses single precision if the
+         significand will fit, otherwise double precision with truncation.
+'''
+MATCH_DIGITS = re.compile(r'(-)?(\d*)(\.\d*)?([%!#]|[dDeE]-?\d*)?')
 
 def match_digits(p):
     ''' Parse basic syntax of number formats for all types of numbers
         into a 4-tuple, consuming the characters if we're successful.
 
-        If we fail, we return `None`. Otherwise the 4-tuple is three
-        `int`s and a string::
-        - Integer portion: optional leading ``-`` followed by one or
-          more digits. Always present.
-        - Fractional portion: leading ``.`` (which is dropped) followed by
-          optional digits, with ``0`` assumed if no digits follow. `None`
-          if there was no ``.``.
-        - Exponent portion: leading char from ``[dDeE]`` (which is dropped)
-          followed by optional ``-`` and optional digits, with ``0``
-          assumed if no digits follow. `None` if there was no ``[dDeE]``.
-        - Type portion: `None`, ``%``, ``!`` or ``#``.
+        This is parsed based on a match of `MATCH_DIGITS` above. Failure
+        to match returns `None`. Otherwise a the 3-tuple is two `int`s
+        followed by a `str` or `int`:
+
+        0. Negative: `int` of 0 (positive) or -1 (negative).
+
+        1. Integer portion: `str` of 0 or more ASCII digits. Always present.
+
+        2. Fractional portion: `None` if not present, or a `str` of zero or
+           more ASCII digits if present. (A decimal point with no following
+           digits produces an empty `str` as a trailing `.` makes the number
+           parse as a float.)
+
+        3. Type or exponent portion:
+           - Not present: `None`
+           - Type: `str` of ``'%'``, ``'!'`` or ``'#'``.
+           - Exponent: `int` (positive or negative).
+             (This must be biased by the caller before tokenisation.)
     '''
     m = MATCH_DIGITS.match(p.remain())
     if m is None: return None
-    def fval(s):
-        ' Return the value from a "field" (`.NNN` or `eNNN`) as an int. '
-        if s is None: return None
-        if len(s) == 1: s += '0'
-        return int(s[1:])
-    retval = (int(m.group(1)), fval(m.group(2)), fval(m.group(3)), m.group(4))
+
+    neg = -1 if m.group(1) else 0
+    i = m.group(2); f = m.group(3);
+    if (i == '') and (f is None):
+        return None
+    if f is not None: f = f[1:]
+    te = m.group(4)
+    if (te is not None) and (te not in ('%', '!', '#')):
+        if len(te) == 1: te += '0'  # D/E alone indicates exponent of 0
+        te = int(te[1:])
+    #print('neg:', repr(neg), 'i:', repr(i), 'f:', repr(f), 'te:', repr(te))
+
     p.consume(m.end())  # consume after calculations in case exception raised
-    return retval
+    return (neg, i, f, te)
 
 def string_literal(p, err=None):
     ''' Consume a string literal starting with `"` and ending with the next
