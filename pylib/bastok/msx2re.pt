@@ -111,36 +111,31 @@ def test_linenum_failure_size():
 
 @pytest.mark.parametrize('s, d', [
     (              '',  None),
-    #                    neg,    int,  frac,  type/exp
-    (             '0',  (  0,    '0',  None, None)),
-    (          '1234',  (  0, '1234',  None, None)),
-    (           '2.%',  (  0,    '2',    '',  '%')),
-    (            '-1',  ( -1,    '1',  None, None)),
-    (           '.3',   (  0,     '',   '3', None)),
-    (          '-.3',   ( -1,     '',   '3', None)),
-    (            '3e',  (  0,    '3',  None,    0)),
-    (        '3.1E12',  (  0,    '3',   '1',   12)),
-    (         '3.23D',  (  0,    '3',  '23',    0)),
-    (        '3.d-13',  (  0,    '3',    '',  -13)),
-    (  '-123.456e-78',  ( -1,  '123', '456',  -78)),
+    #               consume, neg,    int,  frac,  type/exp
+    (             '0',  ( 1,   0,    '0',  None, None)),
+    (          '1234',  ( 4,   0, '1234',  None, None)),
+    (           '2.%',  ( 3,   0,    '2',    '',  '%')),
+    (            '-1',  ( 2,  -1,    '1',  None, None)),
+    (           '.3',   ( 2,   0,     '',   '3', None)),
+    (          '-.3',   ( 3,  -1,     '',   '3', None)),
+    (            '3e',  ( 2,   0,    '3',  None,    0)),
+    (        '3.1E12',  ( 6,   0,    '3',   '1',   12)),
+    (         '3.23D',  ( 5,   0,    '3',  '23',    0)),
+    (        '3.d-13',  ( 6,   0,    '3',    '',  -13)),
+    (  '-123.456e-78',  (12,  -1,  '123', '456',  -78)),
 ])
 def test_match_digits(s, d):
-    p = PState(s)
-    assert d == match_digits(p)
-    assert '' == p.remain()
-
-    p = PState(s + 'a')
-    match_digits(p)
-    assert 'a' == p.remain()
+    p = PState(s);       assert d == match_digits(p)
+    p = PState(s + 'a'); assert d == match_digits(p)
 
 def test_match_digits_exp_and_type():
     ''' We test above that random chars after the number are not consumed
         by the parse, but we want to make quite sure that we're not allowing
         both an exponent _and_ a type.
     '''
-    p = PState('-123.456e-78#')
-    parsed = ( -1,  '123', '456',  -78)
-    assert (parsed, '#') == (match_digits(p), p.remain())
+    s = '-123.456e-78#'     # `#` at should not be parsed/consumed
+    p = PState(s)
+    assert (len(s)-1, -1, '123', '456',  -78) == match_digits(p)
 
 @pytest.mark.parametrize('s, remain, n, tok', [
     #  input,  remaining unparsed, value returned,              tokenised data

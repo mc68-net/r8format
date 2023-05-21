@@ -64,7 +64,7 @@ def digits(p, gen=True, err=None):
     '''
     d = match_digits(p)
     if d is None: return
-    neg, i, f, te = d
+    consume, neg, i, f, te = d
 
     def genint(neg, i):
         ''' BASIC 16-bit int format is always non-negative 0-32767, with
@@ -84,6 +84,7 @@ def digits(p, gen=True, err=None):
             p.generate(pack('<BB', 0x0F, i))
         else:
             p.generate(pack('<BH', 0x1C, i))
+        p.consume(consume)
         if neg: return -i
         else:   return i
 
@@ -92,7 +93,6 @@ def digits(p, gen=True, err=None):
     if f is None and te is None:
         return genint(neg, int(i))
 
-    p.pos -= 12
     p.error('XXX write me')
 
     #   MSX-BASIC numeric representations are always positive, so generate
@@ -127,22 +127,26 @@ MATCH_DIGITS = re.compile(r'(-)?(\d*)(\.\d*)?([%!#]|[dDeE]-?\d*)?')
 
 def match_digits(p):
     ''' Parse basic syntax of number formats for all types of numbers
-        into a 4-tuple, consuming the characters if we're successful.
+        into a 5-tuple. Since parsing can still fail after this, nothing
+        is consumed but the number of characters to consume on success
+        is returned.
 
         This is parsed based on a match of `MATCH_DIGITS` above. Failure
-        to match returns `None`. Otherwise a the 3-tuple is two `int`s
-        followed by a `str` or `int`:
+        to match returns `None`. Otherwise a the 5-tuple is the following:
 
-        0. Negative: `int` of 0 (positive) or -1 (negative).
+        0. Number of chars matched, which should be consumed if the parse
+           is successful.
 
-        1. Integer portion: `str` of 0 or more ASCII digits. Always present.
+        1. Negative: `int` of 0 (positive) or -1 (negative).
 
-        2. Fractional portion: `None` if not present, or a `str` of zero or
+        2. Integer portion: `str` of 0 or more ASCII digits. Always present.
+
+        3. Fractional portion: `None` if not present, or a `str` of zero or
            more ASCII digits if present. (A decimal point with no following
            digits produces an empty `str` as a trailing `.` makes the number
            parse as a float.)
 
-        3. Type or exponent portion:
+        4. Type or exponent portion:
            - Not present: `None`
            - Type: `str` of ``'%'``, ``'!'`` or ``'#'``.
            - Exponent: `int` (positive or negative).
@@ -162,8 +166,7 @@ def match_digits(p):
         te = int(te[1:])
     #print('neg:', repr(neg), 'i:', repr(i), 'f:', repr(f), 'te:', repr(te))
 
-    p.consume(m.end())  # consume after calculations in case exception raised
-    return (neg, i, f, te)
+    return (m.end(), neg, i, f, te)
 
 def linenum(p, gen=True, err=None):
     ''' Consume the ASCII representation of a line number and return it as
