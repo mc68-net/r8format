@@ -33,18 +33,20 @@ def tokline(charmap, line):
         #   token takes priority over anything else.
         t = toktrans(p, ENCTOKENS)
         if t is not None:
-            #   Only a few tokens have an argument that needs special parsing.
-            #   These consume and generate the remainder of the line.
+            #   Tokens that consume and generate the remainder of the line.
             if t == 'REM':  chars(p)
             if t == "'":    chars(p)
             if t == 'DATA': chars(p)    # XXX no space compression yet!
+            #   Tokens that take special arguments.
             if t == 'GOTO' or t == 'GOSUB':
                 spaces(p); linenum(p, err='line number after GOTO')
             if t == 'THEN':
                 spaces(p); linenum(p)   # linenum or other tokens
             continue
+        #   If not a token, we try to match the various other constants.
         if string_literal(p)    is not None: continue
         if digits(p)            is not None: continue
+        #   Failing that, read and generate the next byte.
         byte(p, genf=lambda c: bytes([ord(c)]))
 
     return (ln, p.output())
