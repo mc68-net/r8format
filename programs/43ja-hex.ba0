@@ -1,0 +1,2 @@
+1 'SAVE"43ja-hex.bas"
+43520 PRINT&HF,&H1234
