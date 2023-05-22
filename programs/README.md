@@ -5,11 +5,27 @@ These programs are used for `bastok` functional tests (in the [top-level
 `/Test`](../Test) script) and manual testing. This directory can be read
 and written in openMSX by starting it with the `-diska programs` option.
 
-Test data notes:
+### Test Data
+
 - These are not expected to test every edge case; the unit tests generally
   do that.
 - Extra spaces are deliberate; they test that the parser does not remove
   the programmer's formatting (unless required with the `-s` option).
+
+### Line Numbers
+
+The first line is generally `1 'SAVE"..."` to make saving under the right
+filename more reliable after a load and edit.
+
+Test data lines are generally numbered from 43250 incrementing by 256;
+43520, 43536, 43552, ... in decimal produces the pattern
+`00 AA … 10 AA … 20 AA …` in the binary file which is easy to find. ($AA is
+relatively rare in tokenised BASIC: it's in the `RENUM` and `CVD` tokens
+and is the `こ` character.) The numbering can be done automatically with:
+
+    RENUM 43520,2,16
+
+### Filenames
 
 Filenames are in the format `NNcc-sss.ext` where:
 - `NN` is a decimal number. This is used by `Test` to detect the files
