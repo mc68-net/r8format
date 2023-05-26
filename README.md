@@ -14,8 +14,8 @@ sets, but they may also be useful for people developing software in BASIC.
 
 - `bin/detok`: A command-line detokenization tool. Given an input filename,
   it will read that as a tokenized BASIC file and print the detokenized
-  version to stdout in UTF-8 (the user's locale is ignored) or MSX-BASIC
-  encoding. Give the `-h` option for help.
+  version to stdout in UTF-8 (the user's locale is ignored) or GHB/MSX-BASIC
+  (see below) encoding. Give the `-h` option for help.
 - `Test`: A Bash script to set up a Python virtual environment and run the
   unit tests. Any parameters passed to this will be passed on to `pytest`.
 - `pylib/bastok/`: A Python module containing the (de-)tokenization tools.
@@ -45,18 +45,24 @@ string constant and the commas separating `DATA` arguments are part of the
 program text and will always be rendered in ASCII.
 
 Within string constants (between double-quotes) `DATA` arguments (whether
-quoted or not) and after a `REM` the text is interpreted as MSX-BASIC
-encoded characters. This encoding maps:
+quoted or not) and after a `REM` the text is interpreted as the "Graphic
+Header Byte" (グラフ ィ ック ヘッダ バイ ト) or "GHB" encoding used by
+MSX-BASIC and the BIOS `CNVCHR` ($0AB) routine.
+
+The GHB encoding maps:
 - Bytes valued 0x00, 0x02-0x1F and 0x7F to their corresponding ASCII
   control characters. (Some of these are interpreted by print routines as
   cursor movement and other commands; see msx.org wiki page [MSX Characters
   and Control Codes][codes].)
 - Bytes valued 0x20-0x7E and 0x80-0xFF to their corresponding MSX character
   set code points.
-- Byte sequences matching 0x01 _NN_, where _NN_ is 0x40-0x5F, to MSX
-  character set code points _NN-0x40_, i.e. 0x00-0x1F.
+- Byte sequences matching 0x01 _NN_, where _NN_ is 0x41-0x5F, to MSX
+  character set code points _NN-0x41_, i.e. 0x01-0x1F.
+- There appears to be no official way to represent code point 0 (always a
+  "blank" character, the same as space, in the official character sets),
+  but many third-party sources use 0x01 0x00, as does this program.
 
-The detokenizer converts MSX-BASIC encoded characters to Unicode characters
+The detokenizer converts GHB encoded characters to Unicode characters
 using a built-in or (soon) user-specified mapping. (You can see the list of
 currently known MSX character sets by by giving any unknown character set
 name to the `-c` option of a command-line program, e.g., `bin/detok -c - -`.)
@@ -77,7 +83,7 @@ correctly in context.
     10 P$="⌘"       ← detokenizer Unicode output
 
 The detokenizer can also run in a "binary" mode where no conversion is done
-and MSX-BASIC encoding is output directly (the `-b` or `--binary` option).
+and GHB encoding is output directly (the `-b` or `--binary` option).
 
 Support for programs that use kanji ROM characters needs to be investigated.
 
