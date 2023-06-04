@@ -19,6 +19,18 @@ hexdiff() {
         <(xxd -c8 -g1 "$1") <(xxd -c8 -g1 "$2")
 }
 
+whexdiff() {
+    cmp "$1" "$2" && return 0
+    echo "--- $1"
+    echo "+++ $2"
+    local ec=2  # expected values color: green
+    local ac=1  #   actual values color: red
+    wdiff \
+        -w "$(tput bold;tput setaf $ec)" -x "$(tput sgr0)" \
+        -y "$(tput bold;tput setaf $ac)" -z "$(tput sgr0)" \
+        <(xxd -c8 -g1 "$1") <(xxd -c8 -g1 "$2")
+}
+
 ####################################################################
 #   Main
 
@@ -60,7 +72,7 @@ for bas in programs/[0-9][0-9]*.bas; do
 
     qecho "------ retok    $f.ba0"
     bin/retok    programs/$f.ba0 >$ftdata/retok/$f.bas0
-    diff -u <(xxd -g1 programs/$f.bas) <(xxd -g1 $ftdata/retok/$f.bas0)
+   whexdiff programs/$f.bas $ftdata/retok/$f.bas0
 
 #   qecho "------ retok -s $f.ba0"
 #   bin/retok    programs/$f.ba0 >$ftdata/retok/$f.bas0s
@@ -81,7 +93,7 @@ for bas in programs/[0-9][0-9]*.bas; do
 
     qecho "------ retok    $f.ba2"
     bin/retok    programs/$f.ba2 >$ftdata/retok/$f.bas2
-    diff -u <(xxd -g1 programs/$f.bas) <(xxd -g1 $ftdata/retok/$f.bas2)
+    whexdiff programs/$f.bas $ftdata/retok/$f.bas2
 
 #   qecho "------ retok -s $f.ba2"
 #   bin/retok -s programs/$f.ba2 >$ftdata/retok/$f.bas2s
