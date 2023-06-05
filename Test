@@ -20,15 +20,23 @@ hexdiff() {
 }
 
 whexdiff() {
-    cmp "$1" "$2" && return 0
-    echo "--- $1"
-    echo "+++ $2"
-    local ec=2  # expected values color: green
-    local ac=1  #   actual values color: red
+    local builddir="$1" local expected="$2" local actual="$3"
+    cmp "$expected" "$actual" && return 0
+    #   Create temporary files for the hexdumps because that makes it easier
+    #   to use `meld` or similar graphical tools on them after a failure.
+    local hexpected="$builddir/$(basename "$expected").xxd"
+    local hactual="$builddir/$(basename "$actual").xxd"
+    xxd -c8 -g1 "$expected" > "$hexpected"
+    xxd -c8 -g1 "$actual" > "$hactual"
+
+    echo "--- $hexpected"
+    echo "+++ $hactual"
+    local ecolor=2  # expected values color: green
+    local acolor=1  #   actual values color: red
     wdiff \
-        -w "$(tput bold;tput setaf $ec)" -x "$(tput sgr0)" \
-        -y "$(tput bold;tput setaf $ac)" -z "$(tput sgr0)" \
-        <(xxd -c8 -g1 "$1") <(xxd -c8 -g1 "$2")
+        -w "$(tput bold;tput setaf $ecolor)" -x "$(tput sgr0)" \
+        -y "$(tput bold;tput setaf $acolor)" -z "$(tput sgr0)" \
+        "$hexpected" "$hactual"
 }
 
 ####################################################################
@@ -54,7 +62,7 @@ pytest -q -o testpaths=pylib/ "$@"
 ####################################################################
 #   Functional Tests
 
-ftdata=.build/programs/
+ftdata=.build/programs
 mkdir -p $ftdata/detok $ftdata/retok
 
 for bas in programs/[0-9][0-9]*.bas; do
@@ -71,8 +79,8 @@ for bas in programs/[0-9][0-9]*.bas; do
     #   XXX `retok -s` not yet working.
 
     qecho "------ retok    $f.ba0"
-    bin/retok    programs/$f.ba0 >$ftdata/retok/$f.bas0
-   whexdiff programs/$f.bas $ftdata/retok/$f.bas0
+    bin/retok                 programs/$f.ba0 >$ftdata/retok/$f.bas0
+    whexdiff  "$ftdata/retok" programs/$f.bas  $ftdata/retok/$f.bas0
 
 #   qecho "------ retok -s $f.ba0"
 #   bin/retok    programs/$f.ba0 >$ftdata/retok/$f.bas0s
@@ -92,8 +100,8 @@ for bas in programs/[0-9][0-9]*.bas; do
     [[ -r programs/$f.ba2 ]] || continue
 
     qecho "------ retok    $f.ba2"
-    bin/retok    programs/$f.ba2 >$ftdata/retok/$f.bas2
-    whexdiff programs/$f.bas $ftdata/retok/$f.bas2
+    bin/retok                programs/$f.ba2 >$ftdata/retok/$f.bas2
+    whexdiff "$ftdata/retok" programs/$f.bas  $ftdata/retok/$f.bas2
 
 #   qecho "------ retok -s $f.ba2"
 #   bin/retok -s programs/$f.ba2 >$ftdata/retok/$f.bas2s
