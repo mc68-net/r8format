@@ -109,6 +109,35 @@ def test_linenum_failure_size():
         linenum(p, gen=False, err='xyz')
     assert ex.match('65530 outside linenum range at')
 
+@pytest.mark.parametrize('s, i, rem', [
+    ('',              None, 0),
+    ('01',            None, 2),
+    ('&H0',              0, 0),
+    ('&H',               0, 0),
+    ('&HG',              0, 1),
+    ('&ha',           0x0A, 0),
+    ('&HffffG',     0xFFFF, 1),
+    ('&O778',         0o77, 1),
+    ('&o177777',     65535, 0),
+    ('&b1012',       0b101, 1),
+    ('&b1111000011110000',  0xF0F0, 0)
+])
+def test_ampersand_literal(s, i, rem):
+    p = PState(s)
+    assert (i, rem) == (ampersand_literal(p), len(p.remain()))
+
+@pytest.mark.parametrize('s', [
+    '&h10000',
+    '&o200000',
+    '&o1777767',
+    '&b11110000111100001',
+])
+def test_ampersand_literal_overflow(s):
+    p = PState(s)
+    with pytest.raises(p.ParseError) as ex:
+        print(ampersand_literal(p))
+    assert ex.match('Overflow at 0:' + repr(s)[0:13])
+
 @pytest.mark.parametrize('s, d', [
     (              '',  None),
     #               consume, neg,    int,  frac,  type/exp

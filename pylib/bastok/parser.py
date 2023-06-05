@@ -112,8 +112,8 @@ class PState:
     def __str__(self):
         p = self.pos
         return 'at {}:{} after …{} …{}'.format(
-            p, repr(self.input[p:p+8]),
-            repr(self.input[p-8:p]), self.olist[-4:])
+            p, repr(self.input[p:p+12]),
+            repr(self.input[p-12:p]), self.olist[-4:])
 
     class ParseError(ValueError): pass
 

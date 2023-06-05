@@ -45,6 +45,7 @@ def tokline(charmap, line):
             continue
         #   If not a token, we try to match the various other constants.
         if string_literal(p)    is not None: continue
+        if ampersand_literal(p) is not None: continue
         if digits(p)            is not None: continue
         #   Failing that, read and generate the next byte.
         byte(p, genf=lambda c: bytes([ord(c)]))
@@ -169,6 +170,45 @@ def match_digits(p):
     #print('neg:', repr(neg), 'i:', repr(i), 'f:', repr(f), 'te:', repr(te))
 
     return (m.end(), neg, i, f, te)
+
+AMPERSAND_PREFIXES = set([ '&H', '&h', '&O', '&o', '&B', '&b'])
+BINDIGITS = ('0', '1')
+OCTDIGITS = BINDIGITS + ('2', '3', '4', '5', '6', '7')
+HEXDIGITS = OCTDIGITS \
+    + ('8', '9', 'A', 'a', 'B', 'b', 'C', 'c', 'D', 'd', 'E', 'e', 'F', 'f')
+
+def ampersand_literal(p):
+    ''' Read and consume ``&Hnnnn``, ``&Onnnn`` and ``&Bnnnn`` integer
+        literals. Raises a `ParseError` saying "Overflow" if the number
+        exceeds 2^16.
+    '''
+    if p.remain()[0:2] not in AMPERSAND_PREFIXES:
+        return None
+    #   If we have the prefix, we have the number; lack of valid digits
+    #   after the prefix just means that the number is 0.
+
+    def read(base, basedigits):
+        i = 2; s = ''
+        while p.remain()[i:].startswith(basedigits):
+            s += p.remain()[i]; i += 1
+        if s == '':
+            p.consume(2)
+            return 0
+        else:
+            n = int(s, base)
+            if n > 0xFFFF:
+                p.error('Overflow'.format(base, s))
+            p.consume(2 + len(s))
+            return n
+
+    base = p.remain()[1].upper()
+    if base == 'H':
+        return read(16, HEXDIGITS)
+    elif base == 'O':
+        return read(8, OCTDIGITS)
+    elif base == 'B':
+        return read(2, BINDIGITS)
+    raise RuntimeError('Internal error: bug!')
 
 def linenum(p, gen=True, err=None):
     ''' Consume the ASCII representation of a line number and return it as
