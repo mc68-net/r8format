@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+#
+#   bashex - hexdump an MS-BASIC program
+#
+#   This understands the MS-BASIC binary file and in-memory format and
+#   splits the lines based on where the BASIC lines start, rather than
+#   at arbitrary 16-byte intervals.
+#
+
+from    argparse  import ArgumentParser
+from    struct  import unpack
+import  sys
+
+def printaddr(i_addr):
+    print('{:04X}: '.format(i_addr), end='')
+
+def vis(b):
+    ' Return "visible" version of character code `b`. '
+    if b <= 0x20:       return '⋅'      # control char: dot operator
+    if b <  0x7F:       return chr(b)   # printable ASCII: the char itself
+    pass;               return '▥'      # token: cross-hatched box
+
+def print_hex_firstline(i_lineno, data):
+    ' Print the remainder of the first line after the addr and lineno. '
+    blank = range(12 - len(data))       # columns without data, if any
+    #   hex
+    for b in data:  print('{:02X} '.format(b), end='')
+    for b in blank: print('   ', end='')
+    #   ASCII
+    pass;           print(' {:5d} '.format(i_lineno), end='')
+    for b in data:  print(vis(b), end='')
+    #   done with ine
+    print()
+
+def print_hex_contline(addr, data):
+    ' Print continuation lines after the first one. '
+    blank = range(12 - len(data))       # columns without data, if any
+    printaddr(addr)
+    print('            ', end='')
+    #   hex
+    for b in data:  print('{:02X} '.format(b), end='')
+    for b in blank: print('   ', end='')
+    #   ASCII
+    print('       ', end='')
+    for b in data:  print(vis(b), end='')
+    print()
+
+def printbasline(i_addr, f):
+    printaddr(i_addr)
+
+    nextaddr = f.read(2)
+    print('{:02X} {:02X} '.format(nextaddr[0], nextaddr[1]), end='')
+    i_nextaddr = unpack('<H', nextaddr)[0]
+    if i_nextaddr == 0:
+        return None
+
+    lineno = f.read(2)
+    print('{:02X} {:02X} '.format(lineno[0], lineno[1]), end='')
+    i_lineno = unpack('<H', lineno)[0]
+
+    linelen = i_nextaddr - i_addr
+    line = f.read(linelen - 4)      # include trailing $00
+
+    i_curpos = i_addr
+    print_hex_firstline(i_lineno, line[:12])
+    line = line[12:]; i_curpos += 12
+    while len(line) > 0:
+        print_hex_contline(i_curpos, line[:12])
+        line = line[12:]; i_curpos += 12
+
+    return i_addr + linelen
+
+def parseargs():
+    p = ArgumentParser(description='MS-BASIC hexdump')
+    arg = p.add_argument
+    arg('input', help='input file (required); use `-` for stdin')
+    return p.parse_args()
+
+def main(args):
+    if args.input == '-':
+        f = sys.stdin.buffer
+    else:
+        f = open(args.input, 'rb')
+
+    #   TODO: This needs to be expanded to handle other MS-BASIC (and maybe
+    #   even non-MS-BASIC) formats.
+    type = f.read(1)
+    if type == b'':
+        raise RuntimeError('empty input')
+    elif type != b'\xFF':
+        raise RuntimeError('bad type byte ${:02X}'.format(type[0]))
+    else:
+        print('8000: {:02X}'.format(type[0]))
+
+    #   TODO: The initial current address should be auto-detected from the
+    #   next-line address and the first line length, and/or overridden by
+    #   a command-line parameter.
+    i_addr = 0x8001
+
+    #   TODO: This assumes little-endian format. We need to be able to do
+    #   big-endian for 6800.
+    while True:
+        i_nextaddr = printbasline(i_addr, f)
+        if i_nextaddr is None:
+            print()
+            break
+        else:
+            i_addr = i_nextaddr
+    f.close()
+
+
+if __name__ == '__main__':
+    main(parseargs())
