@@ -12,7 +12,7 @@ from    struct  import unpack
 import  sys
 
 def printaddr(i_addr):
-    print('{:04X}: '.format(i_addr), end='')
+    print('  {:04X}: '.format(i_addr), end='')
 
 def vis(b):
     ' Return "visible" version of character code `b`. '
@@ -35,7 +35,8 @@ def print_hex_firstline(i_lineno, data):
 def print_hex_contline(addr, data):
     ' Print continuation lines after the first one. '
     blank = range(12 - len(data))       # columns without data, if any
-    printaddr(addr)
+    if ARGS.address:    printaddr(addr)
+    else:               print('      : ', end='')
     print('            ', end='')
     #   hex
     for b in data:  print('{:02X} '.format(b), end='')
@@ -46,17 +47,20 @@ def print_hex_contline(addr, data):
     print()
 
 def printbasline(i_addr, f):
-    printaddr(i_addr)
-
     nextaddr = f.read(2)
-    print('{:02X} {:02X} '.format(nextaddr[0], nextaddr[1]), end='')
     i_nextaddr = unpack('<H', nextaddr)[0]
     if i_nextaddr == 0:
+        if ARGS.address:    printaddr(i_addr)
+        else:               print('___END: ', end='')
+        print('{:02X} {:02X} '.format(nextaddr[0], nextaddr[1]), end='')
         return None
 
     lineno = f.read(2)
-    print('{:02X} {:02X} '.format(lineno[0], lineno[1]), end='')
     i_lineno = unpack('<H', lineno)[0]
+    if ARGS.address:    printaddr(i_addr)
+    else:               print('L{:05d}: '.format(i_lineno), end='')
+    print('{:02X} {:02X} '.format(nextaddr[0], nextaddr[1]), end='')
+    print('{:02X} {:02X} '.format(lineno[0], lineno[1]), end='')
 
     linelen = i_nextaddr - i_addr
     line = f.read(linelen - 4)      # include trailing $00
@@ -73,14 +77,15 @@ def printbasline(i_addr, f):
 def parseargs():
     p = ArgumentParser(description='MS-BASIC hexdump')
     arg = p.add_argument
+    arg('-a', '--address', action='store_true', help='print memory addresses')
     arg('input', help='input file (required); use `-` for stdin')
     return p.parse_args()
 
-def main(args):
-    if args.input == '-':
+def main():
+    if ARGS.input == '-':
         f = sys.stdin.buffer
     else:
-        f = open(args.input, 'rb')
+        f = open(ARGS.input, 'rb')
 
     #   TODO: This needs to be expanded to handle other MS-BASIC (and maybe
     #   even non-MS-BASIC) formats.
@@ -90,7 +95,9 @@ def main(args):
     elif type != b'\xFF':
         raise RuntimeError('bad type byte ${:02X}'.format(type[0]))
     else:
-        print('8000: {:02X}'.format(type[0]))
+        #                   XXX should not be using hard-coded addr here
+        if ARGS.address:    print('  8000: {:02X}'.format(type[0]))
+        else:               print('__TYPE: {:02X}'.format(type[0]))
 
     #   TODO: The initial current address should be auto-detected from the
     #   next-line address and the first line length, and/or overridden by
@@ -110,4 +117,5 @@ def main(args):
 
 
 if __name__ == '__main__':
-    main(parseargs())
+    ARGS = parseargs()
+    main()
