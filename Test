@@ -24,19 +24,22 @@ whexdiff() {
     cmp "$expected" "$actual" && return 0
     #   Create temporary files for the hexdumps because that makes it easier
     #   to use `meld` or similar graphical tools on them after a failure.
-    local hexpected="$builddir/$(basename "$expected").xxd"
-    local hactual="$builddir/$(basename "$actual").xxd"
-    xxd -c8 -g1 "$expected" > "$hexpected"
-    xxd -c8 -g1 "$actual" > "$hactual"
+    local hexpected="$builddir/$(basename "$expected").dump"
+    local hactual="$builddir/$(basename "$actual").dump"
+    bin/basdump "$expected" > "$hexpected"
+    bin/basdump "$actual" > "$hactual"
 
-    echo "--- $hexpected"
-    echo "+++ $hactual"
     local ecolor=2  # expected values color: green
     local acolor=1  #   actual values color: red
-    wdiff \
-        -w "$(tput bold;tput setaf $ecolor)" -x "$(tput sgr0)" \
-        -y "$(tput bold;tput setaf $acolor)" -z "$(tput sgr0)" \
-        "$hexpected" "$hactual"
+
+    echo "--- expected: $(tput setaf $ecolor)$hexpected$(tput sgr0)"
+    echo "---   actual: $(tput setaf $acolor)$hactual$(tput sgr0)"
+    #   Feeding a unified diff into wdiff gives us a bit of context
+    #   in the output, which can be helpful.
+    diff -U2 --label '' --label '' "$hexpected" "$hactual" \
+        | wdiff -d \
+            -w "$(tput setaf $ecolor)" -x "$(tput sgr0)" \
+            -y "$(tput setaf $acolor)" -z "$(tput sgr0)"
 }
 
 ####################################################################
