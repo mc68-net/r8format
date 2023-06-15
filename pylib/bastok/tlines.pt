@@ -15,7 +15,7 @@ def test_unle():
 ####################################################################
 
 def test_setline_text():
-    tl = TLines(0x0801)
+    tl = TLines(txttab=0x0801)
     assert None is tl.orig_text
     assert 0x0801 == tl.txttab
 
@@ -48,7 +48,7 @@ def test_setline_text():
 
 
 def test_setline_bad_lineno():
-    tl = TLines(0x400)
+    tl = TLines(txttab=0x400)
     with pytest.raises(ValueError): tl.setline(-1, b'')
     with pytest.raises(ValueError): tl.setline(tl.maxlin + 1, b'')
     tl.setline(tl.maxlin, b'')
@@ -56,30 +56,55 @@ def test_setline_bad_lineno():
 ####################################################################
 
 TEST_TXTTAB = 0x7701
-TEST_TEXT = b''.join([
+TEST_TEXT_1 = b''.join([
     b'\x11\x77', b'\x0A\x00',       # next line pointer, line 10
     b'\x8F Tokenized\x00',          # REM Tokenized
     b'\x1B\x77', b'\x14\x00',       # next line pointer, line 10
     b'\x91 "\x00"\x00'              # PRINT "<NUL>"
     b'\x00\x00',                    # terminator
 ])
+TEST_TEXT_2 = b''.join([
+    b'\x07\x77', b'\x01\x00', b'\xFF\x00',  # next line pointer, line 1, token
+    b'\x0D\x77', b'\x02\x00', b'\xFE\x00',  # next line pointer, line 2, token
+    b'\x00\x00'                             # end of program
+])
 
-def test_parsetext_noerr():
-    tl = TLines(TEST_TXTTAB, TEST_TEXT)
-    assert TEST_TEXT == tl.orig_text
-    assert (0x7701, TEST_TEXT) == (tl.txttab, tl.text())
+def test_parsetext_with_txttab():
+    tl = TLines(TEST_TEXT_1, txttab=TEST_TXTTAB)
+    assert TEST_TEXT_1 == tl.orig_text
+    assert (0x7701, TEST_TEXT_1) == (tl.txttab, tl.text())
     expected = {
         10: b'\x8F Tokenized',
         20: b'\x91 "\x00"',
         }
     assert expected == tl.linemap
 
+def test_orig_text():
+    tl = TLines(txttab=TEST_TXTTAB)
+    assert (None, tl.linenos()) == (tl.orig_text, ())
+
+    tl.parsetext(TEST_TEXT_1)
+    assert (TEST_TEXT_1, tl.linenos()) == (tl.orig_text, (10,20))
+
+    #   Parsing more text preserves orig_text,
+    tl.parsetext(TEST_TEXT_2)
+    assert (TEST_TEXT_1, tl.linenos()) == (tl.orig_text, (1,2,10,20))
+
+    #   Clear then parse resets orig_text
+    tl.clearlines()
+    tl.parsetext(TEST_TEXT_2)
+    assert (TEST_TEXT_2, tl.linenos()) == (tl.orig_text, (1,2))
+
 def test_parsetext_badterm():
     badprog = b''.join([ b'\x05\x01', b'\x02\x01', b'_\x00\x00', ])
     with pytest.raises(ValueError) as ex:
-        TLines(0x100, badprog)
+        TLines(badprog, txttab=0x100)
     assert ex.match(r'line 258 ')
     assert ex.match(r'addr \$0100:')
     assert ex.match(r'byte \$5F ')    # '_'
     assert ex.match(r'at \$0104 ')
     assert ex.match(r'offset \$0004')
+
+@pytest.mark.xfail(strict=True, reason='Implementation incomplete')
+def test_parsetext_no_txttab():
+    assert 0

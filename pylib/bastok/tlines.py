@@ -15,6 +15,7 @@ class TLines:
         Functions:
         - `__init__()`: Create a new sequence, either empty or from a
           program image that will be passed to `parsetext()`.
+        - `clearlines()`: Clear all lines and `orig_text`.
         - `parsetext()`: Add lines from a program image to the list.
         - `setline()`: Add a single line to the program image.
         - `lines()`: Return the line numbers and data as a sequence
@@ -29,7 +30,8 @@ class TLines:
           instantiated with, if any (otherwise `None`). This should be the
           same as the result of `text()` if the original text was valid,
           `txttab` has not been changed from the value discovered by the
-          parse, and no lines have been added, deleted or changed.
+          parse, and no lines have been added, deleted or changed. This
+          is not changed once set, except by `clearlines()`.
 
         Issues:
         - This currently assumes little-endian format, which is fine for
@@ -41,23 +43,32 @@ class TLines:
     MAXLIN_5 = 65529        # v5.x: MSX-BASIC, GW-BASIC
     MAXLIN_2 = 63999        # v2.x: Early 6502 BASIC
 
-    def __init__(self, txttab, text=None, *, maxlin=MAXLIN_5):
+    TXTTAB_PET      = 0x0401
+    TXTTAB_APPLE2   = 0x0801
+    TXTTAB_C64      = 0x0801
+    TXTTAB_8080     = 0x8001    # Also Z80
+
+    def __init__(self, text=None, *, txttab=None, maxlin=MAXLIN_5):
         ''' Create a list of tokenized lines starting at address `txttab`.
             if a `bytes` `text` is supplied, it will be parsed with
             `parsetext()`, providing the initial set of lines.
         '''
-        self.linemap = {}
         self.maxlin = maxlin
 
         self.txttab = int(txttab)
         if self.txttab < 0:
             raise ValueError('txttab {} < 0'.format(self.txttab))
 
-        self.orig_text = text
+        self.clearlines()
         if text is not None:
-             self.parsetext(txttab, text)
+             self.parsetext(text, txttab)
 
-    def parsetext(self, txttab, text):
+    def clearlines(self):
+        ' Clear all lines and `orig_text`. '
+        self.orig_text = None
+        self.linemap = {}
+
+    def parsetext(self, text, txttab=None):
         ''' Parse the given program image `text` into lines, adding them to
             the lines already held by this object. New lines with the same
             line number as an existing line will overwrite the existing line.
@@ -72,6 +83,11 @@ class TLines:
             termination byte; a `ValueError` will be raised if it does
             not, indicating either bad data or a bug in this function.
         '''
+        if txttab == None:
+            txttab = self.txttab
+        if self.orig_text is None:
+            self.orig_text = text
+
         curaddr = txttab
         while True:
             offset = curaddr - txttab
@@ -91,7 +107,9 @@ class TLines:
             curaddr = naddr
 
     def setline(self, lineno, bs):
-        ' Set line `lineno` of the text to the data `bs`. '
+        ''' Set line `lineno` of the text to the data `bs`. This will
+            overwrite an existing line of that number, if present.
+        '''
         if lineno < 0 or lineno > self.maxlin:
             raise ValueError('Line number {} out of range 0-{}'
                 .format(lineno, self.maxlin))
@@ -99,9 +117,13 @@ class TLines:
 
     def lines(self):
         ''' Return (`int`, `bytes`) tuples containing the line number
-            and its tokenized data in line number order.
+            and its tokenized data, in line number order.
         '''
         return ( (l, self.linemap[l]) for l in sorted(self.linemap.keys()) )
+
+    def linenos(self):
+        ' Return a sequence of the line numbers, in line number order. '
+        return tuple(sorted(self.linemap.keys()))
 
     def text(self):
         ''' Return a `bytes` containing the current tokenized text.

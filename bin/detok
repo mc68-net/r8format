@@ -58,7 +58,7 @@ def main(args):
     type = f.read(1)[0]
     if type != 0xFF:
         raise RuntimeError('bad type byte ${:02X}'.format(type))
-    tl = TLines(0x8001, f.read())
+    tl = TLines(f.read(), txttab=0x8001)  # XXX txttab should not be hard-coded
     f.close()
 
     #   We always write in binary mode, printing `str` output explictly
