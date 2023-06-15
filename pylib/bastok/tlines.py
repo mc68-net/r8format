@@ -38,10 +38,10 @@ class TLines:
           GW-BASIC, but not for early 6502 BASIC (63999).
     '''
 
-    NEW_MAXLIN = 65529      # MSX-BASIC, GW-BASIC
-                            # Early 6502 BASIC used 63999.
+    MAXLIN_5 = 65529        # v5.x: MSX-BASIC, GW-BASIC
+    MAXLIN_2 = 63999        # v2.x: Early 6502 BASIC
 
-    def __init__(self, txttab, text=None, *, maxlin=NEW_MAXLIN):
+    def __init__(self, txttab, text=None, *, maxlin=MAXLIN_5):
         ''' Create a list of tokenized lines starting at address `txttab`.
             if a `bytes` `text` is supplied, it will be parsed with
             `parsetext()`, providing the initial set of lines.
