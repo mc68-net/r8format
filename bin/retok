@@ -35,15 +35,15 @@ def parseargs():
     return args
 
 def main(args):
-    charmap = CHARMAP.get(args.charset)
-    if charmap is None:
+    cmap = CHARMAP.get(args.charset)
+    if cmap is None:
         die(3, 'Unknown MSX charset: {}'.format(args.charset),
             'Known charsets:',
             *[ ' {:>4}: {}'.format(k, v.description)
                for k, v in sorted(CHARMAP.items()) ]
             )
 
-    tlines = tokenize(charmap, blines(args.input.readlines()))
+    tlines = tokenize(cmap, blines(args.input.readlines()))
     tlines.write_to(args.output)
 
 if __name__ == '__main__':
