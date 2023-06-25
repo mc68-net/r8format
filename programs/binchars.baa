@@ -1,0 +1,6 @@
+1 'SAVE"binchars.bas"
+10 REM ‘’“”•
+50 'The following characters use MSX 2-byte encoding.
+60 REM HAG
+70 PRINT "HAG"
+

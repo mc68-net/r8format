@@ -9,6 +9,13 @@ qecho() {
     echo "$@"
 }
 
+hexdiff() {
+    cmp "$1" "$2" && return 0
+    diff -U 0 \
+        --label   "$1"  --label   "$2" \
+        <(xxd -c8 -g1 "$1") <(xxd -c8 -g1 "$2")
+}
+
 basedir=$(cd "$(dirname "$0")" && pwd -P)
 cd "$basedir"
 
@@ -39,5 +46,12 @@ diff -u {$ftdata/detok,programs}/simple.ba0
 qecho "------ detok -e simple.bas"
 bin/detok -e programs/simple.bas >$ftdata/detok/simple.ba1
 diff -u {$ftdata/detok,programs}/simple.ba1
+
+{
+    f="binchars"
+    qecho "====== detok --binary $f.bas"
+    bin/detok --binary programs/$f.bas >$ftdata/detok/$f.baa
+    hexdiff {$ftdata/detok,programs}/$f.baa
+}
 
 PASSED=true

@@ -22,7 +22,7 @@ def parseargs():
     arg = p.add_argument
 
     arg('-b', '--binary', action='store_true',
-        help='do not do charset conversion')
+        help='do not do charset conversion (implies --dos-text)')
     arg('-c', '--charset', default='ja',
         help='MSX charset: ja (default), int, ar, ru, etc.')
     arg('-e', '--expand', action='store_true',
@@ -40,6 +40,7 @@ def main(args):
 
     if args.binary:
         cmap = None
+        args.dos_text = True
     else:
         cmap = CHARMAP.get(args.charset)
         if cmap is None:
