@@ -18,12 +18,15 @@ def parseargs():
     p = ArgumentParser(description='MSX-BASIC tokenizer')
     arg = p.add_argument
 
+    arg('-b', '--binary', action='store_true',
+        help='do not do charset conversion and use DOS text CR/LF/^Z;'
+             'expanded input not allowed')
     arg('-c', '--charset', default='ja',
         help='MSX charset: ja (default), int, ar, ru, etc.')
     arg('-s', '--squeeze', action='store_true',
         help='remove spaces to reduce code size')
-    arg('input', type=FileType(encoding='UTF-8'),
-        help='input file, always UTF-8 (`-` for stdin)')
+    arg('input',
+        help='input file (`-` for stdin); always UTF-8 except in --binary mode')
     arg('output', nargs='?', type=FileType('wb'), default=stdout.buffer,
         help='output file, always binary (default stdout)')
 
@@ -35,15 +38,24 @@ def parseargs():
     return args
 
 def main(args):
-    cmap = CHARMAP.get(args.charset)
-    if cmap is None:
-        die(3, 'Unknown MSX charset: {}'.format(args.charset),
-            'Known charsets:',
-            *[ ' {:>4}: {}'.format(k, v.description)
-               for k, v in sorted(CHARMAP.items()) ]
-            )
+    if args.binary:
+        cmap = None
+    else:
+        cmap = CHARMAP.get(args.charset)
+        if cmap is None:
+            die(3, 'Unknown MSX charset: {}'.format(args.charset),
+                'Known charsets:',
+                *[ ' {:>4}: {}'.format(k, v.description)
+                   for k, v in sorted(CHARMAP.items()) ]
+                )
 
-    tlines = tokenize(cmap, blines(args.input.readlines()))
+    if args.binary:
+        with open(args.input, 'rb') as f:
+            lines = f.readlines()
+    else:
+        with open(args.input, 'r') as f:
+            lines = blines(f.readlines())
+    tlines = tokenize(cmap, lines)
     tlines.write_to(args.output)
 
 if __name__ == '__main__':

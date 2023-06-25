@@ -116,6 +116,10 @@ done
     qecho "====== detok --binary $f.bas"
     bin/detok --binary programs/$f.bas >$ftdata/detok/$f.baa
     hexdiff {$ftdata/detok,programs}/$f.baa
+
+    qecho "====== retok --binary $f.baa"
+    bin/retok --binary programs/$f.baa >$ftdata/detok/$f.bas
+    hexdiff {$ftdata/detok,programs}/$f.bas
 }
 
 PASSED=true
