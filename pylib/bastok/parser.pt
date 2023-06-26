@@ -9,6 +9,9 @@ class TestCodec:
         #   We rely on `ord()` to check that length of `s` is 1.
         return ord(s)
 
+#   Our "most basic" parser function that does consumption is consume();
+#   we test it first as other tests depend upon it.
+
 def test_parser_consume_str():
     p = Parser('abc')
     c = p.consume
@@ -46,13 +49,13 @@ def test_Parser_confirmation():
     p.start()
     assert (b'c', b'cd') == (c(), p.remain())
 
-def test_Parser_string_str():
-    p = Parser('abcd')
-    s = p.string
-    assert (  'a',    'bc',    None,   'd') \
-        == (s('a'), s('bc'), s('e'), s('d'))
+def test_Parser_peek():
+    p = Parser(b'a', TestCodec())
+    assert ord(b'a') == p.peek()
+    assert b'a' == p.string('a')
+    assert b'' == p.peek()
 
-def test_Parser_string_bytes():
+def test_Parser_string():
     p = Parser(b'abcd', TestCodec())
     s = p.string
     assert ( b'a',   b'bc',    None,  b'd') \
@@ -61,17 +64,12 @@ def test_Parser_string_bytes():
     p.confirm()
     assert b'' == p.remain()
 
-def test_Parser_peek():
-    p = Parser(b'a', TestCodec())
-    assert ord(b'a') == p.peek()
-    assert b'a' == p.string('a')
-    assert b'' == p.peek()
-
 def test_Parser_decdigit():
-    p = Parser(b'19ab', TestCodec())
-    assert b'1' == p.decdigit()
-    assert b'9' == p.decdigit()
-    assert None is p.decdigit()
+    p = Parser(b'195ab', TestCodec())
+    d = p.decdigit
+    #   The '5' below ensures we are not "using up" an iterator produced
+    #   by map() in __init_constants, but have turned it into real data.
+    assert (b'1', b'9', b'5', None) == (d(), d(), d(), d())
 
 
 

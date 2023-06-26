@@ -82,9 +82,9 @@ class Parser:
     def __init_constants(self):
         ' Set up certain constants used by parsing routines. '
         self.DECDIGITS \
-            = ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
+            = set(('0', '1', '2', '3', '4', '5', '6', '7', '8', '9'))
         if self.codec:
-            self.DECDIGITS = map(self.codec.native, self.DECDIGITS)
+            self.DECDIGITS = set(map(self.codec.native, self.DECDIGITS))
 
     def remain(self):
         ' Return what remains after the _confirmed_ parse point. '
@@ -132,7 +132,6 @@ class Parser:
     def decdigit(self):
         ' Return the next input element if it is a decimal digit. '
         next = self.peek()
-        print(self.DECDIGITS)
         if next in self.DECDIGITS:
             return self.consume(1)
 
