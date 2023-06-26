@@ -72,11 +72,12 @@ class Parser:
     '''
 
     def __init__(self, input, codec=None):
-        self.input      = input
-        self.pos_conf   = 0
-        self.pos_un     = 0
-        self.olist      = []
-        self.codec      = codec
+        self.input          = input
+        self.pos_conf       = 0
+        self.pos_un         = 0
+        self.olist_conf     = []
+        self.olist_pending  = []
+        self.codec          = codec
         self.__init_constants()
 
     def __init_constants(self):
@@ -95,10 +96,61 @@ class Parser:
         self.pos_un = self.pos_conf
 
     def confirm(self):
-        ' Move confirmed parse point forward to latest unconfirmed parse point.'
+        ''' Move confirmed parse point forward to latest unconfirmed parse
+            point and add all unconfirmed output to the confirmed output list.
+        '''
         self.pos_conf = self.pos_un
+        self.olist_conf.extend(self.olist_pending)
+        self.olist_pending = []
+
+    class ParseError(ValueError): pass
+
+    def error(self, message):
+        raise self.ParseError(message + ' ' + str(self))
+
+    def __str__(self):
+        p = self.pos_un
+        return 'at {}:{} after …{} (output …{})'.format(
+            p, repr(self.input[p:p+12]),
+            repr(self.input[p-12:p]), self.olist_conf[-4:])
 
     ####################################################################
+    #   Generation Methods
+    #   _Only_ these methods generate output.
+
+    def generate(self, x):
+        ''' Append an output element to the pending output list.
+            These elements will not be moved to the confirmed output
+            list until `confirm()` is called.
+
+            All elements in the list must be the same type or a subtype
+            of the first element added or a `ParseError` will be raised.
+        '''
+        prev = self.olist_conf[0:1] + self.olist_pending[0:1]
+        if len(prev) == 0 or isinstance(x, type(prev[0])):
+            self.olist_pending.append(x)
+        else:
+            self.error('Cannot generate {}: {} not an instance of {}.' \
+                .format(repr(x), type(x), type(prev[0])))
+
+    def output(self):
+        ''' Return the joined-together confirmed output list.
+
+            The object used for joining will be a new instance of the class
+            of the first object in the list. E.g., if the first object is
+            `b'0x01'`, `bytes().join(olist_conf)` will be called.
+
+            If the confirmed ouptut list is empty, `None` will be returned.
+            (XXX This may not be the correct behaviour for this case.)
+        '''
+        if len(self.olist_conf) == 0:
+            return None
+        cls = type(self.olist_conf[0])
+        return cls().join(self.olist_conf)
+
+
+    ####################################################################
+    #   Parsing Methods
     #   All the following use and update the _unconfirmed_ parse point.
 
     def peek(self):
@@ -112,7 +164,13 @@ class Parser:
             return self.input[self.pos_un]
 
     def consume(self, count=1):
-        ' Consume and return the next `count` input elements (default 1). '
+        ''' Consume and return the next `count` elements of the input
+            (default 1). Raise a `ParseError` if we try to consume past end
+            of input.
+        '''
+        if self.pos_un + count > len(self.input):
+            self.error('Consumed past end of input: {} > {}' \
+                .format(self.pos_un + count, len(self.input)))
         elems = self.input[self.pos_un : self.pos_un + count]
         self.pos_un += len(elems)
         return elems

@@ -2,32 +2,30 @@ from    bastok.parser  import *
 import  struct
 import  pytest
 
-class TestCodec:
-    def trans(self, n):
-        raise NotImplementedError("We don't think we need this.")
-    def native(self, s):
-        #   We rely on `ord()` to check that length of `s` is 1.
-        return ord(s)
-
-#   Our "most basic" parser function that does consumption is consume();
-#   we test it first as other tests depend upon it.
+####################################################################
+#   Minimal parser functionality on which other tests depend
 
 def test_parser_consume_str():
-    p = Parser('abc')
+    p = Parser('abcdef')
     c = p.consume
-    assert ('a', 'bc', '') == (c(1), c(2), c(3))
+    assert ('a', 'bc') == (c(1), c(2))
+    with pytest.raises(p.ParseError) as ex:
+        c(4)
+    assert ex.match('Consumed past end of input: 7 > 6')
+    assert 'abcdef' == p.remain()
     p.confirm()
-    assert '' == p.remain()
+    assert 'def' == p.remain()
 
 def test_parser_consume_bytes():
-    p = Parser(b'abc', TestCodec())
+    p = Parser(b'abcdef')
     c = p.consume
-    assert (b'a', b'bc', b'') == (c(1), c(2), c(3))
+    assert (b'a', b'bc') == (c(1), c(2))
+    with pytest.raises(p.ParseError) as ex:
+        c(4)
+    assert ex.match('Consumed past end of input: 7 > 6')
+    assert b'abcdef' == p.remain()
     p.confirm()
-    assert b'' == p.remain()
-
-#   From here on we generally test using `bytes` input to help ensure
-#   that everything is using the codec properly.
+    assert b'def' == p.remain()
 
 def test_Parser_confirmation():
     p = Parser(b'abcd')
@@ -48,6 +46,54 @@ def test_Parser_confirmation():
 
     p.start()
     assert (b'c', b'cd') == (c(), p.remain())
+
+####################################################################
+#   Parser output generation.
+
+@pytest.mark.parametrize('output, olist', [
+    ('01234',           ['01', '2', '3', '4']),
+    (b'\x00\x01\x02',   [b'\x00', b'\x01\x02']),
+    #   XXX It's not clear what we should give for the output if we can't
+    #   figure out what type it should be, so for the moment, just None.
+    (None,              []),
+])
+def test_Parser_generate_output_types(output, olist):
+    p = Parser('');
+    for o in olist:
+        p.generate(o)
+    p.confirm()
+    assert output == p.output()
+
+def test_Parser_generate_type_error():
+    p = Parser('');
+    p.generate(b'0')
+    p.generate(b'1')
+    with pytest.raises(p.ParseError) as ex:
+        p.generate('a')
+    assert ex.match('Cannot generate '
+        "'a': <class 'str'> not an instance of <class 'bytes'>")
+    p.confirm()
+    assert b'01' == p.output(), "should not have added 'a'"
+
+def test_Parser_generate_confirm():
+    p = Parser('')
+    p.generate(b'a1');  assert    None is p.output()
+    p.confirm();        assert   b'a1' == p.output()
+    p.generate(b'b2');  assert   b'a1' == p.output()
+    p.confirm();        assert b'a1b2' == p.output()
+
+
+####################################################################
+#   Parsing Routine Tests
+#   From here on we generally test using `bytes` input to help
+#   ensure that everything is using the codec properly.
+
+class TestCodec:
+    def trans(self, n):
+        raise NotImplementedError("We don't think we need this.")
+    def native(self, s):
+        #   We rely on `ord()` to check that length of `s` is 1.
+        return ord(s)
 
 def test_Parser_peek():
     p = Parser(b'a', TestCodec())
@@ -72,6 +118,9 @@ def test_Parser_decdigit():
     assert (b'1', b'9', b'5', None) == (d(), d(), d(), d())
 
 
+
+####################################################################
+####################################################################
 
 ####################################################################
 #   PState reading/consumption

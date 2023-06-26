@@ -1,6 +1,7 @@
 from    bastok.msx2re  import *
 from    bastok.msxchars  import UTCharset, CHARMAP
 from    re  import escape
+from    struct  import pack
 import  pytest
 
 #   When we don't need to have distinguishable Unicode and native
@@ -17,25 +18,25 @@ ja_charmap = CHARMAP['ja']
     ('\uF0FF', b'\xFF'),
 ])
 def test_char_good(s, b):
-    p = PState(s, UTCharset())
+    p = Parser(s, UTCharset())
     char(p)
     assert b == p.output()
 
 def test_char_encodingerror():
-    p = PState('\uF07F', UTCharset())
+    p = Parser('\uF07F', UTCharset())
     with pytest.raises(EncodingError) as ex:
         char(p)
     assert ex.match('0x7F')
 
 def test_char_eoi():
-    p = PState('', None)
+    p = Parser('', None)
     with pytest.raises(p.ParseError) as ex:
         char(p)
     assert ex.match('unexpected end of input')
     assert None is char(p, err=None)
 
 def test_chars():
-    p = PState('bcd', UTCharset(1))
+    p = Parser('bcd', UTCharset(1))
     chars(p)
     assert b'abc' == p.output()
 
@@ -46,13 +47,13 @@ def test_chars():
     ('  '   , b'  ' , ''),
 ])
 def test_spaces(s, b, r):
-    p = PState(s, ja_charmap)
+    p = Parser(s, ja_charmap)
     spaces(p);        assert (b, r) == (p.output(), p.remain())
-    p = PState(s, ja_charmap)
+    p = Parser(s, ja_charmap)
     spaces(p, False); assert (None, r) == (p.output(), p.remain())
 
 def test_spaces_default():
-    p = PState('  x', ja_charmap)
+    p = Parser('  x', ja_charmap)
     spaces(p); assert (b'  ', 'x') == (p.output(), p.remain())
 
 @pytest.mark.parametrize('s, b', [
@@ -64,14 +65,14 @@ def test_spaces_default():
     ('"Aaあ年',     b'"Aa\x91\x01\x48'),
 ])
 def test_string_literal_success(s, b):
-    p = PState(s, ja_charmap)
+    p = Parser(s, ja_charmap)
     string_literal(p)
     assert b == p.output()
 
 def test_string_literal_error():
-    p = PState('a'); assert None is string_literal(p)   # no errors
+    p = Parser('a'); assert None is string_literal(p)   # no errors
 
-    p = PState('a')
+    p = Parser('a')
     with pytest.raises(p.ParseError) as ex:
         string_literal(p, 'unexpected input')
     assert ex.match("unexpected input: 'a'")
@@ -84,26 +85,26 @@ def test_string_literal_error():
     #(6553, 5, '65530'), (6553, 5, '65536'),  # tokeniser does this!
 ])
 def test_linenum_success(n, pos, s):
-    p = PState(s)
+    p = Parser(s)
     tok = b'\xF2' if n < 0 else b''
-    tok += b'\x0E' + struct.pack('<H', abs(n))
+    tok += b'\x0E' + pack('<H', abs(n))
     assert (n       , tok        , pos) \
-        == (linenum(p), p.output() , p.pos)
+        == (linenum(p), p.output() , p.pos_conf)
 
 def test_linenum_nogen():
-    p = PState('258')
+    p = Parser('258')
     assert 258 == linenum(p, False)
     assert None is p.output()
 
 def test_linenum_failure_letters():
-    p = PState('=123')
+    p = Parser('=123')
     assert None == linenum(p)
     with pytest.raises(p.ParseError) as ex:
         linenum(p, err='linenum')
     assert ex.match('linenum')
 
 def test_linenum_failure_size():
-    p = PState('65530')
+    p = Parser('65530')
     with pytest.raises(p.ParseError) as ex:
         #   Should raise error even if not generating.
         linenum(p, gen=False, err='xyz')
@@ -123,7 +124,7 @@ def test_linenum_failure_size():
     ('&b1111000011110000',  0xF0F0, 0)
 ])
 def test_ampersand_literal(s, i, rem):
-    p = PState(s)
+    p = Parser(s)
     assert (i, rem) == (ampersand_literal(p), len(p.remain()))
 
 @pytest.mark.parametrize('s', [
@@ -133,7 +134,7 @@ def test_ampersand_literal(s, i, rem):
     '&b11110000111100001',
 ])
 def test_ampersand_literal_overflow(s):
-    p = PState(s)
+    p = Parser(s)
     with pytest.raises(p.ParseError) as ex:
         print(ampersand_literal(p))
     assert ex.match('Overflow at 0:' + repr(s)[0:13])
@@ -154,8 +155,8 @@ def test_ampersand_literal_overflow(s):
     (  '-123.456e-78',  (12,  -1,  '123', '456',  -78)),
 ])
 def test_match_digits(s, d):
-    p = PState(s);       assert d == match_digits(p)
-    p = PState(s + 'a'); assert d == match_digits(p)
+    p = Parser(s);       assert d == match_digits(p)
+    p = Parser(s + 'a'); assert d == match_digits(p)
 
 def test_match_digits_exp_and_type():
     ''' We test above that random chars after the number are not consumed
@@ -163,7 +164,7 @@ def test_match_digits_exp_and_type():
         both an exponent _and_ a type.
     '''
     s = '-123.456e-78#'     # `#` at should not be parsed/consumed
-    p = PState(s)
+    p = Parser(s)
     assert (len(s)-1, -1, '123', '456',  -78) == match_digits(p)
 
 @pytest.mark.parametrize('s, remain, n, tok', [
@@ -209,13 +210,13 @@ def test_match_digits_exp_and_type():
 #   (  '1e2%',       100.0,                b'XXX'),
 ])
 def test_digits(s, remain, n, tok):
-    p = PState(s)
+    p = Parser(s)
     nn = digits(p)
     assert (remain, n, tok) == (p.remain(), nn, p.output())
 
 @pytest.mark.parametrize('s', [ '32768%', '-32768%', '32768.1234%' ])
 def test_digits_int_overflow(s):
-    p = PState(s)
+    p = Parser(s)
     with pytest.raises(p.ParseError) as ex:
         digits(p)
     assert ex.match('int Overflow: 32768')
@@ -224,7 +225,7 @@ def test_digits_int_overflow(s):
 
 
 #   XXX what should we be doing about lower case in program text?
-#   Maybe add an `insensitive` property to PState and have parse functions
+#   Maybe add an `insensitive` property to Parser and have parse functions
 #   use that to determine if they're "liberal" in what they accept, e.g.,
 #   toktrans() will do a case-insensitive comparision on strings.
 
@@ -245,7 +246,7 @@ def test_tokline(lineno, tokens, line):
     ('10 GOTO =1',          'line number after GOTO'),
 ])
 def test_tokline_error(line, msg):
-    with pytest.raises(PState.ParseError) as ex:
+    with pytest.raises(Parser.ParseError) as ex:
         tokline(ja_charmap, line)
     assert ex.match('expected ' + msg)
 
