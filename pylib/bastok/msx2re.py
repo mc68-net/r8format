@@ -238,7 +238,6 @@ def linenum(p, gen=True, err=None):
     ds = ''
     while True:
         d = p.decdigit()
-        print('{}+{}'.format(ds, d))
         if d is None:
             break
         else:

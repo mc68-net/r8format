@@ -78,14 +78,13 @@ class Parser:
         self.olist_conf     = []
         self.olist_pending  = []
         self.codec          = codec
-        self.__init_constants()
 
-    def __init_constants(self):
-        ' Set up certain constants used by parsing routines. '
-        self.DECDIGITS \
-            = set(('0', '1', '2', '3', '4', '5', '6', '7', '8', '9'))
-        if self.codec:
-            self.DECDIGITS = set(map(self.codec.native, self.DECDIGITS))
+        #   Constants used by parsing routines. The ones set to `None` must
+        #   use lazy initialisation so that if the routines that use them
+        #   are not called, the parser doesn't try to use the codec on
+        #   them. (Some codecs may not be able to translate the characters,
+        #   usually ASCII, used by some parsing routines.)
+        self.DECDIGITS = None
 
     def remain(self):
         ' Return what remains after the _confirmed_ parse point. '
@@ -189,6 +188,13 @@ class Parser:
 
     def decdigit(self):
         ' Return the next input element if it is a decimal digit. '
+
+        if self.DECDIGITS is None:      # lazy init
+            self.DECDIGITS \
+                = set(('0', '1', '2', '3', '4', '5', '6', '7', '8', '9'))
+            if self.codec:
+                self.DECDIGITS = set(map(self.codec.native, self.DECDIGITS))
+
         next = self.peek()
         if next in self.DECDIGITS:
             return self.consume(1)

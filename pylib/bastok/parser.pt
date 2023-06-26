@@ -1,4 +1,5 @@
 from    bastok.parser  import *
+from    bastok.charset  import UTCharset
 import  struct
 import  pytest
 
@@ -46,6 +47,15 @@ def test_Parser_confirmation():
 
     p.start()
     assert (b'c', b'cd') == (c(), p.remain())
+
+def test_parser_without_ASCII():
+    ''' Test the parser with a codec that cannot convert any ASCII
+        characters. Some parsing routines (e.g., `digits()`) won't work
+        with such a codec, but so long as those are not called, we should
+        still work fine.
+    '''
+    p = Parser(b'x', UTCharset())
+    assert b'x' == p.consume(1)
 
 ####################################################################
 #   Parser output generation.
