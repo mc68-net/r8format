@@ -35,10 +35,12 @@ class Parser:
           (usually `str` or `bytes`) that is *consumed* by the parser.
           Individual items in this sequence are called _elements._
         - The current parse position in the input, `pos`.
-        - An optional `codec` for translating between Unicode and the
+        - An optional `charset` for translating between Unicode and the
           `input` type when `input` is not a `str`. This should follow the
           `Charset` interface: `trans(n)` for native code point to `str`,
           and `native(s)` for a single Unicode char to native.
+          XXX This should actually be a codec and deal with encoding
+          as well as code points?
         - A `list` `olist` of fragments of parser-dependent type (usually
           `bytes` or `str`) that when joined together are the output of the
           parser. `gen()` appends to this list.
@@ -71,19 +73,20 @@ class Parser:
         return values to `str()` before doing further processing of them.
     '''
 
-    def __init__(self, input, codec=None):
+    def __init__(self, input, charset=None):
         self.input          = input
         self.pos_conf       = 0
         self.pos_un         = 0
         self.olist_conf     = []
         self.olist_pending  = []
-        self.codec          = codec
+        self.charset          = charset
 
-        #   Constants used by parsing routines. The ones set to `None` must
-        #   use lazy initialisation so that if the routines that use them
-        #   are not called, the parser doesn't try to use the codec on
-        #   them. (Some codecs may not be able to translate the characters,
-        #   usually ASCII, used by some parsing routines.)
+        #   Constants used by parsing routines. Any constants that rely
+        #   on the charset being able to convert Unicode chars they need
+        #   to native chars must be lazily initialised, so that the Parser
+        #   works for Charsets that cannot do that conversion so long as
+        #   the methods that need them are not called.
+        self.DIGITS = dict()        # base → set of digits in that base
         self.DECDIGITS = None
 
     def remain(self):
@@ -108,7 +111,7 @@ class Parser:
         raise self.ParseError(message + ' ' + str(self))
 
     def __str__(self):
-        p = self.pos_un
+        p = self.pos_conf
         return 'at {}:{} after …{} (output …{})'.format(
             p, repr(self.input[p:p+12]),
             repr(self.input[p-12:p]), self.olist_conf[-4:])
@@ -150,15 +153,16 @@ class Parser:
 
     ####################################################################
     #   Parsing Methods
-    #   All the following use and update the _unconfirmed_ parse point.
+    #   Nothing here generates output or calls `confirm()`, and all of the
+    #   following use and update the _unconfirmed_ parse point.
 
     def peek(self):
         ''' Without consuming anything, return next element at the
-            _unconfirmed_ parse point in input, or an empty sequence
-            if at end of input.
+            _unconfirmed_ parse point in input, or `None` if at end of
+            input.
         '''
         if self.pos_un >= len(self.input):
-            return type(self.input)()
+            return None
         else:
             return self.input[self.pos_un]
 
@@ -168,7 +172,7 @@ class Parser:
             of input.
         '''
         if self.pos_un + count > len(self.input):
-            self.error('Consumed past end of input: {} > {}' \
+            self.error('Unexpected end of input: {} > {}' \
                 .format(self.pos_un + count, len(self.input)))
         elems = self.input[self.pos_un : self.pos_un + count]
         self.pos_un += len(elems)
@@ -180,24 +184,71 @@ class Parser:
         if isinstance(self.input, str):
             expected = s
         else:
-            expected = type(self.input)(map(self.codec.native, s))
+            expected = type(self.input)(map(self.charset.native, s))
 
         next = self.input[self.pos_un:self.pos_un+len(expected)]
         if expected == next:
             return self.consume(len(expected))
 
-    def decdigit(self):
-        ' Return the next input element if it is a decimal digit. '
+    def string_in(self, strs):
+        for s in strs:
+            ret = self.string(s)
+            if ret is not None:
+                return ret
+        return None
 
-        if self.DECDIGITS is None:      # lazy init
-            self.DECDIGITS \
-                = set(('0', '1', '2', '3', '4', '5', '6', '7', '8', '9'))
-            if self.codec:
-                self.DECDIGITS = set(map(self.codec.native, self.DECDIGITS))
+    def digit(self, base=10):
+        ''' Return the next input element if it is a digit in the given
+            `base` (default 10).
 
+            The charset, if present, must have native representations of
+            the ASCII digits.
+        '''
+        if not base in self.DIGITS:
+            digits = basedigits(base)
+            if self.charset:
+                digits = set(map(self.charset.native, digits))
+            self.DIGITS[base] = digits
+
+        digits = self.DIGITS[base]
         next = self.peek()
-        if next in self.DECDIGITS:
+        if next in digits:
             return self.consume(1)
+
+    def digits(self, base=10):
+        ds = type(self.input)()
+        while True:
+            d = self.digit(base)
+            if d is not None:
+                ds += d
+            else:
+                break
+        if len(ds) > 0: return ds
+
+####################################################################
+#   Support routines
+
+ASCII_0 = ord('0')
+ASCII_A = ord('A')
+ASCII_a = ord('a')
+
+def basedigits(base):
+    ''' Return a set of all Unicode characters comprising the digits
+        for a given base. This starts with the characters ``'0'``
+        through ``'9'``, and proceeds after that from the letters
+        ``'A'`` and ``'a'``, returning both upper- and lower-case
+        letters in the set.
+    '''
+    digits = set()
+    for i in range(0, min(base, 10)):
+        digits.add(chr(ASCII_0 + i))
+    for i in range(10, base):
+        digits.add(chr(ASCII_A - 10 + i))
+        digits.add(chr(ASCII_a - 10 + i))
+    return digits
+
+####################################################################
+#   Legacy code
 
 class PState:
     ''' A mutable parser state, consisting of:

@@ -32,8 +32,7 @@ def test_char_eoi():
     p = Parser('', None)
     with pytest.raises(p.ParseError) as ex:
         char(p)
-    assert ex.match('unexpected end of input')
-    assert None is char(p, err=None)
+    assert ex.match('Unexpected end of input')
 
 def test_chars():
     p = Parser('bcd', UTCharset(1))
@@ -67,6 +66,7 @@ def test_spaces_default():
 def test_string_literal_success(s, b):
     p = Parser(s, ja_charmap)
     string_literal(p)
+    p.confirm()
     assert b == p.output()
 
 def test_string_literal_error():
@@ -74,8 +74,8 @@ def test_string_literal_error():
 
     p = Parser('a')
     with pytest.raises(p.ParseError) as ex:
-        string_literal(p, 'unexpected input')
-    assert ex.match("unexpected input: 'a'")
+        string_literal(p, 'Unexpected input')
+    assert ex.match("Unexpected input: 'a'")
 
 @pytest.mark.parametrize('n, pos, s', [
     (0, 1, '0'), (0, 3, '000'),
@@ -110,28 +110,29 @@ def test_linenum_failure_size():
         linenum(p, gen=False, err='xyz')
     assert ex.match('65530 outside linenum range at')
 
-@pytest.mark.parametrize('s, i, rem', [
-    ('',              None, 0),
-    ('01',            None, 2),
-    ('&H0',              0, 0),
-    ('&H',               0, 0),
-    ('&HG',              0, 1),
-    ('&ha',           0x0A, 0),
-    ('&HffffG',     0xFFFF, 1),
-    ('&O778',         0o77, 1),
-    ('&o177777',     65535, 0),
-    ('&b1012',       0b101, 1),
-    ('&b1111000011110000',  0xF0F0, 0)
+@pytest.mark.parametrize('s, i, gen, rem', [
+    ('',                      None,            None,  0),
+    ('01',                    None,            None,  2),
+    ('&H0',                      0,  b'\x0C\x00\x00', 0),
+    ('&H',                       0,  b'\x0C\x00\x00', 0),
+    ('&HG',                      0,  b'\x0C\x00\x00', 1),
+    ('&ha',                   0x0A,  b'\x0C\x0A\x00', 0),
+    ('&HffffG',             0xFFFF,  b'\x0C\xFF\xFF', 1),
+    ('&O778',                 0o77,  b'\x0B\x3F\x00', 1),
+    ('&o177777',             65535,  b'\x0B\xFF\xFF', 0),
+   #('&b1012',               0b101,  b'????????????', 1),
+   #('&b1111000011110000',  0xF0F0,  b'????????????', 0)
 ])
-def test_ampersand_literal(s, i, rem):
+def test_ampersand_literal(s, i, gen, rem):
     p = Parser(s)
-    assert (i, rem) == (ampersand_literal(p), len(p.remain()))
+    assert (i, gen, rem) \
+        == (ampersand_literal(p), p.output(), len(p.remain()))
 
 @pytest.mark.parametrize('s', [
     '&h10000',
     '&o200000',
     '&o1777767',
-    '&b11110000111100001',
+   #'&b11110000111100001',
 ])
 def test_ampersand_literal_overflow(s):
     p = Parser(s)

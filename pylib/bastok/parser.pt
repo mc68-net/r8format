@@ -4,6 +4,22 @@ import  struct
 import  pytest
 
 ####################################################################
+#   Support routines
+
+DIGITS_2 = set(['0', '1'])
+DIGITS_8 = DIGITS_2 | set(['2', '3', '4', '5', '6', '7'])
+DIGITS_10 = DIGITS_8 | set(['8', '9'])
+DIGITS_16 = DIGITS_10 \
+    | set(['A', 'a', 'B', 'b', 'C', 'c', 'D', 'd', 'E', 'e', 'F', 'f'])
+
+@pytest.mark.parametrize('base, digitchars', [
+    (2, DIGITS_2), (8, DIGITS_8), (10, DIGITS_10), (16, DIGITS_16),
+])
+def test_basedigits(base, digitchars):
+    print(sorted(digitchars))
+    assert digitchars == basedigits(base)
+
+####################################################################
 #   Minimal parser functionality on which other tests depend
 
 def test_parser_consume_str():
@@ -12,7 +28,7 @@ def test_parser_consume_str():
     assert ('a', 'bc') == (c(1), c(2))
     with pytest.raises(p.ParseError) as ex:
         c(4)
-    assert ex.match('Consumed past end of input: 7 > 6')
+    assert ex.match('Unexpected end of input: 7 > 6')
     assert 'abcdef' == p.remain()
     p.confirm()
     assert 'def' == p.remain()
@@ -23,7 +39,7 @@ def test_parser_consume_bytes():
     assert (b'a', b'bc') == (c(1), c(2))
     with pytest.raises(p.ParseError) as ex:
         c(4)
-    assert ex.match('Consumed past end of input: 7 > 6')
+    assert ex.match('Unexpected end of input: 7 > 6')
     assert b'abcdef' == p.remain()
     p.confirm()
     assert b'def' == p.remain()
@@ -109,7 +125,7 @@ def test_Parser_peek():
     p = Parser(b'a', TestCodec())
     assert ord(b'a') == p.peek()
     assert b'a' == p.string('a')
-    assert b'' == p.peek()
+    assert None == p.peek()
 
 def test_Parser_string():
     p = Parser(b'abcd', TestCodec())
@@ -120,13 +136,35 @@ def test_Parser_string():
     p.confirm()
     assert b'' == p.remain()
 
-def test_Parser_decdigit():
-    p = Parser(b'195ab', TestCodec())
-    d = p.decdigit
+def test_parser_string_in():
+    p = Parser(b'abcd', TestCodec())
+    #   Any iterable should work, so we use several different ones.
+
+    p.start();
+    assert b'ab' == p.string_in(set(['ab']))
+    assert b'cd' == p.string_in(('cd',))
+
+    p.start()
+    assert  None is p.string_in(['xx', 'cd', 'xx'])
+    assert b'ab' == p.string_in(['xx', 'ab', 'xx'])
+    assert  None is p.string_in(['xx', 'ab', 'xx'])
+
+@pytest.mark.parametrize('base, input, retvals', [
     #   The '5' below ensures we are not "using up" an iterator produced
     #   by map() in __init_constants, but have turned it into real data.
-    assert (b'1', b'9', b'5', None) == (d(), d(), d(), d())
+    (10, b'195ab',  (b'1', b'9', b'5', None)),
+    ( 2, b'0123',   (b'0', b'1', None)),
+    (16, b'aF0g',   (b'a', b'F', b'0', None)),
+    ( 8, b'9',      (None,)),
+    (10, b'',       (None,)),
+])
+def test_Parser_digit(base, input, retvals):
+    p = Parser(input, TestCodec())
+    assert retvals == tuple(( p.digit(base) for i in retvals ))
 
+def test_Parser_digits():
+    assert b'19' == Parser(b'19a', TestCodec()).digits()
+    assert  None is Parser(b'',    TestCodec()).digits()
 
 
 ####################################################################

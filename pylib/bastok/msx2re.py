@@ -47,8 +47,11 @@ def tokline(charmap, line):
         if string_literal(p)    is not None: continue
         if ampersand_literal(p) is not None: continue
         if digits(p)            is not None: continue
-        #   Failing that, read and generate the next byte.
-        byte(p, genf=lambda c: bytes([ord(c)]))
+        #   Failing that, pass the next byte straight through.
+        #   This should _not_ be converted because it's not in a string,
+        #   REM or DATA statement, and we simply don't know what it is.
+        #   (The BASIC interpreter will deal with it if it's an error.)
+        b = p.consume(1); generate(bytes([ord(c)]))
 
     return (ln, p.output())
 
@@ -171,44 +174,39 @@ def match_digits(p):
 
     return (m.end(), neg, i, f, te)
 
-AMPERSAND_PREFIXES = set([ '&H', '&h', '&O', '&o', '&B', '&b'])
-BINDIGITS = ('0', '1')
-OCTDIGITS = BINDIGITS + ('2', '3', '4', '5', '6', '7')
-HEXDIGITS = OCTDIGITS \
-    + ('8', '9', 'A', 'a', 'B', 'b', 'C', 'c', 'D', 'd', 'E', 'e', 'F', 'f')
-
 def ampersand_literal(p):
     ''' Read and consume ``&Hnnnn``, ``&Onnnn`` and ``&Bnnnn`` integer
-        literals. Raises a `ParseError` saying "Overflow" if the number
-        exceeds 2^16.
+        literals and generate their tokenised version. Raises a
+        `ParseError` saying "Overflow" if the number is ≥ 2^16.
     '''
-    if p.remain()[0:2] not in AMPERSAND_PREFIXES:
+    if p.string_in(['&H', '&h']):
+        base = 16; p.generate(b'\x0C')
+    elif p.string_in(['&O', '&o']):
+        base = 8;  p.generate(b'\x0B')
+    elif p.string_in(['&B', '&b']):
+        base = 2
+    else:
         return None
-    #   If we have the prefix, we have the number; lack of valid digits
-    #   after the prefix just means that the number is 0.
 
-    def read(base, basedigits):
-        i = 2; s = ''
-        while p.remain()[i:].startswith(basedigits):
-            s += p.remain()[i]; i += 1
-        if s == '':
-            p.consume(2)
-            return 0
-        else:
-            n = int(s, base)
-            if n > 0xFFFF:
-                p.error('Overflow'.format(base, s))
-            p.consume(2 + len(s))
-            return n
+    digits = p.digits(base)
+    if digits is None:
+        #   A prefix not followed by a valid digit assumes a value of 0.
+        digits = '0'
+    else:
+        digits = str(digits)
 
-    base = p.remain()[1].upper()
-    if base == 'H':
-        return read(16, HEXDIGITS)
-    elif base == 'O':
-        return read(8, OCTDIGITS)
-    elif base == 'B':
-        return read(2, BINDIGITS)
-    raise RuntimeError('Internal error: bug!')
+    n = int(digits, base)
+    print(base, digits, n, hex(n)) # XXX
+    if n > 0xFFFF:
+        p.error('Overflow')
+    if base != 2:
+        p.generate(pack('<H', n))
+    else:
+        #   XXX no tokenised version, do ASCII!
+        raise Exception('binary: write me!')
+
+    p.confirm()
+    return n
 
 def linenum(p, gen=True, err=None):
     ''' Consume the ASCII representation of a line number and return it as
@@ -237,7 +235,7 @@ def linenum(p, gen=True, err=None):
 
     ds = ''
     while True:
-        d = p.decdigit()
+        d = p.digit()
         if d is None:
             break
         else:
@@ -268,11 +266,14 @@ def string_literal(p, err=None):
     if p.peek() != DQUOTE:
         if err is None: return None
         raise p.ParseError('{}: {}'.format(err, repr(p.peek())))
-    byte(p); p.generate(b'"'); s += DQUOTE
+    p.consume(1); p.generate(b'"'); s += DQUOTE
     while True:
         c = p.peek()
         if c == None: return s
-        if c == DQUOTE: byte(p); p.generate(b'"'); return s + DQUOTE
+        if c == DQUOTE:
+            p.consume(1)
+            p.generate(b'"')
+            return s + DQUOTE
         s += char(p)
 
 def space(p, generate=True):
@@ -282,21 +283,25 @@ def space(p, generate=True):
         else:        p.consume()
 
 def spaces(p, generate=True):
-    ''' Consume zero or more Unicode space characters.
+    ''' Consume zero or more space characters.
 
         If `generate` is `True` these will be generated into the output
         (using the usual Unicode to native translation), otherwise they
         will be silenty consumed.
     '''
-    while p.peek() in (' ', ord(' ')):
-        if generate: char(p)
-        else:        p.consume()
+    while p.peek() is not None:
+        if p.string(' '):
+            if generate: p.generate(msx_encode(p, ' '))
+        else:
+            break
+        p.confirm()
 
 def chars(p):
-    ' Do char() until EOF. '
-    while char(p, err=None): pass
+    ' Do char() until end of input. '
+    while p.peek() is not None:
+        char(p)
 
-def char(p, err='unexpected end of input'):
+def char(p):
     ''' Consume a Unicode character from the input, translate it to an
         native character using the `PState` `p`'s `charmap`, generate the
         native character to the output using MSX encoding, and return the
@@ -311,9 +316,12 @@ def char(p, err='unexpected end of input'):
         - 0x00-0x1F: 0x01 byte followed a byte with the code point + 0x40.
         - 0x7F: Cannot be encoded; raises `EncodingError`.
     '''
-    c = byte(p, err=err)
-    if c is None: return None
+    c = p.consume(1)
+    p.generate(msx_encode(p, c))
+    p.confirm()
+    return c
 
+def msx_encode(p, c):
     if not p.charset:
         p.error('No charset provided for translation')
     else:
@@ -324,5 +332,4 @@ def char(p, err='unexpected end of input'):
         encoded = bytes([0x01, n+0x40])
     else:
         encoded = bytes([n])
-    p.generate(encoded)
-    return c
+    return encoded
