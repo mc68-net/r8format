@@ -1,5 +1,5 @@
 from    bastok.tlines  import TLines
-from    bastok.parser  import *
+from    bastok.parser  import Parser, toksort
 from    bastok.msx2  import TOKENS, NEGATIVE
 from    struct  import pack
 import  re
@@ -25,7 +25,7 @@ def tokline(charmap, line):
     '''
     #   Possibly we want to change this API so that we can tokenize line
     #   fragments that do not start with a line number.
-    p = PState(line, charmap)
+    p = Parser(line, charmap)
     ln = linenum(p, gen=False, err='line number')
     space(p, False)
     while not p.finished():

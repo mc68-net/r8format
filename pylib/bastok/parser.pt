@@ -9,6 +9,43 @@ class TestCodec:
         #   We rely on `ord()` to check that length of `s` is 1.
         return ord(s)
 
+def test_parser_consume_str():
+    p = Parser('abc')
+    c = p.consume
+    assert ('a', 'bc', '') == (c(1), c(2), c(3))
+    p.confirm()
+    assert '' == p.remain()
+
+def test_parser_consume_bytes():
+    p = Parser(b'abc', TestCodec())
+    c = p.consume
+    assert (b'a', b'bc', b'') == (c(1), c(2), c(3))
+    p.confirm()
+    assert b'' == p.remain()
+
+#   From here on we generally test using `bytes` input to help ensure
+#   that everything is using the codec properly.
+
+def test_Parser_confirmation():
+    p = Parser(b'abcd')
+    c = p.consume
+
+    assert b'abcd' == p.remain()
+
+    p.start()
+    assert (b'a', b'abcd') == (c(), p.remain())
+    assert (b'b', b'abcd') == (c(), p.remain())
+
+    p.start()
+    assert (b'a', b'abcd') == (c(), p.remain())
+    assert (b'b', b'abcd') == (c(), p.remain())
+
+    p.confirm()
+    assert b'cd' == p.remain()
+
+    p.start()
+    assert (b'c', b'cd') == (c(), p.remain())
+
 def test_Parser_string_str():
     p = Parser('abcd')
     s = p.string
@@ -20,26 +57,22 @@ def test_Parser_string_bytes():
     s = p.string
     assert ( b'a',   b'bc',    None,  b'd') \
         == (s('a'), s('bc'), s('e'), s('d'))
-
-def test_Parser_confirmation():
-    p = Parser('abcd')
-    s = p.string
-
-    assert 'abcd' == p.remain()
-
-    p.start()
-    assert ('a', 'abcd') == (s('a'), p.remain())
-    assert ('b', 'abcd') == (s('b'), p.remain())
-
-    p.start()
-    assert ('a', 'abcd') == (s('a'), p.remain())
-    assert ('b', 'abcd') == (s('b'), p.remain())
-
+    assert b'abcd' == p.remain()
     p.confirm()
-    assert 'cd' == p.remain()
+    assert b'' == p.remain()
 
-    p.start()
-    assert ('c', 'cd') == (s('c'), p.remain())
+def test_Parser_peek():
+    p = Parser(b'a', TestCodec())
+    assert ord(b'a') == p.peek()
+    assert b'a' == p.string('a')
+    assert b'' == p.peek()
+
+def test_Parser_decdigit():
+    p = Parser(b'19ab', TestCodec())
+    assert b'1' == p.decdigit()
+    assert b'9' == p.decdigit()
+    assert None is p.decdigit()
+
 
 
 ####################################################################

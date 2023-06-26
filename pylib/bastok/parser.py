@@ -33,6 +33,7 @@ class Parser:
 
         - An `input` sequence (never mutated) of application-dependent type
           (usually `str` or `bytes`) that is *consumed* by the parser.
+          Individual items in this sequence are called _elements._
         - The current parse position in the input, `pos`.
         - An optional `codec` for translating between Unicode and the
           `input` type when `input` is not a `str`. This should follow the
@@ -64,6 +65,10 @@ class Parser:
 
         XXX `start()`/`confirm()` possibly should be re-entrant, using
         a stack of confirmed and unconfirmed parse points.
+
+        When elements of the input is returned, they are of the same type
+        as the input. For non-`str` inputs, you may need to pass these
+        return values to `str()` before doing further processing of them.
     '''
 
     def __init__(self, input, codec=None):
@@ -72,17 +77,49 @@ class Parser:
         self.pos_un     = 0
         self.olist      = []
         self.codec      = codec
+        self.__init_constants()
+
+    def __init_constants(self):
+        ' Set up certain constants used by parsing routines. '
+        self.DECDIGITS \
+            = ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
+        if self.codec:
+            self.DECDIGITS = map(self.codec.native, self.DECDIGITS)
 
     def remain(self):
+        ' Return what remains after the _confirmed_ parse point. '
         return self.input[self.pos_conf:]
 
     def start(self):
+        ' Set unconfirmed parse point to confirmed parse point. '
         self.pos_un = self.pos_conf
 
     def confirm(self):
+        ' Move confirmed parse point forward to latest unconfirmed parse point.'
         self.pos_conf = self.pos_un
 
+    ####################################################################
+    #   All the following use and update the _unconfirmed_ parse point.
+
+    def peek(self):
+        ''' Without consuming anything, return next element at the
+            _unconfirmed_ parse point in input, or an empty sequence
+            if at end of input.
+        '''
+        if self.pos_un >= len(self.input):
+            return type(self.input)()
+        else:
+            return self.input[self.pos_un]
+
+    def consume(self, count=1):
+        ' Consume and return the next `count` input elements (default 1). '
+        elems = self.input[self.pos_un : self.pos_un + count]
+        self.pos_un += len(elems)
+        return elems
+
     def string(self, s):
+        ''' Consume and return elements matching the constant string `s`.
+        '''
         if isinstance(self.input, str):
             expected = s
         else:
@@ -90,10 +127,14 @@ class Parser:
 
         next = self.input[self.pos_un:self.pos_un+len(expected)]
         if expected == next:
-            self.pos_un += len(expected)
-            return next
-        else:
-            return None
+            return self.consume(len(expected))
+
+    def decdigit(self):
+        ' Return the next input element if it is a decimal digit. '
+        next = self.peek()
+        print(self.DECDIGITS)
+        if next in self.DECDIGITS:
+            return self.consume(1)
 
 class PState:
     ''' A mutable parser state, consisting of:
