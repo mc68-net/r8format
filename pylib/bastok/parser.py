@@ -28,6 +28,73 @@
 
 import  struct
 
+class Parser:
+    ''' A parser with mutable state consisting of:
+
+        - An `input` sequence (never mutated) of application-dependent type
+          (usually `str` or `bytes`) that is *consumed* by the parser.
+        - The current parse position in the input, `pos`.
+        - An optional `codec` for translating between Unicode and the
+          `input` type when `input` is not a `str`. This should follow the
+          `Charset` interface: `trans(n)` for native code point to `str`,
+          and `native(s)` for a single Unicode char to native.
+        - A `list` `olist` of fragments of parser-dependent type (usually
+          `bytes` or `str`) that when joined together are the output of the
+          parser. `gen()` appends to this list.
+
+        The parser has two parse points and output lists: "confirmed" and
+        "unconfirmed."
+        - `start()` sets the unconfirmed parse point to the confirmed parse
+          point; and clears any unconfirmed output. this should be used by
+          a routine that is not yet sure that it's going to consume the
+          following text without an error.
+        - Matching routines such as `string()`:
+          - On success advance the unconfirmed parse point and return the
+            input that matched or a value derived from it.
+          - On failure leave the unconfirmed parse point unchanged and
+            return `None`.
+        - `confirm()` sets the confirmed parse point to the unconfirmed
+          parse point and appends all unconfirmed output to the confirmed
+          output.
+
+        Thus, parsing routines should `start()`, and either:
+        - Parse until they've succeeded, generating output as they go
+          along, and then call `confirm()`, or
+        - Parse unti they've failed and just return.
+
+        XXX `start()`/`confirm()` possibly should be re-entrant, using
+        a stack of confirmed and unconfirmed parse points.
+    '''
+
+    def __init__(self, input, codec=None):
+        self.input      = input
+        self.pos_conf   = 0
+        self.pos_un     = 0
+        self.olist      = []
+        self.codec      = codec
+
+    def remain(self):
+        return self.input[self.pos_conf:]
+
+    def start(self):
+        self.pos_un = self.pos_conf
+
+    def confirm(self):
+        self.pos_conf = self.pos_un
+
+    def string(self, s):
+        if isinstance(self.input, str):
+            expected = s
+        else:
+            expected = type(self.input)(map(self.codec.native, s))
+
+        next = self.input[self.pos_un:self.pos_un+len(expected)]
+        if expected == next:
+            self.pos_un += len(expected)
+            return next
+        else:
+            return None
+
 class PState:
     ''' A mutable parser state, consisting of:
 

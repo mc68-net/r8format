@@ -2,6 +2,46 @@ from    bastok.parser  import *
 import  struct
 import  pytest
 
+class TestCodec:
+    def trans(self, n):
+        raise NotImplementedError("We don't think we need this.")
+    def native(self, s):
+        #   We rely on `ord()` to check that length of `s` is 1.
+        return ord(s)
+
+def test_Parser_string_str():
+    p = Parser('abcd')
+    s = p.string
+    assert (  'a',    'bc',    None,   'd') \
+        == (s('a'), s('bc'), s('e'), s('d'))
+
+def test_Parser_string_bytes():
+    p = Parser(b'abcd', TestCodec())
+    s = p.string
+    assert ( b'a',   b'bc',    None,  b'd') \
+        == (s('a'), s('bc'), s('e'), s('d'))
+
+def test_Parser_confirmation():
+    p = Parser('abcd')
+    s = p.string
+
+    assert 'abcd' == p.remain()
+
+    p.start()
+    assert ('a', 'abcd') == (s('a'), p.remain())
+    assert ('b', 'abcd') == (s('b'), p.remain())
+
+    p.start()
+    assert ('a', 'abcd') == (s('a'), p.remain())
+    assert ('b', 'abcd') == (s('b'), p.remain())
+
+    p.confirm()
+    assert 'cd' == p.remain()
+
+    p.start()
+    assert ('c', 'cd') == (s('c'), p.remain())
+
+
 ####################################################################
 #   PState reading/consumption
 

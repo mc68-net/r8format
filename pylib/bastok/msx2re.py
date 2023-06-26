@@ -229,25 +229,27 @@ def linenum(p, gen=True, err=None):
     def fail():
         if err is None: return None
         p.error('expected ' + err)
-    digits = ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
+
+    p.start()
 
     neg = False
-    if p.peek() == '-':
-        neg = True
-        byte(p)
+    if p.string('-'): neg = True
 
-    if p.peek() not in digits: return fail()
-    s = ''
+    ds = None
     while True:
-        if p.peek() not in digits: break
-        c = byte(p); s = s + c
-    n = int(s)
+        d = p.decdigit()
+        if ds is None:
+            ds = d
+        else:
+            ds = ds + d
+    n = int(str(s))
     if n > 65529:   # XXX probably should not be hard-coded!
         p.error('{} outside linenum range'.format(n))
     uint_16 = struct.pack('<H', n)
     if gen:
         if neg: p.generate(NEGATIVE)
         p.generate(b'\x0E' + uint_16)
+    p.commit()
     return -n if neg else n
 
 def string_literal(p, err=None):
