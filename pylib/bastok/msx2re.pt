@@ -242,10 +242,18 @@ TLPARSER = Parser('', ja_charmap, TOKENS)
 ])
 def test_tokline(lineno, tokens, line):
     TLPARSER.reset(line)
-    assert (lineno, tokens) == tokline(ja_charmap, line)
+    assert (lineno, tokens) == tokline(TLPARSER)
 
 def test_tokline_bytes():
-    p = Parser(b'10 REM SAVE', ja_charmap, TOKENS)
+    #   We cannot use the ja_charmap here because it's not quite ASCII: the
+    #   backslash has been replaced by the yen symbol. But the integer
+    #   division symbol is a backslash, so when converting the tokens to
+    #   `bytes`, ja_charmap.native('\\') complains that there is no native
+    #   conversion for backslash. It's all the same character code in the
+    #   MSX ASCII saves, so when reading non-Unicode we just need always to
+    #   use a charset compatible with ASCII.
+
+    p = Parser(b'10 REM SAVE', CHARMAP['int'], TOKENS)
     assert (10, b'\x8F SAVE') == tokline(p)
 
 @pytest.mark.parametrize('line, msg', [
@@ -253,8 +261,9 @@ def test_tokline_bytes():
     ('10 GOTO =1',          'line number after GOTO'),
 ])
 def test_tokline_error(line, msg):
+    TLPARSER.reset(line)
     with pytest.raises(Parser.ParseError) as ex:
-        tokline(ja_charmap, line)
+        tokline(TLPARSER)
     assert ex.match('expected ' + msg)
 
 def test_tokenize():
