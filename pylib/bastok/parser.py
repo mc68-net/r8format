@@ -207,6 +207,9 @@ class Parser:
                 .format(len(s), repr(s)))
         if isinstance(self.input, str):
             return s
+        elif self.charset is None:
+            raise TypeError('Parser of input {} must have a charset' \
+                .format(type(self.input)))
         else:
             return self.charset.native(s)
 
@@ -222,6 +225,9 @@ class Parser:
         '''
         if isinstance(self.input, str):
             return s
+        elif self.charset is None:
+            raise TypeError('Parser of input {} must have a charset' \
+                .format(type(self.input)))
         else:
             return type(self.input)(map(self.charset.native, s))
 

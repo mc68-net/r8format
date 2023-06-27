@@ -33,6 +33,7 @@ def tokline(p):
     #   fragments that do not start with a line number.
     ln = linenum(p, gen=False, err='line number')
     space(p, False)
+    p.confirm()
 
     #DEBUG('input:', p.input) # XXX
     #   At the start of every iteration, we confirm what the previous
@@ -246,17 +247,24 @@ def linenum(p, gen=True, err=None):
     neg = False
     if p.string('-'): neg = True
 
-    ds = ''
+    ds = type(p.input)()
     while True:
         d = p.digit()
         if d is None:
             break
         else:
             ds += d
+
+    DEBUG('ds:', type(ds), repr(ds))
+    if not isinstance(ds, str):
+        ds = ''.join(map(p.charset.trans, ds))
+    DEBUG('ds:', type(ds), repr(ds))
+
     if ds == '':
         if err is None: return None
         p.error('no linenum found')
-    n = int(str(ds))
+
+    n = int(ds)
     if n > 65529:   # XXX probably should not be hard-coded!
         p.error('{} outside linenum range'.format(n))
     uint_16 = pack('<H', n)

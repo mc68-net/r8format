@@ -91,6 +91,11 @@ def test_linenum_success(n, pos, s):
     assert (n       , tok        , pos) \
         == (linenum(p), p.output() , p.pos_conf)
 
+def test_linenum_bytes():
+    p = Parser(b'12345 PRINT', ja_charmap)
+    assert (12345, b'\x0E\x39\x30', b' PRINT') \
+        == (linenum(p), p.output(), p.remain())
+
 def test_linenum_nogen():
     p = Parser('258')
     assert 258 == linenum(p, False)
@@ -224,6 +229,7 @@ def test_digits_int_overflow(s):
 
 ####################################################################
 
+TLPARSER = Parser('', ja_charmap, TOKENS)
 
 @pytest.mark.parametrize('lineno, tokens, line', [
     ( 10, b'\x8F SAVE',             '10 REM SAVE'),
@@ -235,7 +241,12 @@ def test_digits_int_overflow(s):
     #  41 24 ef 22 61 22 f1 22 91 22
 ])
 def test_tokline(lineno, tokens, line):
+    TLPARSER.reset(line)
     assert (lineno, tokens) == tokline(ja_charmap, line)
+
+def test_tokline_bytes():
+    p = Parser(b'10 REM SAVE', ja_charmap, TOKENS)
+    assert (10, b'\x8F SAVE') == tokline(p)
 
 @pytest.mark.parametrize('line, msg', [
     ('GOTO',                'line number at 0'),
