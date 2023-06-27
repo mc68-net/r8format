@@ -68,8 +68,11 @@ class Charset:
         '''
         for n, u in map:
             self._ncheck(n); self._ucheck(u)
-            #   When debugging you may uncomment this to help find duplicates.
-            #if u in self._un: raise RuntimeError('Dup ' + repr(u))
+           ##   When debugging you may uncomment this to help find duplicates.
+           #if u in self._un:
+           #    raise RuntimeError(
+           #        "Dup char: 0x{:0X}→{} overriding 0x{:0X}→{}" \
+           #        .format(ord(u), hex(n), ord(u), hex(self._un[u])))
             self._nu[n] = u
             self._un[u] = n
 
