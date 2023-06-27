@@ -33,7 +33,10 @@ class Parser:
 
         - An `input` sequence (never mutated) of application-dependent type
           (usually `str` or `bytes`) that is *consumed* by the parser.
-          Individual items in this sequence are called _elements._
+          Individual items in this sequence are called _elements._ Note
+          that the element data type is not necessarily the same as the
+          sequence data type. (It is for `str`, but that's because Python
+          is odd in having no character type.)
         - The current parse position in the input, `pos`.
         - An optional `charset` for translating between Unicode and the
           `input` type when `input` is not a `str`. This should follow the
@@ -156,6 +159,45 @@ class Parser:
     #   Nothing here generates output or calls `confirm()`, and all of the
     #   following use and update the _unconfirmed_ parse point.
 
+    def encode_elem(self, s):
+        ''' Convert `str` `s`, which must be of length 1, to the input
+            sequence element data type.
+            (This is a no-op when the input sequence is a `str`.)
+
+            This is normally used only by certain parsing routines in this
+            class that take arguments giving text to match; those arguments
+            are always `str` and the Parser deals with any conversion
+            necesssary. Depending on the input sequence element type,
+            conversion may not be possible, in which case those parsing
+            methods that need to convert an argument cannot be used with
+            that input sequence element type.
+        '''
+        #   Though native() should raise an Error of some sort if we pass
+        #   it a str of length ≠ 1, we do our own check so that we produce
+        #   a consistent error.
+        if len(s) != 1:
+            raise ValueError('encode_elem argument length {} != 1 for {}' \
+                .format(len(s), repr(s)))
+        if isinstance(self.input, str):
+            return s
+        else:
+            return self.charset.native(s)
+
+    def encode_seq(self, s):
+        ''' Convert each element of `str` `s` to the input sequence
+            element data type, and return those elements as the input
+            sequence type.
+            (This is a no-op when the input sequence is a `str`.)
+
+            This is normally used only by certain parsing routines in this
+            class that take arguments giving text to match. See the header
+            comment for `encode_all` for further information.
+        '''
+        if isinstance(self.input, str):
+            return s
+        else:
+            return type(self.input)(map(self.charset.native, s))
+
     def peek(self):
         ''' Without consuming anything, return next element at the
             _unconfirmed_ parse point in input, or `None` if at end of
@@ -179,13 +221,8 @@ class Parser:
         return elems
 
     def string(self, s):
-        ''' Consume and return elements matching the constant string `s`.
-        '''
-        if isinstance(self.input, str):
-            expected = s
-        else:
-            expected = type(self.input)(map(self.charset.native, s))
-
+        ' Consume and return elements matching the constant string `s`. '
+        expected = self.encode_seq(s)
         next = self.input[self.pos_un:self.pos_un+len(expected)]
         if expected == next:
             return self.consume(len(expected))
@@ -201,13 +238,13 @@ class Parser:
         ''' Return the next input element if it is a digit in the given
             `base` (default 10).
 
-            The charset, if present, must have native representations of
-            the ASCII digits.
+            If the input sequence is not a `str`, the `charset` must have
+            native representations of the digits for the given base
+            (`0`…`9`, `A`…, `a`…).
         '''
         if not base in self.DIGITS:
             digits = basedigits(base)
-            if self.charset:
-                digits = set(map(self.charset.native, digits))
+            digits = set(map(self.encode_elem, digits))
             self.DIGITS[base] = digits
 
         digits = self.DIGITS[base]

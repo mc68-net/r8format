@@ -44,6 +44,30 @@ def test_parser_consume_bytes():
     p.confirm()
     assert b'def' == p.remain()
 
+def test_encode_elem_str():
+    p = Parser('')
+    assert '1' == p.encode_elem('1')
+    with pytest.raises(ValueError) as ex:
+        p.encode_elem('23')
+    assert ex.match("encode_elem argument length 2 != 1 for '23'")
+
+def test_encode_seq_str():
+    p = Parser('')
+    assert '1' == p.encode_seq('1')
+    assert '23' == p.encode_seq('23')
+
+def test_encode_elem_bytes():
+    p = Parser(b'', TestCodec())
+    assert 49 == p.encode_elem('1')
+    with pytest.raises(ValueError) as ex:
+        p.encode_elem('23')
+    assert ex.match("encode_elem argument length 2 != 1 for '23'")
+
+def test_encode_seq_bytes():
+    p = Parser(b'', TestCodec())
+    assert b'1' == p.encode_seq('1')
+    assert b'23' == p.encode_seq('23')
+
 def test_Parser_confirmation():
     p = Parser(b'abcd')
     c = p.consume
@@ -127,7 +151,16 @@ def test_Parser_peek():
     assert b'a' == p.string('a')
     assert None == p.peek()
 
-def test_Parser_string():
+def test_Parser_string_str():
+    p = Parser('abcd')
+    s = p.string
+    assert (   'a' ,     'bc' ,   None ,    'd') \
+        == ( s('a'),   s('bc'),  s('e'),  s('d') )
+    assert 'abcd' == p.remain()
+    p.confirm()
+    assert '' == p.remain()
+
+def test_Parser_string_bytes():
     p = Parser(b'abcd', TestCodec())
     s = p.string
     assert ( b'a',   b'bc',    None,  b'd') \
@@ -158,9 +191,14 @@ def test_parser_string_in():
     ( 8, b'9',      (None,)),
     (10, b'',       (None,)),
 ])
-def test_Parser_digit(base, input, retvals):
+def test_Parser_digit_bytes(base, input, retvals):
     p = Parser(input, TestCodec())
     assert retvals == tuple(( p.digit(base) for i in retvals ))
+
+def test_Parser_digit_str():
+    p = Parser('195ab', TestCodec())
+    expected = ('1', '9', '5', None)
+    assert expected == tuple(( p.digit(10) for i in expected ))
 
 def test_Parser_digits():
     assert b'19' == Parser(b'19a', TestCodec()).digits()

@@ -46,7 +46,7 @@ def tokline(charmap, line):
         #   If not a token, we try to match the various other constants.
         if string_literal(p)    is not None: continue
         if ampersand_literal(p) is not None: continue
-        if digits(p)            is not None: continue
+        if number(p)            is not None: continue
         #   Failing that, pass the next byte straight through.
         #   This should _not_ be converted because it's not in a string,
         #   REM or DATA statement, and we simply don't know what it is.
@@ -60,7 +60,7 @@ class EncodingError(ValueError): pass
 def data(p):
     p.error('XXX Write DATA parser!')
 
-def digits(p, gen=True, err=None):
+def number(p, gen=True, err=None):
     ''' Convert digits to an appropriate internal representation.
 
         This is more complex than it seems becuase the type cannot be
@@ -68,7 +68,7 @@ def digits(p, gen=True, err=None):
         exponent may change the type, sometimes even overriding the
         trailing type character.
     '''
-    d = match_digits(p)
+    d = match_number(p)
     if d is None: return
     consume, neg, i, f, te = d
 
@@ -79,7 +79,7 @@ def digits(p, gen=True, err=None):
         '''
         if neg: p.generate(NEGATIVE)
         if i > 32767:
-            #   XXX Sadly, the number was consumed by match_digits() so our
+            #   XXX Sadly, the number was consumed by match_number() so our
             #   parse pointer is wrong, and the 'after' part in the message
             #   doesn't cover the whole int for reasons that need to be
             #   investigated. Not clear how to fix this yet.
@@ -131,7 +131,7 @@ def digits(p, gen=True, err=None):
 '''
 MATCH_DIGITS = re.compile(r'(-)?(\d*)(\.\d*)?([%!#]|[dDeE]-?\d*)?')
 
-def match_digits(p):
+def match_number(p):
     ''' Parse basic syntax of number formats for all types of numbers
         into a 5-tuple. Since parsing can still fail after this, nothing
         is consumed but the number of characters to consume on success

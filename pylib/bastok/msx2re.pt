@@ -155,9 +155,9 @@ def test_ampersand_literal_overflow(s):
     (        '3.d-13',  ( 6,   0,    '3',    '',  -13)),
     (  '-123.456e-78',  (12,  -1,  '123', '456',  -78)),
 ])
-def test_match_digits(s, d):
-    p = Parser(s);       assert d == match_digits(p)
-    p = Parser(s + 'a'); assert d == match_digits(p)
+def test_match_number(s, d):
+    p = Parser(s);       assert d == match_number(p)
+    p = Parser(s + 'a'); assert d == match_number(p)
 
 def test_match_digits_exp_and_type():
     ''' We test above that random chars after the number are not consumed
@@ -166,7 +166,7 @@ def test_match_digits_exp_and_type():
     '''
     s = '-123.456e-78#'     # `#` at should not be parsed/consumed
     p = Parser(s)
-    assert (len(s)-1, -1, '123', '456',  -78) == match_digits(p)
+    assert (len(s)-1, -1, '123', '456',  -78) == match_number(p)
 
 @pytest.mark.parametrize('s, remain, n, tok', [
     #  input,  remaining unparsed, value returned,              tokenised data
@@ -210,16 +210,16 @@ def test_match_digits_exp_and_type():
 #   #   XXX need to push back trailing % here?
 #   (  '1e2%',       100.0,                b'XXX'),
 ])
-def test_digits(s, remain, n, tok):
+def test_number(s, remain, n, tok):
     p = Parser(s)
-    nn = digits(p)
+    nn = number(p)
     assert (remain, n, tok) == (p.remain(), nn, p.output())
 
 @pytest.mark.parametrize('s', [ '32768%', '-32768%', '32768.1234%' ])
 def test_digits_int_overflow(s):
     p = Parser(s)
     with pytest.raises(p.ParseError) as ex:
-        digits(p)
+        number(p)
     assert ex.match('int Overflow: 32768')
 
 ####################################################################
