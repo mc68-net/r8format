@@ -198,6 +198,12 @@ class Parser:
         else:
             return type(self.input)(map(self.charset.native, s))
 
+    def finished(self):
+        ''' Return `True` if the _confirmed_ parse point is at the end
+            of the input.
+        '''
+        return self.pos_conf >= len(self.input)
+
     def peek(self):
         ''' Without consuming anything, return next element at the
             _unconfirmed_ parse point in input, or `None` if at end of

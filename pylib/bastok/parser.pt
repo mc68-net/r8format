@@ -22,28 +22,6 @@ def test_basedigits(base, digitchars):
 ####################################################################
 #   Minimal parser functionality on which other tests depend
 
-def test_parser_consume_str():
-    p = Parser('abcdef')
-    c = p.consume
-    assert ('a', 'bc') == (c(1), c(2))
-    with pytest.raises(p.ParseError) as ex:
-        c(4)
-    assert ex.match('Unexpected end of input: 7 > 6')
-    assert 'abcdef' == p.remain()
-    p.confirm()
-    assert 'def' == p.remain()
-
-def test_parser_consume_bytes():
-    p = Parser(b'abcdef')
-    c = p.consume
-    assert (b'a', b'bc') == (c(1), c(2))
-    with pytest.raises(p.ParseError) as ex:
-        c(4)
-    assert ex.match('Unexpected end of input: 7 > 6')
-    assert b'abcdef' == p.remain()
-    p.confirm()
-    assert b'def' == p.remain()
-
 def test_encode_elem_str():
     p = Parser('')
     assert '1' == p.encode_elem('1')
@@ -67,6 +45,28 @@ def test_encode_seq_bytes():
     p = Parser(b'', TestCodec())
     assert b'1' == p.encode_seq('1')
     assert b'23' == p.encode_seq('23')
+
+def test_parser_consume_str():
+    p = Parser('abcdef')
+    c = p.consume
+    assert ('a', 'bc') == (c(1), c(2))
+    with pytest.raises(p.ParseError) as ex:
+        c(4)
+    assert ex.match('Unexpected end of input: 7 > 6')
+    assert 'abcdef' == p.remain()
+    p.confirm()
+    assert 'def' == p.remain()
+
+def test_parser_consume_bytes():
+    p = Parser(b'abcdef')
+    c = p.consume
+    assert (b'a', b'bc') == (c(1), c(2))
+    with pytest.raises(p.ParseError) as ex:
+        c(4)
+    assert ex.match('Unexpected end of input: 7 > 6')
+    assert b'abcdef' == p.remain()
+    p.confirm()
+    assert b'def' == p.remain()
 
 def test_Parser_confirmation():
     p = Parser(b'abcd')
@@ -144,6 +144,13 @@ class TestCodec:
     def native(self, s):
         #   We rely on `ord()` to check that length of `s` is 1.
         return ord(s)
+
+def test_Parser_finished():
+    assert Parser('').finished()
+
+    p = Parser('1');    assert not p.finished()
+    p.consume();        assert not p.finished()
+    p.confirm();        assert     p.finished()
 
 def test_Parser_peek():
     p = Parser(b'a', TestCodec())
