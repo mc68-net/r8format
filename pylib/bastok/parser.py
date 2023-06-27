@@ -74,15 +74,17 @@ class Parser:
         When elements of the input is returned, they are of the same type
         as the input. For non-`str` inputs, you may need to pass these
         return values to `str()` before doing further processing of them.
+
+        Parser use constant data that depends on the input sequence and
+        element types that can be expensive to initialise, so a
+        `reset(input)` function is provided to allow re-using the Parser
+        instance for new input.
     '''
 
     def __init__(self, input, charset=None):
-        self.input          = input
-        self.pos_conf       = 0
-        self.pos_un         = 0
-        self.olist_conf     = []
-        self.olist_pending  = []
-        self.charset          = charset
+        self.input    = input
+        self.charset  = charset
+        self.reset(input)
 
         #   Constants used by parsing routines. Any constants that rely
         #   on the charset being able to convert Unicode chars they need
@@ -91,6 +93,32 @@ class Parser:
         #   the methods that need them are not called.
         self.DIGITS = dict()        # base → set of digits in that base
         self.DECDIGITS = None
+
+    def reset(self, input=None):
+        ''' Reset the parser to the initial state, possibly with new input.
+            If new input is provided, the input sequence type and element
+            type must be the same as the original types with which the
+            `Parser` was instantiated.
+        '''
+        def err(name, newtype, oldtype):
+            raise ValueError('reset: new input {} type {} ' \
+                'not instance of old input {} type {}' \
+                .format(name, newtype, name, oldtype))
+
+        if input is not None:
+            seq_type = type(self.input)
+            if not isinstance(input, seq_type):
+                err('sequence', type(input), seq_type)
+            if len(input) > 0 and len(self.input) > 0:
+                elem_type = type(self.input[0])
+                if not isinstance(input[0], elem_type):
+                    err('element', type(input[0]), elem_type)
+            self.input = input
+
+        self.pos_conf       = 0
+        self.pos_un         = 0
+        self.olist_conf     = []
+        self.olist_pending  = []
 
     def remain(self):
         ' Return what remains after the _confirmed_ parse point. '
@@ -268,6 +296,7 @@ class Parser:
                 break
         if len(ds) > 0: return ds
 
+
 ####################################################################
 #   Support routines
 
@@ -289,6 +318,7 @@ def basedigits(base):
         digits.add(chr(ASCII_A - 10 + i))
         digits.add(chr(ASCII_a - 10 + i))
     return digits
+
 
 ####################################################################
 #   Legacy code

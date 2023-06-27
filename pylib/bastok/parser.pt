@@ -134,6 +134,45 @@ def test_Parser_generate_confirm():
 
 
 ####################################################################
+#   Parser control tests
+
+def test_Parser_finished():
+    assert Parser('').finished()
+
+    p = Parser('1');    assert not p.finished()
+    p.consume();        assert not p.finished()
+    p.confirm();        assert     p.finished()
+
+def test_parser_reset_noarg():
+    p = Parser('abc123');   assert 'abc' == p.consume(3)
+    p.confirm();            assert '123' == p.consume(3)
+    p.reset();              assert 'abc' == p.consume(3)
+
+def test_parser_reset_newinput_same_type():
+    p = Parser(b'abc');     assert b'abc' == p.consume(3)
+    p.reset(b'def');        assert b'def' == p.consume(3)
+
+def test_parser_reset_newinput_different_type():
+    p = Parser(b'abc')
+    with pytest.raises(ValueError) as ex:
+        p.reset('abc')
+    assert ex.match("reset: new input sequence type <class 'str'>" \
+        " not instance of old input sequence type <class 'bytes'>")
+
+    p = Parser([1, 2, 3])
+    with pytest.raises(ValueError) as ex:
+        p.reset([1.1, 2.2, 3.3])
+    assert ex.match("reset: new input element type <class 'float'>" \
+        " not instance of old input element type <class 'int'>")
+
+    p.reset([])
+
+    p = Parser([])
+    p.reset(['a', 'b', 'c'])
+
+
+
+####################################################################
 #   Parsing Routine Tests
 #   From here on we generally test using `bytes` input to help
 #   ensure that everything is using the codec properly.
@@ -144,13 +183,6 @@ class TestCodec:
     def native(self, s):
         #   We rely on `ord()` to check that length of `s` is 1.
         return ord(s)
-
-def test_Parser_finished():
-    assert Parser('').finished()
-
-    p = Parser('1');    assert not p.finished()
-    p.consume();        assert not p.finished()
-    p.confirm();        assert     p.finished()
 
 def test_Parser_peek():
     p = Parser(b'a', TestCodec())
@@ -210,6 +242,35 @@ def test_Parser_digit_str():
 def test_Parser_digits():
     assert b'19' == Parser(b'19a', TestCodec()).digits()
     assert  None is Parser(b'',    TestCodec()).digits()
+
+####################################################################
+#   Token sorting and translation
+
+TT_TABLE = (
+    (b'\x02',       'bar',      None),
+    (b'',           'f',        None),
+    (b'\x01',       'foo',      None),
+    (b'\x10\x20',   'foobar',   None),
+)
+
+def test_toksort_0_1():
+    assert (
+        (b'\x10\x20',   'foobar',   ),
+        (b'\x02',       'bar'       ),
+        (b'\x01',       'foo'       ),
+        (b'',           'f'         ),
+    ) == toksort(TT_TABLE)
+
+def test_toksort_1_0():
+    assert (
+        ('foobar',  b'\x10\x20'),
+        ('bar',     b'\x02'),
+        ('foo',     b'\x01'),
+        ('f',       b''),
+    ) == toksort(TT_TABLE, 1, 0)
+
+def test_Parser_token():
+    assert 1
 
 
 ####################################################################
@@ -287,32 +348,6 @@ def test_byte_bytes():
     assert 0x68 == byte(p, genf=chr)
     assert 0x69 == byte(p, genf=lambda b: chr(b+1))
     assert 'hj' == p.output()
-
-####################################################################
-#   Token sorting
-
-TT_TABLE = (
-    (b'\x02',       'bar',      None),
-    (b'',           'f',        None),
-    (b'\x01',       'foo',      None),
-    (b'\x10\x20',   'foobar',   None),
-)
-
-def test_toksort_0_1():
-    assert (
-        (b'\x10\x20',   'foobar',   ),
-        (b'\x02',       'bar'       ),
-        (b'\x01',       'foo'       ),
-        (b'',           'f'         ),
-    ) == toksort(TT_TABLE)
-
-def test_toksort_1_0():
-    assert (
-        ('foobar',  b'\x10\x20'),
-        ('bar',     b'\x02'),
-        ('foo',     b'\x01'),
-        ('f',       b''),
-    ) == toksort(TT_TABLE, 1, 0)
 
 def test_toktrans():
     toktab = toksort(TT_TABLE, 1, 0)

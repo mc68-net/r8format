@@ -1,5 +1,5 @@
 from    bastok.tlines  import TLines
-from    bastok.parser  import Parser, toksort
+from    bastok.parser  import Parser, toksort, toktrans
 from    bastok.msx2  import TOKENS, NEGATIVE
 from    struct  import pack
 import  re
@@ -11,27 +11,31 @@ def tokenize(charmap, lines, txttab=0x8001):
         a `TLines` object with a start address of `txttab`.
     '''
     tl = TLines(txttab)
+    if len(lines) == 0:
+        return tl
+    parser = Parser(lines[0], charmap)      # set input seq and elem type
     for l in lines:
-        #   XXX check for duplicate line no?
-        ln, tokens = tokline(charmap, l)
-        from sys import stderr
+        #   XXX check for duplicate line numbers and replace?
+        parser.reset(l)
+        ln, tokens = tokline(parser)
         tl.setline(ln, tokens)
     return tl
 
-def tokline(charmap, line):
-    ''' Tokenize a line of BASIC. Return an `(int, bytes)` tuple with
-        the line number and tokenized line data or raise a `ParseError`
-        if parsing fails.
+def tokline(p):
+    ''' Tokenize a line of BASIC in `Parser` `p`. Return an `(int, bytes)`
+        tuple with the line number and tokenized line data or raise a
+        `ParseError` if parsing fails.
     '''
     #   Possibly we want to change this API so that we can tokenize line
     #   fragments that do not start with a line number.
-    p = Parser(line, charmap)
     ln = linenum(p, gen=False, err='line number')
     space(p, False)
+    from sys import stderr; print(p.input, file=stderr) # XXX
     while not p.finished():
         #   Start by checking for a token, since any string matching a
         #   token takes priority over anything else.
         t = toktrans(p, ENCTOKENS)
+        print('token: {}'.format(t), file=stderr) # XXX
         if t is not None:
             #   Tokens that consume and generate the remainder of the line.
             if t == 'REM':  chars(p)
@@ -42,6 +46,7 @@ def tokline(charmap, line):
                 spaces(p); linenum(p, err='line number after GOTO')
             if t == 'THEN':
                 spaces(p); linenum(p)   # linenum or other tokens
+            print('handled token {}'.format(t), file=stderr) # XXX
             continue
         #   If not a token, we try to match the various other constants.
         if string_literal(p)    is not None: continue
@@ -51,7 +56,7 @@ def tokline(charmap, line):
         #   This should _not_ be converted because it's not in a string,
         #   REM or DATA statement, and we simply don't know what it is.
         #   (The BASIC interpreter will deal with it if it's an error.)
-        b = p.consume(1); generate(bytes([ord(c)]))
+        b = p.consume(1); p.generate(bytes([ord(b)]))
 
     return (ln, p.output())
 
@@ -298,7 +303,7 @@ def spaces(p, generate=True):
 
 def chars(p):
     ' Do char() until end of input. '
-    while p.peek() is not None:
+    while not p.finished():
         char(p)
 
 def char(p):
