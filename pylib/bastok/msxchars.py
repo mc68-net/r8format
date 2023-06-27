@@ -69,21 +69,21 @@ VH_shortH = '\u256A'    # ╪ BOX DRAWINGS VERTICAL SINGLE AND HORIZONTAL DOUBLE
 VH_shortV = '\u256B'    # ╫ BOX DRAWINGS VERTICAL DOUBLE AND HORIZONTAL SINGLE
 
 LO_int = ''.join([C00,
-        '☺☻♡♢♣♠∙◘○◙♂♀♪♫☼',
+        '☺☻♡♢♣♠•◘○◙♂♀♪♫☼',
         VH_shortH, '┴┬┤├┼│─┌┐└┘╳╱╲', VH_shortV,
         ])
 
 #   There's not complete agreement on what all the Code Page 437 characters
 #   are; see the notes at https://en.wikipedia.org/wiki/Code_page_437 .
 HI_int = ''.join([
-        'ÇüéâäàåçêëèïîìÄÅ',     # row from CP 437
-        'ÉæÆôöòûùÿÖÜ¢£¥₧ƒ',     # row from CP 437
-        'áíóúñÑªº¿⌐¬½¼¡«»',     # row from CP 437
-        'ÃãĨĩÕõŨũ__¾___¶§',     # XXX incomplete
-        '________________',     # XXX incomplete
-        '________________',     # XXX incomplete
-        'αßΓπΣσµτΦΘΩδ∞φ∈∩',     # row from CP 437, possibly excepting 0xEE
-        '≡±≥≤⌠⌡÷≈°∙·√ⁿ²■█',     # row from CP 437, mostly
+        'ÇüéâäàåçêëèïîìÄÅ',     # 8x row from CP 437
+        'ÉæÆôöòûùÿÖÜ¢£¥₧ƒ',     # 9x row from CP 437
+        'áíóúñÑªº¿⌐¬½¼¡«»',     # Ax row from CP 437
+        'ÃãĨĩÕõŨũĲĳ¾∽◇‰¶§',     # Bx XXX incomplete
+        '▂▚▆🮂▬🮅▎▞▊🮇🮊🮙🮘🭭🭯🭬',     # Cx from Wikipedia "MSX Character Set"
+        '🭮🮚🮛▘▗▝▖🮖Δ‡ω█▄▌▐▀',     # Dx from Wikipedia "MSX Character Set"
+        'αßΓπΣσµτΦΘΩδ∞φ∈∩',     # Ex row from CP 437, possibly excepting 0xEE
+        '≡±≥≤⌠⌡÷≈°∙·√ⁿ²■▒',     # Fx row from CP 437, mostly
         ])
 
 assert len(LO_int) == 0x20, hex(len(LO_int))
@@ -124,8 +124,7 @@ C_JA = tuple(zip(range(0x00, 0x20), LO_ja)) \
 #   Dictionary of all standard charset/Unicode mappings
 
 CHARMAP = {
-    'int':  #Charset("International (North America/Europe), C_INT), # incomplete
-            Unimplemented('int', 'International (North America/Europe)'),
+    'int':  Charset('International (North America/Europe)', C_INT),
     'ja':   Charset('Japanese (MSX2)', C_JA),
     'ja1':  Unimplemented('ja1', 'Japanese (MSX1, different hiragana)'),
     'ar':   Unimplemented('ar', 'Arabic'),
