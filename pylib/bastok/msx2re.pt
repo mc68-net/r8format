@@ -225,11 +225,6 @@ def test_digits_int_overflow(s):
 ####################################################################
 
 
-#   XXX what should we be doing about lower case in program text?
-#   Maybe add an `insensitive` property to Parser and have parse functions
-#   use that to determine if they're "liberal" in what they accept, e.g.,
-#   toktrans() will do a case-insensitive comparision on strings.
-
 @pytest.mark.parametrize('lineno, tokens, line', [
     ( 10, b'\x8F SAVE',             '10 REM SAVE'),
     ( 10, b':\x8F\xE6 SAVE',        "10 ' SAVE"),

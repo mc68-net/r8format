@@ -4,7 +4,9 @@ from    bastok.msx2  import TOKENS, NEGATIVE
 from    struct  import pack
 import  re
 
-ENCTOKENS = toksort(TOKENS, 1, 0)
+def DEBUG(*args):
+    from sys import stderr
+    print('DEBUG:', *args, file=stderr)
 
 def tokenize(charmap, lines, txttab=0x8001):
     ''' Tokenise a sequence of lines of BASIC code, returning them in
@@ -13,12 +15,13 @@ def tokenize(charmap, lines, txttab=0x8001):
     tl = TLines(txttab)
     if len(lines) == 0:
         return tl
-    parser = Parser(lines[0], charmap)      # set input seq and elem type
+    parser = Parser(lines[0], charmap, TOKENS)
     for l in lines:
         #   XXX check for duplicate line numbers and replace?
         parser.reset(l)
         ln, tokens = tokline(parser)
         tl.setline(ln, tokens)
+    DEBUG('tlines:', repr(tl))
     return tl
 
 def tokline(p):
@@ -30,12 +33,15 @@ def tokline(p):
     #   fragments that do not start with a line number.
     ln = linenum(p, gen=False, err='line number')
     space(p, False)
-    from sys import stderr; print(p.input, file=stderr) # XXX
-    while not p.finished():
+
+    #DEBUG('input:', p.input) # XXX
+    #   At the start of every iteration, we confirm what the previous
+    #   iteration consumed and generated.
+    while (p.confirm() or True) and not p.finished():
+        #DEBUG('remain={}'.format(repr(p.remain())))
         #   Start by checking for a token, since any string matching a
         #   token takes priority over anything else.
-        t = toktrans(p, ENCTOKENS)
-        print('token: {}'.format(t), file=stderr) # XXX
+        t = p.token()
         if t is not None:
             #   Tokens that consume and generate the remainder of the line.
             if t == 'REM':  chars(p)
@@ -46,8 +52,9 @@ def tokline(p):
                 spaces(p); linenum(p, err='line number after GOTO')
             if t == 'THEN':
                 spaces(p); linenum(p)   # linenum or other tokens
-            print('handled token {}'.format(t), file=stderr) # XXX
+            #DEBUG('handled token {}'.format(t)) # XXX
             continue
+        #DEBUG('not token')
         #   If not a token, we try to match the various other constants.
         if string_literal(p)    is not None: continue
         if ampersand_literal(p) is not None: continue
@@ -58,6 +65,7 @@ def tokline(p):
         #   (The BASIC interpreter will deal with it if it's an error.)
         b = p.consume(1); p.generate(bytes([ord(b)]))
 
+    p.confirm()
     return (ln, p.output())
 
 class EncodingError(ValueError): pass
@@ -201,7 +209,7 @@ def ampersand_literal(p):
         digits = str(digits)
 
     n = int(digits, base)
-    print(base, digits, n, hex(n)) # XXX
+    #DEBUG('ampersand_literal:', base, digits, n, hex(n)) # XXX
     if n > 0xFFFF:
         p.error('Overflow')
     if base != 2:

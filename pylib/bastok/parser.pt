@@ -270,7 +270,24 @@ def test_toksort_1_0():
     ) == toksort(TT_TABLE, 1, 0)
 
 def test_Parser_token():
-    assert 1
+    p = Parser(b'ZfoofoobarbarffZ', TestCodec(), TT_TABLE)
+
+    assert None is p.token()
+    assert b'Z' == p.consume()
+    p.confirm()
+
+    def check(token, tokenized):
+        assert token == p.token()
+        p.confirm()
+        assert tokenized == p.olist_conf[-1]
+
+    check(b'foo',     b'\x01')
+    check(b'foobar',  b'\x10\x20')
+    check(b'bar',     b'\x02')
+    check(b'f',       b'')
+    check(b'f',       b'')
+
+    assert b'Z' == p.consume()
 
 
 ####################################################################

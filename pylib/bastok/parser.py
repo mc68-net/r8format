@@ -81,9 +81,10 @@ class Parser:
         instance for new input.
     '''
 
-    def __init__(self, input, charset=None):
+    def __init__(self, input, charset=None, tokens=None):
         self.input    = input
         self.charset  = charset
+        self.tokens   = tokens
         self.reset(input)
 
         #   Constants used by parsing routines. Any constants that rely
@@ -91,8 +92,9 @@ class Parser:
         #   to native chars must be lazily initialised, so that the Parser
         #   works for Charsets that cannot do that conversion so long as
         #   the methods that need them are not called.
-        self.DIGITS = dict()        # base → set of digits in that base
-        self.DECDIGITS = None
+        self.DIGITS     = dict()    # base → set of digits in that base
+        self.DECDIGITS  = None
+        self.toktab     = None      # sorted token table
 
     def reset(self, input=None):
         ''' Reset the parser to the initial state, possibly with new input.
@@ -172,9 +174,6 @@ class Parser:
             The object used for joining will be a new instance of the class
             of the first object in the list. E.g., if the first object is
             `b'0x01'`, `bytes().join(olist_conf)` will be called.
-
-            If the confirmed ouptut list is empty, `None` will be returned.
-            (XXX This may not be the correct behaviour for this case.)
         '''
         if len(self.olist_conf) == 0:
             return None
@@ -296,6 +295,28 @@ class Parser:
                 break
         if len(ds) > 0: return ds
 
+    #   XXX what should we be doing about lower case in program text?
+    #   Maybe add an `insensitive` property to Parser and have parse functions
+    #   use that to determine if they're "liberal" in what they accept, e.g.,
+    #   toktrans() will do a case-insensitive comparision on strings.
+
+    def token(self):
+        if self.toktab is None:
+            if self.tokens is None:
+                raise ValueError('Parser.token(): no token table supplied')
+            self.toktab = tuple(
+                (self.encode_seq(token), tokenzied)
+                for token, tokenzied in toksort(self.tokens, 1, 0)
+            )
+            #from sys import stderr; print(self.toktab, file=stderr) # XXX
+
+        for token, tokenized in self.toktab:
+            if self.remain().startswith(token):
+                ret = self.consume(len(token))
+                self.generate(tokenized)
+                return ret
+        return None
+
 
 ####################################################################
 #   Support routines
@@ -318,6 +339,20 @@ def basedigits(base):
         digits.add(chr(ASCII_A - 10 + i))
         digits.add(chr(ASCII_a - 10 + i))
     return digits
+
+def toksort(toktab, field0=0, field1=1):
+    ''' Given a sequence of tuples `toktab`, return a new sequence of
+        pairs consisting of index `field0` followed by index `field1`
+        of each input tuple, sorted by length of the `field0` entry.
+
+        Regardless of the type of the input sequence and its tuples,
+        a `tuple` of `tuple` is always returned.
+
+        This is used to build a token table for use with `toktrans()`
+        that matches longer prefixes before shorter.
+    '''
+    res = [ (f[field0], f[field1]) for f in toktab ]
+    return tuple(sorted(res, key=lambda t: len(t[0]), reverse=True))
 
 
 ####################################################################
@@ -440,20 +475,6 @@ def byte(p, *, genf=None, err='unexpected end of input'):
     if genf is not None:
         p.generate(genf(x))
     return x
-
-def toksort(toktab, field0=0, field1=1):
-    ''' Given a sequence of tuples `toktab`, return a new sequence of
-        pairs consisting of index `field0` followed by index `field1`
-        of each input tuple, sorted by length of the `field0` entry.
-
-        Regardless of the type of the input sequence and its tuples,
-        a `tuple` of `tuple` is always returned.
-
-        This is used to build a token table for use with `toktrans()`
-        that matches longer prefixes before shorter.
-    '''
-    res = [ (f[field0], f[field1]) for f in toktab ]
-    return tuple(sorted(res, key=lambda t: len(t[0]), reverse=True))
 
 def toktrans(p, toktab):
     ''' Given a translation table `toktab` of *(x,y)* pairs, try to match

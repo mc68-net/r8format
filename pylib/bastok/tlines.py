@@ -101,7 +101,8 @@ class TLines:
         ''' Return (`int`, `bytes`) tuples containing the line number
             and its tokenized data in line number order.
         '''
-        return ( (l, self.linemap[l]) for l in sorted(self.linemap.keys()) )
+        return tuple(
+            (l, self.linemap[l]) for l in sorted(self.linemap.keys()) )
 
     def text(self):
         ''' Return a `bytes` containing the current tokenized text.
@@ -110,6 +111,9 @@ class TLines:
         nextaddr = self.txttab
         data = []
         for lineno, linedata in self.lines():
+            if linedata is None:
+                raise ValueError(
+                    "TLines: line {} data is 'None'".format(lineno))
             nextaddr = nextaddr + 2 + 2 + len(linedata) + 1
             data.extend([ le(nextaddr), le(lineno), linedata, b'\x00' ])
         data.append(le(0))
@@ -121,6 +125,9 @@ class TLines:
         '''
         stream.write(b'\xFF')       # type byte
         stream.write(self.text())
+
+    def __repr__(self):
+        return "TLines:" + repr(self.lines())
 
 def le(n):
     ' Return _n_ as little-endian unsigned 16-bit int. '
