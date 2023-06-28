@@ -48,6 +48,10 @@ class Parser:
           `bytes` or `str`) that when joined together are the output of the
           parser. `gen()` appends to this list.
 
+        Additional data that may be supplied are:
+        - `tokens`, a sequence of ``(token_text, tokenized)`` pairs used
+          by `token()`.
+
         The parser has two parse points and output lists: "committed" and
         "pending."
         - `start()` sets the pending parse point to the committed parse
@@ -124,8 +128,12 @@ class Parser:
         self.olist_committed    = []
         self.olist_pending      = []
 
-    def remain(self):
-        ' Return what remains after the _committed_ parse point. '
+    def uncommitted(self):
+        ''' Return what remains after the _committed_ parse point.
+
+            This is normally used only for testing, error information or
+            other unusual situations.
+        '''
         return self.input[self.pos_committed:]
 
     def start(self):
@@ -146,10 +154,13 @@ class Parser:
         raise self.ParseError(message + ' ' + str(self))
 
     def __str__(self):
-        p = self.pos_committed
-        return 'at {}:{} after …{} (output …{})'.format(
-            p, repr(self.input[p:p+12]),
-            repr(self.input[p-12:p]), self.olist_committed[-4:])
+        p           = self.pos_pending
+        ucp         = p - self.pos_committed
+        pos_text    = repr(self.input[p:p+12])
+        prev_text   = repr(self.input[ max(p-12,0) : p ])
+        output      = (self.olist_committed + self.olist_pending)[-4:]
+        return 'at {}:{} after …{} (pending={} output …{})' \
+            .format(p, pos_text, prev_text, ucp, output)
 
     ####################################################################
     #   Generation Methods
@@ -250,6 +261,10 @@ class Parser:
         '''
         return self.pos_pending >= len(self.input)
 
+    def remain(self):
+        ' Return what remains after the _pending_ parse point. '
+        return self.input[self.pos_pending:]
+
     def peek(self):
         ''' Without consuming anything, return next input element at the
             _pending_ parse point, or `None` if at end of input.
@@ -319,21 +334,31 @@ class Parser:
     #   toktrans() will do a case-insensitive comparision on strings.
 
     def token(self):
-        ' Attempt to parse and generate a token. Returns `None` on failure. '
+        ''' Attempt to parse and generate the tokenized version of a token
+            text.
+
+            This uses the `tokens` map given to `__init__()`, which is a
+            sequence of ``(token_text, tokenized)`` pairs, and tries to
+            match the longest possible ``token_text`` from that map.
+
+            On a match, it generates the second ``tokenized`` element and
+            returns the ``token_text`` that matched. On no match, this
+            returns `None`.
+        '''
         if self.toktab is None:
             if self.tokens is None:
                 raise ValueError('Parser.token(): no token table supplied')
             self.toktab = tuple(
-                (self.encode_seq(token), tokenzied)
-                for token, tokenzied in toksort(self.tokens, 1, 0)
+                (token_text, self.encode_seq(token_text), tokenzied)
+                for token_text, tokenzied in toksort(self.tokens, 1, 0)
             )
             #from sys import stderr; print(self.toktab, file=stderr) # XXX
 
-        for token, tokenized in self.toktab:
-            if self.remain().startswith(token):
-                ret = self.consume(len(token))
+        for token_text, encoded_text, tokenized in self.toktab:
+            if self.remain().startswith(encoded_text):
+                self.consume(len(encoded_text))
                 self.generate(tokenized)
-                return ret
+                return token_text
         return None
 
 
