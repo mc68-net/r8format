@@ -324,7 +324,6 @@ def spaces(p, generate=True):
 def chars(p):
     ' Do char() until end of input. '
     while not p.finished():
-        DEBUG('chars(): remain={}'.format(repr(p.remain())))
         char(p)
 
 def char(p):
@@ -342,8 +341,10 @@ def char(p):
         - 0x00-0x1F: 0x01 byte followed a byte with the code point + 0x40.
         - 0x7F: Cannot be encoded; raises `EncodingError`.
     '''
-    c = p.consume(1)
-    p.generate(msx_encode(p, c))
+    c = i = p.consume(1)
+    if isinstance(p.input, str):
+        i = msx_encode(p, c)
+    p.generate(i)
     return c
 
 def msx_encode(p, c):

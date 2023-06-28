@@ -23,6 +23,12 @@ def test_char_good(s, b):
     assert b == p.output_pending()
     assert p.finished()
 
+def test_char_bytes():
+    p = Parser(b'a', CHARMAP['int'])
+    assert b'a' == char(p)
+    assert b'a' == p.output_pending()
+    assert p.finished()
+
 def test_char_encodingerror():
     p = Parser('\uF07F', UTCharset())
     with pytest.raises(EncodingError) as ex:
@@ -40,6 +46,7 @@ def test_chars():
     chars(p)
     assert b'abc' == p.output_pending()
     assert p.finished()
+
 
 @pytest.mark.parametrize('s, b, r', [
     ('x'    , None  , 'x'),
