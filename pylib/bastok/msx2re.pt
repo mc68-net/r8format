@@ -19,8 +19,9 @@ ja_charmap = CHARMAP['ja']
 ])
 def test_char_good(s, b):
     p = Parser(s, UTCharset())
-    char(p)
-    assert b == p.output()
+    assert s == char(p)
+    assert b == p.output_pending()
+    assert p.finished()
 
 def test_char_encodingerror():
     p = Parser('\uF07F', UTCharset())
@@ -37,7 +38,8 @@ def test_char_eoi():
 def test_chars():
     p = Parser('bcd', UTCharset(1))
     chars(p)
-    assert b'abc' == p.output()
+    assert b'abc' == p.output_pending()
+    assert p.finished()
 
 @pytest.mark.parametrize('s, b, r', [
     ('x'    , None  , 'x'),
