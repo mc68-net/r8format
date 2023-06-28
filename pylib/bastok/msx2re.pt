@@ -6,7 +6,8 @@ import  pytest
 
 #   When we don't need to have distinguishable Unicode and native
 #   codepoints, this is easier to use.
-ja_charmap = CHARMAP['ja']
+ja_charmap  = CHARMAP['ja']
+int_charmap = CHARMAP['int']
 
 ####################################################################
 
@@ -24,7 +25,7 @@ def test_char_good(s, b):
     assert p.finished()
 
 def test_char_bytes():
-    p = Parser(b'a', CHARMAP['int'])
+    p = Parser(b'a', int_charmap)
     assert b'a' == char(p)
     assert b'a' == p.output_pending()
     assert p.finished()
@@ -174,7 +175,7 @@ def test_match_number(s, d):
     p = Parser(s + 'a'); assert d == match_number(p)
 
 def test_match_number_bytes():
-    p = Parser(b'3.1E12', CHARMAP['int'])
+    p = Parser(b'3.1E12', int_charmap)
     assert (6, 0, b'3', b'1', 12) == match_number(p)
 
 
@@ -235,9 +236,11 @@ def test_number(s, remain, n, tok):
     assert (n, tok, remain) == (nn,  p.output_pending(), p.remain())
 
 def test_number_bytes():
-    p = Parser(b'-123%x')
+    p = Parser(b'-255%x', int_charmap)
     nn = number(p)
-    assert (-255, b'\xF2\x0F\xFF', 'x') == (nn,  p.output_pending(), p.remain())
+    
+    assert (  -255,     b'\xF2\x0F\xFF',       b'x') \
+        == (    nn,  p.output_pending(), p.remain())
 
 @pytest.mark.parametrize('s', [ '32768%', '-32768%', '32768.1234%' ])
 def test_digits_int_overflow(s):
@@ -272,7 +275,7 @@ def test_tokline_bytes():
     #   MSX ASCII saves, so when reading non-Unicode we just need always to
     #   use a charset compatible with ASCII.
 
-    p = Parser(b'10 REM SAVE', CHARMAP['int'], TOKENS)
+    p = Parser(b'10 REM SAVE', int_charmap, TOKENS)
     assert (10, b'\x8F SAVE') == tokline(p)
 
 @pytest.mark.parametrize('line, msg', [

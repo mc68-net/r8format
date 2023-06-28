@@ -191,7 +191,11 @@ def match_number(p):
     if (i == '') and (f is None):
         return None
     if f is not None: f = f[1:]
+    #   XXX decode TE here if input is not str
     te = m.group(4)
+    if not isinstance(p.input, str):
+        #   XXX is this correct? Should Parser be doing this translation back?
+        te = ''.join(map(p.charset.trans, te))
     if (te is not None) and (te not in ('%', '!', '#')):
         if len(te) == 1: te += '0'  # D/E alone indicates exponent of 0
         te = int(te[1:])
