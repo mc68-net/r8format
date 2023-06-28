@@ -110,8 +110,10 @@ def test_parser_without_ASCII():
 def test_Parser_generate_output_types(output, olist):
     p = Parser('');
     for o in olist:
+        assert None is p.output_pending()
         p.generate(o)
-    p.commit()
+        assert o == p.output_pending()
+        p.commit()
     assert output == p.output()
 
 def test_Parser_generate_type_error():
@@ -140,7 +142,7 @@ def test_Parser_finished():
     assert Parser('').finished()
 
     p = Parser('1');    assert not p.finished()
-    p.consume();        assert not p.finished()
+    p.consume();        assert     p.finished()
     p.commit();         assert     p.finished()
 
 def test_parser_reset_noarg():

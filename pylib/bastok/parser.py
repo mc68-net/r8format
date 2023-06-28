@@ -170,6 +170,12 @@ class Parser:
             self.error('Cannot generate {}: {} not an instance of {}.' \
                 .format(repr(x), type(x), type(prev[0])))
 
+    def _output(self, olist):
+        if len(olist) == 0:
+            return None
+        cls = type(olist[0])
+        return cls().join(olist)
+
     def output(self):
         ''' Return the joined-together committed output list.
 
@@ -177,10 +183,10 @@ class Parser:
             of the first object in the list. E.g., if the first object is
             `b'0x01'`, `bytes().join(olist_committed)` will be called.
         '''
-        if len(self.olist_committed) == 0:
-            return None
-        cls = type(self.olist_committed[0])
-        return cls().join(self.olist_committed)
+        return self._output(self.olist_committed)
+
+    def output_pending(self):
+        return self._output(self.olist_pending)
 
 
     ####################################################################
@@ -231,18 +237,18 @@ class Parser:
         else:
             return type(self.input)(map(self.charset.native, s))
 
-    def finished(self):
-        ''' Return `True` if the _committed_ parse point is at the end
-            of the input.
-        '''
-        return self.pos_committed >= len(self.input)
-
     ####################################################################
     #   Parsing Methods
     #
     #   • Nothing here calls `start()` or `commit()`;
     #     only the pending start point is used and updated.
     #   • No output is generated unless the header comment says otherwise.
+
+    def finished(self):
+        ''' Return `True` if the _pending_ parse point is at the end
+            of the input.
+        '''
+        return self.pos_pending >= len(self.input)
 
     def peek(self):
         ''' Without consuming anything, return next input element at the
