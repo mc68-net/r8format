@@ -300,6 +300,16 @@ class Parser:
                 return ret
         return None
 
+    def match(self, re):
+        ''' Try to match `re` against the input and return a `Match` object
+            if successful, consuming the matched input.
+
+            This does not consume the matched text; the caller should
+            ``consume(match.end)`` with the returned `Match` if it
+            accepts the contents of the matched expression.
+        '''
+        raise Error('write me')
+
     def digit(self, base=10):
         ''' Return the next input element if it is a digit in the given
             `base` (default 10).

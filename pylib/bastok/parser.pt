@@ -224,6 +224,12 @@ def test_parser_string_in():
     assert b'ab' == p.string_in(['xx', 'ab', 'xx'])
     assert  None is p.string_in(['xx', 'ab', 'xx'])
 
+def test_parser_match():
+    assert 0
+
+def test_parser_match_bytes():
+    assert 0
+
 @pytest.mark.parametrize('base, input, retvals', [
     #   The '5' below ensures we are not "using up" an iterator produced
     #   by map() in __init_constants, but have turned it into real data.
