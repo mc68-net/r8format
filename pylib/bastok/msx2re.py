@@ -264,7 +264,7 @@ def linenum(p, gen=True, err=None):
 
     if ds == '':
         if err is None: return None
-        p.error('no linenum found')
+        p.error('expected ' + err)
 
     n = int(ds)
     if n > 65529:   # XXX probably should not be hard-coded!
