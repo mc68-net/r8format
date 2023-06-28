@@ -54,7 +54,7 @@ def test_parser_consume_str():
         c(4)
     assert ex.match('Unexpected end of input: 7 > 6')
     assert 'abcdef' == p.remain()
-    p.confirm()
+    p.commit()
     assert 'def' == p.remain()
 
 def test_parser_consume_bytes():
@@ -65,10 +65,10 @@ def test_parser_consume_bytes():
         c(4)
     assert ex.match('Unexpected end of input: 7 > 6')
     assert b'abcdef' == p.remain()
-    p.confirm()
+    p.commit()
     assert b'def' == p.remain()
 
-def test_Parser_confirmation():
+def test_Parser_commit():
     p = Parser(b'abcd')
     c = p.consume
 
@@ -82,7 +82,7 @@ def test_Parser_confirmation():
     assert (b'a', b'abcd') == (c(), p.remain())
     assert (b'b', b'abcd') == (c(), p.remain())
 
-    p.confirm()
+    p.commit()
     assert b'cd' == p.remain()
 
     p.start()
@@ -111,7 +111,7 @@ def test_Parser_generate_output_types(output, olist):
     p = Parser('');
     for o in olist:
         p.generate(o)
-    p.confirm()
+    p.commit()
     assert output == p.output()
 
 def test_Parser_generate_type_error():
@@ -122,15 +122,15 @@ def test_Parser_generate_type_error():
         p.generate('a')
     assert ex.match('Cannot generate '
         "'a': <class 'str'> not an instance of <class 'bytes'>")
-    p.confirm()
+    p.commit()
     assert b'01' == p.output(), "should not have added 'a'"
 
-def test_Parser_generate_confirm():
+def test_Parser_generate_commit():
     p = Parser('')
     p.generate(b'a1');  assert    None is p.output()
-    p.confirm();        assert   b'a1' == p.output()
+    p.commit();         assert   b'a1' == p.output()
     p.generate(b'b2');  assert   b'a1' == p.output()
-    p.confirm();        assert b'a1b2' == p.output()
+    p.commit();         assert b'a1b2' == p.output()
 
 
 ####################################################################
@@ -141,11 +141,11 @@ def test_Parser_finished():
 
     p = Parser('1');    assert not p.finished()
     p.consume();        assert not p.finished()
-    p.confirm();        assert     p.finished()
+    p.commit();         assert     p.finished()
 
 def test_parser_reset_noarg():
     p = Parser('abc123');   assert 'abc' == p.consume(3)
-    p.confirm();            assert '123' == p.consume(3)
+    p.commit();             assert '123' == p.consume(3)
     p.reset();              assert 'abc' == p.consume(3)
 
 def test_parser_reset_newinput_same_type():
@@ -196,7 +196,7 @@ def test_Parser_string_str():
     assert (   'a' ,     'bc' ,   None ,    'd') \
         == ( s('a'),   s('bc'),  s('e'),  s('d') )
     assert 'abcd' == p.remain()
-    p.confirm()
+    p.commit()
     assert '' == p.remain()
 
 def test_Parser_string_bytes():
@@ -205,7 +205,7 @@ def test_Parser_string_bytes():
     assert ( b'a',   b'bc',    None,  b'd') \
         == (s('a'), s('bc'), s('e'), s('d'))
     assert b'abcd' == p.remain()
-    p.confirm()
+    p.commit()
     assert b'' == p.remain()
 
 def test_parser_string_in():
@@ -274,11 +274,11 @@ def test_Parser_token():
 
     assert None is p.token()
     assert b'Z' == p.consume()
-    p.confirm()
+    p.commit()
 
     def check(token, tokenized):
         assert token == p.token()
-        p.confirm()
+        p.commit()
         assert tokenized == p.olist_conf[-1]
 
     check(b'foo',     b'\x01')

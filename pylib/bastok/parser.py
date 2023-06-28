@@ -48,28 +48,30 @@ class Parser:
           `bytes` or `str`) that when joined together are the output of the
           parser. `gen()` appends to this list.
 
-        The parser has two parse points and output lists: "confirmed" and
-        "unconfirmed."
-        - `start()` sets the unconfirmed parse point to the confirmed parse
-          point; and clears any unconfirmed output. this should be used by
-          a routine that is not yet sure that it's going to consume the
+        The parser has two parse points and output lists: "committed" and
+        "pending."
+        - `start()` sets the pending parse point to the committed parse
+          point; and clears any pending output. This should be used by a
+          routine that is not yet sure that it's going to consume the
           following text without an error.
         - Matching routines such as `string()`:
-          - On success advance the unconfirmed parse point and return the
-            input that matched or a value derived from it.
-          - On failure leave the unconfirmed parse point unchanged and
-            return `None`.
-        - `confirm()` sets the confirmed parse point to the unconfirmed
-          parse point and appends all unconfirmed output to the confirmed
-          output.
+          - On success advance the pending parse point and return the input
+            that matched or a value derived from it.
+          - On failure leave the pending parse point unchanged and return
+            `None`.
+          - Note that parsing routines supplied in this class never
+            `start()` or `commit()`, as they're intended to be usable as
+            components within a larger sub-parser.
+        - `commit()` sets the committed parse point to the pending parse
+          point and appends all pending output to the committed output.
 
-        Thus, parsing routines should `start()`, and either:
+        Thus, your parsing routines should `start()` and then either:
         - Parse until they've succeeded, generating output as they go
-          along, and then call `confirm()`, or
+          along, and then call `commit()`, or
         - Parse unti they've failed and just return.
 
-        XXX `start()`/`confirm()` possibly should be re-entrant, using
-        a stack of confirmed and unconfirmed parse points.
+        XXX `start()`/`commit()` possibly should be re-entrant, using
+        a stack of committed and pending parse points.
 
         When elements of the input is returned, they are of the same type
         as the input. For non-`str` inputs, you may need to pass these
@@ -123,16 +125,16 @@ class Parser:
         self.olist_pending  = []
 
     def remain(self):
-        ' Return what remains after the _confirmed_ parse point. '
+        ' Return what remains after the _committed_ parse point. '
         return self.input[self.pos_conf:]
 
     def start(self):
-        ' Set unconfirmed parse point to confirmed parse point. '
+        ' Set pending parse point back to the committed parse point. '
         self.pos_un = self.pos_conf
 
-    def confirm(self):
-        ''' Move confirmed parse point forward to latest unconfirmed parse
-            point and add all unconfirmed output to the confirmed output list.
+    def commit(self):
+        ''' Move committed parse point forward to the pending parse point
+            and add all pending output to the committed output list.
         '''
         self.pos_conf = self.pos_un
         self.olist_conf.extend(self.olist_pending)
@@ -155,11 +157,11 @@ class Parser:
 
     def generate(self, x):
         ''' Append an output element to the pending output list.
-            These elements will not be moved to the confirmed output
-            list until `confirm()` is called.
+            These elements will not be moved to the committed output list
+            until `commit()` is called.
 
-            All elements in the list must be the same type or a subtype
-            of the first element added or a `ParseError` will be raised.
+            All elements in the list must be the same type or a subtype of
+            the first element added or a `ParseError` will be raised.
         '''
         prev = self.olist_conf[0:1] + self.olist_pending[0:1]
         if len(prev) == 0 or isinstance(x, type(prev[0])):
@@ -169,7 +171,7 @@ class Parser:
                 .format(repr(x), type(x), type(prev[0])))
 
     def output(self):
-        ''' Return the joined-together confirmed output list.
+        ''' Return the joined-together committed output list.
 
             The object used for joining will be a new instance of the class
             of the first object in the list. E.g., if the first object is
@@ -182,9 +184,7 @@ class Parser:
 
 
     ####################################################################
-    #   Parsing Methods
-    #   Nothing here generates output or calls `confirm()`, and all of the
-    #   following use and update the _unconfirmed_ parse point.
+    #   Utility methods used by parsing methods.
 
     def encode_elem(self, s):
         ''' Convert `str` `s`, which must be of length 1, to the input
@@ -232,15 +232,21 @@ class Parser:
             return type(self.input)(map(self.charset.native, s))
 
     def finished(self):
-        ''' Return `True` if the _confirmed_ parse point is at the end
+        ''' Return `True` if the _committed_ parse point is at the end
             of the input.
         '''
         return self.pos_conf >= len(self.input)
 
+    ####################################################################
+    #   Parsing Methods
+    #
+    #   • Nothing here calls `start()` or `commit()`;
+    #     only the pending start point is used and updated.
+    #   • No output is generated unless the header comment says otherwise.
+
     def peek(self):
-        ''' Without consuming anything, return next element at the
-            _unconfirmed_ parse point in input, or `None` if at end of
-            input.
+        ''' Without consuming anything, return next input element at the
+            _pending_ parse point, or `None` if at end of input.
         '''
         if self.pos_un >= len(self.input):
             return None
@@ -249,8 +255,8 @@ class Parser:
 
     def consume(self, count=1):
         ''' Consume and return the next `count` elements of the input
-            (default 1). Raise a `ParseError` if we try to consume past end
-            of input.
+            (default 1). Raise a `ParseError` if we try to consume past
+            end of input.
         '''
         if self.pos_un + count > len(self.input):
             self.error('Unexpected end of input: {} > {}' \

@@ -66,7 +66,7 @@ def test_spaces_default():
 def test_string_literal_success(s, b):
     p = Parser(s, ja_charmap)
     string_literal(p)
-    p.confirm()
+    p.commit()
     assert b == p.output()
 
 def test_string_literal_error():

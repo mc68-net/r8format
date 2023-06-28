@@ -33,18 +33,18 @@ def tokline(p):
     #   fragments that do not start with a line number.
     ln = linenum(p, gen=False, err='line number')
     space(p, False)
-    p.confirm()
+    p.commit()
 
     #DEBUG('input:', p.input) # XXX
-    #   At the start of every iteration, we confirm what the previous
+    #   At the start of every iteration, we commit what the previous
     #   iteration consumed and generated.
-    while (p.confirm() or True) and not p.finished():
+    while (p.commit() or True) and not p.finished():
         #DEBUG('remain={}'.format(repr(p.remain())))
         #   Start by checking for a token, since any string matching a
         #   token takes priority over anything else.
         t = p.token()
         if t is not None:
-            p.confirm()     # new start point for attempt to parse any argument
+            p.commit()  # new start point for attempt to parse any argument
             #   Tokens that consume and generate the remainder of the line.
             if t == 'REM':  chars(p)
             if t == "'":    chars(p)
@@ -67,7 +67,7 @@ def tokline(p):
         #   (The BASIC interpreter will deal with it if it's an error.)
         b = p.consume(1); p.generate(bytes([ord(b)]))
 
-    p.confirm()
+    p.commit()
     return (ln, p.output())
 
 class EncodingError(ValueError): pass
@@ -220,7 +220,7 @@ def ampersand_literal(p):
         #   XXX no tokenised version, do ASCII!
         raise Exception('binary: write me!')
 
-    p.confirm()
+    p.commit()
     return n
 
 def linenum(p, gen=True, err=None):
@@ -273,7 +273,7 @@ def linenum(p, gen=True, err=None):
     if gen:
         if neg: p.generate(NEGATIVE)
         p.generate(b'\x0E' + uint_16)
-    p.confirm()
+    p.commit()
     return -n if neg else n
 
 def string_literal(p, err=None):
@@ -317,7 +317,7 @@ def spaces(p, generate=True):
             if generate: p.generate(msx_encode(p, ' '))
         else:
             break
-        p.confirm()
+        p.commit()
 
 def chars(p):
     ' Do char() until end of input. '
@@ -341,7 +341,7 @@ def char(p):
     '''
     c = p.consume(1)
     p.generate(msx_encode(p, c))
-    p.confirm()
+    p.commit()
     return c
 
 def msx_encode(p, c):
