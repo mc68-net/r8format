@@ -39,7 +39,7 @@ def parseargs():
 
 def main(args):
     if args.binary:
-        cmap = None
+        cmap = CHARMAP.get('int')   # must be ASCII-compatible!
     else:
         cmap = CHARMAP.get(args.charset)
         if cmap is None:
