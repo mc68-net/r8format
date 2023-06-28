@@ -227,7 +227,12 @@ def test_match_digits_exp_and_type():
 def test_number(s, remain, n, tok):
     p = Parser(s)
     nn = number(p)
-    assert (remain, n, tok) == (p.remain(), nn, p.output())
+    assert (n, tok, remain) == (nn,  p.output_pending(), p.remain())
+
+def test_number_bytes():
+    p = Parser(b'-123%x')
+    nn = number(p)
+    assert (-255, b'\xF2\x0F\xFF', 'x') == (nn,  p.output_pending(), p.remain())
 
 @pytest.mark.parametrize('s', [ '32768%', '-32768%', '32768.1234%' ])
 def test_digits_int_overflow(s):
