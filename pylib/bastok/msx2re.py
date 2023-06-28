@@ -193,7 +193,7 @@ def match_number(p):
     if f is not None: f = f[1:]
     #   XXX decode TE here if input is not str
     te = m.group(4)
-    if not isinstance(p.input, str):
+    if not isinstance(p.input, str) and te is not None:
         #   XXX is this correct? Should Parser be doing this translation back?
         te = ''.join(map(p.charset.trans, te))
     if (te is not None) and (te not in ('%', '!', '#')):
