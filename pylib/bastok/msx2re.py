@@ -146,7 +146,8 @@ def number(p, gen=True, err=None):
          equivalent: BASIC always uses single precision if the
          significand will fit, otherwise double precision with truncation.
 '''
-MATCH_DIGITS = re.compile(r'(-)?(\d*)(\.\d*)?([%!#]|[dDeE]-?\d*)?')
+MATCH_DIGITS_S = r'(-)?(\d*)(\.\d*)?([%!#]|[dDeE]-?\d*)?'
+MATCH_DIGITS = None     # lazy initialisation
 
 def match_number(p):
     ''' Parse basic syntax of number formats for all types of numbers
@@ -175,7 +176,14 @@ def match_number(p):
            - Exponent: `int` (positive or negative).
              (This must be biased by the caller before tokenisation.)
     '''
-    m = MATCH_DIGITS.match(p.remain())
+
+    #   XXX get rid of p.re_compile() and have p.re_match() compile
+    #   and cache the `re.Pattern`
+   #global MATCH_DIGITS
+   #if MATCH_DIGITS is None:
+   #    MATCH_DIGITS = p.re_compile(MATCH_DIGITS_S)
+
+    m = p.re_match(MATCH_DIGITS_S)
     if m is None: return None
 
     neg = -1 if m.group(1) else 0

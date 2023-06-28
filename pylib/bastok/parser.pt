@@ -224,11 +224,30 @@ def test_parser_string_in():
     assert b'ab' == p.string_in(['xx', 'ab', 'xx'])
     assert  None is p.string_in(['xx', 'ab', 'xx'])
 
-def test_parser_match():
-    assert 0
+def test_parser_re_match():
+    p = Parser('123abc')
+
+    m = p.re_match(r'\d+')
+    assert (3, '123') == (m.end(), m.group()), 'matches'
+
+    m = p.re_match(r'\d+')
+    assert (3, '123') == (m.end(), m.group()), 'no consumption'
+
+    m = p.re_match(re.compile(r'\d+'))
+    assert (3, '123') == (m.end(), m.group()), 'pre-compiled REs work'
+
+    p.consume(m.end())
+    assert None is p.re_match(r'\d+'), 'consumption works'
 
 def test_parser_match_bytes():
-    assert 0
+    p = Parser(b'123abc', TestCodec())
+
+    m = p.re_match(r'\d+')
+    assert (3, b'123') == (m.end(), m.group()), 'matches'
+
+    m = p.re_match(p.re_compile(r'\d+'))
+    assert (3, b'123') == (m.end(), m.group()), 'matches'
+
 
 @pytest.mark.parametrize('base, input, retvals', [
     #   The '5' below ensures we are not "using up" an iterator produced

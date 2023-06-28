@@ -173,6 +173,11 @@ def test_match_number(s, d):
     p = Parser(s);       assert d == match_number(p)
     p = Parser(s + 'a'); assert d == match_number(p)
 
+def test_match_number_bytes():
+    p = Parser(b'3.1E12', CHARMAP['int'])
+    assert (6, 0, b'3', b'1', 12) == match_number(p)
+
+
 def test_match_digits_exp_and_type():
     ''' We test above that random chars after the number are not consumed
         by the parse, but we want to make quite sure that we're not allowing
@@ -209,10 +214,10 @@ def test_match_digits_exp_and_type():
     (          '-32767%',   '',            -32767,         b'\xF2\x1C\xFF\x7F'),
     (      '-32767.999%',   '',            -32767,         b'\xF2\x1C\xFF\x7F'),
 
-#   (            '32768',   '',           32768.0,             b'\x1Dee001122'),   # forces float
-#   (           '-32768',   '',          -32768.0,         b'\xF2\x1Dee001122'),   # forces float
-
-#   ('-123456.789012e34',   '', -123456.789012e34, b'\xF2\x1Dee00112233445566'),   # forces float
+    #   forces float
+#   (            '32768',   '',           32768.0,             b'\x1Dee001122'),
+#   (           '-32768',   '',          -32768.0,         b'\xF2\x1Dee001122'),
+#   ('-123456.789012e34',   '', -123456.789012e34, b'\xF2\x1Dee00112233445566'),
 
 #   (    '-3!',       -3.0, b'\xF2\x1D................'),   # XXX leaves !
 #   (    '-3#',       -3.0, b'\xF2\x1F................'),   # XXX leaves #

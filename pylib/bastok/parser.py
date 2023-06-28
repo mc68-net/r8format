@@ -26,6 +26,7 @@
 
 '''
 
+import  re
 import  struct
 
 class Parser:
@@ -300,15 +301,28 @@ class Parser:
                 return ret
         return None
 
-    def match(self, re):
+    def re_compile(self, s):
+        ''' Compile a regexp given in `str` `s` to an `re.Pattern` regular
+            expression object in the input type that can be passed to
+            `re_match()`.
+        '''
+        return re.compile(self.encode_seq(s))
+
+    def re_match(self, regexp):
         ''' Try to match `re` against the input and return a `Match` object
             if successful, consuming the matched input.
 
             This does not consume the matched text; the caller should
-            ``consume(match.end)`` with the returned `Match` if it
+            ``consume(match.end())`` with the returned `Match` if it
             accepts the contents of the matched expression.
+
+            The groups in the `Match` object will be of the input type.
+            XXX not clear if we should try to convert back. Probably not?
         '''
-        raise Error('write me')
+        if not isinstance(regexp, re.Pattern):
+            regexp = self.encode_seq(regexp)
+        m = re.match(regexp, self.remain())
+        return m
 
     def digit(self, base=10):
         ''' Return the next input element if it is a digit in the given
