@@ -79,19 +79,19 @@ def test_string_literal_error():
         string_literal(p, 'Unexpected input')
     assert ex.match("Unexpected input: 'a'")
 
-@pytest.mark.parametrize('n, pos, s', [
-    (0, 1, '0'), (0, 3, '000'),
-    (17, 2, '17'), (17, 5, '00017'), (65529, 5, '65529'),
-    (0, 1, '0 '), (0, 1, '0:'), (0, 1, '0a'), (0, 1, '0x'),
-    (-32767, 6, '-32767'), # bogus, but tokeniser leaves it for interpreter
+@pytest.mark.parametrize('n, remain, s', [
+    (0, '', '0'), (0, '', '000'),
+    (17, '', '17'), (17, '', '00017'), (65529, '', '65529'),
+    (0, ' ', '0 '), (0, ':', '0:'), (0, 'a', '0a'), (0, 'x', '0x'),
+    (-32767, '', '-32767'), # bogus, but tokeniser leaves it for interpreter
     #(6553, 5, '65530'), (6553, 5, '65536'),  # tokeniser does this!
 ])
-def test_linenum_success(n, pos, s):
+def test_linenum_success(n, remain, s):
     p = Parser(s)
     tok = b'\xF2' if n < 0 else b''
     tok += b'\x0E' + pack('<H', abs(n))
-    assert (n       , tok        , pos) \
-        == (linenum(p), p.output() , p.pos_conf)
+    assert (n         , tok        , remain) \
+        == (linenum(p), p.output() , p.remain())
 
 def test_linenum_bytes():
     p = Parser(b'12345 PRINT', ja_charmap)
@@ -117,35 +117,35 @@ def test_linenum_failure_size():
         linenum(p, gen=False, err='xyz')
     assert ex.match('65530 outside linenum range at')
 
-@pytest.mark.parametrize('s, i, gen, rem', [
-    ('',                      None,            None,  0),
-    ('01',                    None,            None,  2),
-    ('&H0',                      0,  b'\x0C\x00\x00', 0),
-    ('&H',                       0,  b'\x0C\x00\x00', 0),
-    ('&HG',                      0,  b'\x0C\x00\x00', 1),
-    ('&ha',                   0x0A,  b'\x0C\x0A\x00', 0),
-    ('&HffffG',             0xFFFF,  b'\x0C\xFF\xFF', 1),
-    ('&O778',                 0o77,  b'\x0B\x3F\x00', 1),
-    ('&o177777',             65535,  b'\x0B\xFF\xFF', 0),
-   #('&b1012',               0b101,  b'????????????', 1),
-   #('&b1111000011110000',  0xF0F0,  b'????????????', 0)
+@pytest.mark.parametrize('s, i, gen, remain', [
+    ('',                      None,            None,  ''    ),
+    ('01',                    None,            None,  '01'  ),
+    ('&H0',                      0,  b'\x0C\x00\x00', ''    ),
+    ('&H',                       0,  b'\x0C\x00\x00', ''    ),
+    ('&HG',                      0,  b'\x0C\x00\x00', 'G'   ),
+    ('&ha',                   0x0A,  b'\x0C\x0A\x00', ''    ),
+    ('&HffffG',             0xFFFF,  b'\x0C\xFF\xFF', 'G'   ),
+    ('&O778',                 0o77,  b'\x0B\x3F\x00', '8'   ),
+    ('&o177777',             65535,  b'\x0B\xFF\xFF', ''    ),
+   #('&b1012',               0b101,  b'????????????', '2'   ),
+   #('&b1111000011110000',  0xF0F0,  b'????????????', ''    )
 ])
-def test_ampersand_literal(s, i, gen, rem):
+def test_ampersand_literal(s, i, gen, remain):
     p = Parser(s)
-    assert (i, gen, rem) \
-        == (ampersand_literal(p), p.output(), len(p.remain()))
+    assert (                   i,        gen,   remain) \
+        == (ampersand_literal(p), p.output(), p.remain())
 
-@pytest.mark.parametrize('s', [
-    '&h10000',
-    '&o200000',
-    '&o1777767',
+@pytest.mark.parametrize('s, msg', [
+    ('&h10000',     "7:'' after …'&h10000'"),
+    ('&o200000',    "8:'' after …'&o200000'"),
+    ('&o1777767',   "9:'' after …'&o1777767'"),
    #'&b11110000111100001',
 ])
-def test_ampersand_literal_overflow(s):
+def test_ampersand_literal_overflow(s, msg):
     p = Parser(s)
     with pytest.raises(p.ParseError) as ex:
         print(ampersand_literal(p))
-    assert ex.match('Overflow at 0:' + repr(s)[0:13])
+    assert ex.match('Overflow at ' + msg)
 
 @pytest.mark.parametrize('s, d', [
     (              '',  None),

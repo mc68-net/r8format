@@ -39,6 +39,7 @@ def tokline(p):
     #   At the start of every iteration, we commit what the previous
     #   iteration consumed and generated.
     while (p.commit() or True) and not p.finished():
+        p.commit() # XXX
         DEBUG('loop: remain={}'.format(repr(p.remain())))
         #   Start by checking for a token, since any string matching a
         #   token takes priority over anything else.
@@ -323,6 +324,7 @@ def spaces(p, generate=True):
 def chars(p):
     ' Do char() until end of input. '
     while not p.finished():
+        DEBUG('chars(): remain={}'.format(repr(p.remain())))
         char(p)
 
 def char(p):
