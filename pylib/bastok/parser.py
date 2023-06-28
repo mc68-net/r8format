@@ -119,25 +119,25 @@ class Parser:
                     err('element', type(input[0]), elem_type)
             self.input = input
 
-        self.pos_conf       = 0
-        self.pos_un         = 0
-        self.olist_conf     = []
-        self.olist_pending  = []
+        self.pos_committed      = 0
+        self.pos_pending        = 0
+        self.olist_committed    = []
+        self.olist_pending      = []
 
     def remain(self):
         ' Return what remains after the _committed_ parse point. '
-        return self.input[self.pos_conf:]
+        return self.input[self.pos_committed:]
 
     def start(self):
         ' Set pending parse point back to the committed parse point. '
-        self.pos_un = self.pos_conf
+        self.pos_pending = self.pos_committed
 
     def commit(self):
         ''' Move committed parse point forward to the pending parse point
             and add all pending output to the committed output list.
         '''
-        self.pos_conf = self.pos_un
-        self.olist_conf.extend(self.olist_pending)
+        self.pos_committed = self.pos_pending
+        self.olist_committed.extend(self.olist_pending)
         self.olist_pending = []
 
     class ParseError(ValueError): pass
@@ -146,10 +146,10 @@ class Parser:
         raise self.ParseError(message + ' ' + str(self))
 
     def __str__(self):
-        p = self.pos_conf
+        p = self.pos_committed
         return 'at {}:{} after …{} (output …{})'.format(
             p, repr(self.input[p:p+12]),
-            repr(self.input[p-12:p]), self.olist_conf[-4:])
+            repr(self.input[p-12:p]), self.olist_committed[-4:])
 
     ####################################################################
     #   Generation Methods
@@ -163,7 +163,7 @@ class Parser:
             All elements in the list must be the same type or a subtype of
             the first element added or a `ParseError` will be raised.
         '''
-        prev = self.olist_conf[0:1] + self.olist_pending[0:1]
+        prev = self.olist_committed[0:1] + self.olist_pending[0:1]
         if len(prev) == 0 or isinstance(x, type(prev[0])):
             self.olist_pending.append(x)
         else:
@@ -175,12 +175,12 @@ class Parser:
 
             The object used for joining will be a new instance of the class
             of the first object in the list. E.g., if the first object is
-            `b'0x01'`, `bytes().join(olist_conf)` will be called.
+            `b'0x01'`, `bytes().join(olist_committed)` will be called.
         '''
-        if len(self.olist_conf) == 0:
+        if len(self.olist_committed) == 0:
             return None
-        cls = type(self.olist_conf[0])
-        return cls().join(self.olist_conf)
+        cls = type(self.olist_committed[0])
+        return cls().join(self.olist_committed)
 
 
     ####################################################################
@@ -235,7 +235,7 @@ class Parser:
         ''' Return `True` if the _committed_ parse point is at the end
             of the input.
         '''
-        return self.pos_conf >= len(self.input)
+        return self.pos_committed >= len(self.input)
 
     ####################################################################
     #   Parsing Methods
@@ -248,27 +248,27 @@ class Parser:
         ''' Without consuming anything, return next input element at the
             _pending_ parse point, or `None` if at end of input.
         '''
-        if self.pos_un >= len(self.input):
+        if self.pos_pending >= len(self.input):
             return None
         else:
-            return self.input[self.pos_un]
+            return self.input[self.pos_pending]
 
     def consume(self, count=1):
         ''' Consume and return the next `count` elements of the input
             (default 1). Raise a `ParseError` if we try to consume past
             end of input.
         '''
-        if self.pos_un + count > len(self.input):
+        if self.pos_pending + count > len(self.input):
             self.error('Unexpected end of input: {} > {}' \
-                .format(self.pos_un + count, len(self.input)))
-        elems = self.input[self.pos_un : self.pos_un + count]
-        self.pos_un += len(elems)
+                .format(self.pos_pending + count, len(self.input)))
+        elems = self.input[self.pos_pending : self.pos_pending + count]
+        self.pos_pending += len(elems)
         return elems
 
     def string(self, s):
         ' Consume and return elements matching the constant string `s`. '
         expected = self.encode_seq(s)
-        next = self.input[self.pos_un:self.pos_un+len(expected)]
+        next = self.input[self.pos_pending:self.pos_pending+len(expected)]
         if expected == next:
             return self.consume(len(expected))
 
