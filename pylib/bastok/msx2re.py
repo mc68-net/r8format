@@ -21,7 +21,7 @@ def tokenize(charmap, lines, txttab=0x8001):
         parser.reset(l)
         ln, tokens = tokline(parser)
         tl.setline(ln, tokens)
-    DEBUG('tlines:', repr(tl))
+    #DEBUG('tlines:', repr(tl))
     return tl
 
 def tokline(p):
@@ -44,6 +44,7 @@ def tokline(p):
         #   token takes priority over anything else.
         t = p.token()
         if t is not None:
+            p.confirm()     # new start point for attempt to parse any argument
             #   Tokens that consume and generate the remainder of the line.
             if t == 'REM':  chars(p)
             if t == "'":    chars(p)
@@ -242,6 +243,7 @@ def linenum(p, gen=True, err=None):
         if err is None: return None
         p.error('expected ' + err)
 
+    #DEBUG('linenum() on {}'.format(repr(p.remain()[0:10])))
     p.start()
 
     neg = False
@@ -255,10 +257,10 @@ def linenum(p, gen=True, err=None):
         else:
             ds += d
 
-    DEBUG('ds:', type(ds), repr(ds))
+    #DEBUG('ds:', type(ds), repr(ds))
     if not isinstance(ds, str):
         ds = ''.join(map(p.charset.trans, ds))
-    DEBUG('ds:', type(ds), repr(ds))
+    #DEBUG('ds:', type(ds), repr(ds))
 
     if ds == '':
         if err is None: return None

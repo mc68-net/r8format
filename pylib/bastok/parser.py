@@ -307,6 +307,7 @@ class Parser:
     #   toktrans() will do a case-insensitive comparision on strings.
 
     def token(self):
+        ' Attempt to parse and generate a token. Returns `None` on failure. '
         if self.toktab is None:
             if self.tokens is None:
                 raise ValueError('Parser.token(): no token table supplied')
