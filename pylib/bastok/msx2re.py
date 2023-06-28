@@ -188,8 +188,12 @@ def match_number(p):
 
     neg = -1 if m.group(1) else 0
     i = m.group(2); f = m.group(3);
+    if not isinstance(p.input, str):
+        i = ''.join(map(p.charset.trans, i))
     if (i == '') and (f is None):
         return None
+    if f is not None and not isinstance(p.input, str):
+        f = ''.join(map(p.charset.trans, f))
     if f is not None: f = f[1:]
     #   XXX decode TE here if input is not str
     te = m.group(4)
@@ -221,8 +225,6 @@ def ampersand_literal(p):
     if digits is None:
         #   A prefix not followed by a valid digit assumes a value of 0.
         digits = '0'
-    else:
-        digits = str(digits)
 
     n = int(digits, base)
     #DEBUG('ampersand_literal:', base, digits, n, hex(n)) # XXX

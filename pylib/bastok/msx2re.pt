@@ -176,7 +176,7 @@ def test_match_number(s, d):
 
 def test_match_number_bytes():
     p = Parser(b'3.1E12', int_charmap)
-    assert (6, 0, b'3', b'1', 12) == match_number(p)
+    assert (6, 0, '3', '1', 12) == match_number(p)
 
 
 def test_match_digits_exp_and_type():
