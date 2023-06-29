@@ -104,7 +104,9 @@ def main():
     #   TODO: The initial current address should be auto-detected from the
     #   next-line address and the first line length, and/or overridden by
     #   a command-line parameter.
-    i_addr = 0x8001
+    i_addr = bf.addr()
+    if i_addr is None:
+        i_addr = 0                      # what else can we do?
 
     #   TODO: This assumes little-endian format. We need to be able to do
     #   big-endian for 6800.

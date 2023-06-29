@@ -168,12 +168,17 @@ class BASFile():
         what system a file was saved.
 
         `TYPES` is a list of all the filetypes this knows.
+
+        XXX This currently assumes little-endian format.
     '''
 
     class BadHeader(ValueError):
         pass
 
-    TYPES = ['MSX']
+    TYPES = [
+        'TXTTAB',       # no header
+        'MSX',          # Disk MSX-BASIC files
+        ]
 
     def __init__(self, filebytes, filetype):
         ''' Create a BASFile` from `filebytes` containing the contents of a
@@ -192,7 +197,10 @@ class BASFile():
             raise ValueError(
                 'filesbytes len={} too small'.format(len(filebytes)))
 
-        if filetype == 'MSX':
+        if filetype == 'TXTTAB':
+            self._header = b''
+            self._txttab = filebytes
+        elif filetype == 'MSX':
             self._header, self._txttab = filebytes[0:1], filebytes[1:]
             if self._header != b'\xFF':
                 raise self.BadHeader('expected MSX header {}, got {}' \
@@ -203,6 +211,24 @@ class BASFile():
     def filetype(self):     return self._filetype
     def header(self):       return self._header
     def txttab(self):       return self._txttab
+
+    def addr(self):
+        ''' Determine the start address of `txttab()`.
+
+            This works only with more than one line: it calculates the
+            length of the first line and then subtracts that from the
+            start address of the second line.
+        '''
+        tt = self.txttab()
+        p = 4                       # skip 2 bytes addr and 2 bytes lineno
+
+        if unle(tt) == 0:           # only one line in file
+            return None
+        while True:
+            if p > len(tt): return None
+            if tt[p] == 0:  break
+            p += 1
+        return unle(tt) - (p+1)
 
     def read(self, n=None):
         ' Read bytes from `txttab()` as a stream. '

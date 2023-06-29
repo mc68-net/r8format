@@ -112,21 +112,35 @@ def test_parsetext_no_txttab():
 ####################################################################
 #   BASFile
 
-MSX_FILEBYTES = b''.join([
-    b'\xFF',                # header
+TXTTAB = b''.join([
     b'\x00\x00\x11\x11',    # next address and line number
     b'\x8F\x00',            # REM statement
 ])
 
 def test_basfile_msx():
-    bf = BASFile(MSX_FILEBYTES, 'MSX')
-    assert (b'\xFF',     b'\x00\x00\x11' ) \
-        == (bf.header(), bf.txttab()[0:3])
+    bf = BASFile(b'\xFF' + TXTTAB, 'MSX')
+    assert (b'\xFF',     TXTTAB     ) \
+        == (bf.header(), bf.txttab())
 
     with pytest.raises(BASFile.BadHeader):
-        bf = BASFile(MSX_FILEBYTES[1:], 'MSX')
+        bf = BASFile(TXTTAB, 'MSX')
+
+def test_basfile_addr():
+    bf = BASFile(TXTTAB, 'TXTTAB')
+    assert b'' == bf.header()
+    assert None is bf.addr()    #   can't determine addr with only one line
+
+    text = b''.join([
+        b'\x12\x80', b'\x11\x00',
+        b'0123456789\x00',
+        b'\x00\x00', b'\x22\x00',
+        b'0123456789\x00',
+    ])
+    expected = 0x8012 - (2 + 2 + 10 + 1)  # next - (addr + lineno + text + term)
+    bf = BASFile(text, 'TXTTAB')
+    assert expected == bf.addr(), "expected " + hex(expected)
 
 def test_basfile_read():
-    bf = BASFile(MSX_FILEBYTES, 'MSX')
+    bf = BASFile(b'\xFF' + TXTTAB, 'MSX')
     assert   b'\x00\x00\x11\x11' == bf.read(4)
     assert           b'\x8F\x00' == bf.read()
