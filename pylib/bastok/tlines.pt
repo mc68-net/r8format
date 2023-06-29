@@ -46,12 +46,15 @@ def test_setline_text():
     tl.txttab = 0x901
     assert bytes(expected_new_txttab) == tl.text()
 
-
 def test_setline_bad_lineno():
     tl = TLines(txttab=0x400)
     with pytest.raises(ValueError): tl.setline(-1, b'')
     with pytest.raises(ValueError): tl.setline(tl.maxlin + 1, b'')
     tl.setline(tl.maxlin, b'')
+
+@pytest.mark.xfail(strict=True, reason='Implementation incomplete')
+def test_tlines_no_txttab():
+    tl = TLines()
 
 ####################################################################
 

@@ -56,6 +56,8 @@ class TLines:
         '''
         self.maxlin = maxlin
 
+        #   XXX does not work without txttab right now, but should
+        #   use the BASFile trick to figure it out.
         self.txttab = int(txttab)
         if self.txttab < 0:
             raise ValueError('txttab {} < 0'.format(self.txttab))
