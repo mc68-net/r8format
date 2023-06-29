@@ -35,17 +35,17 @@ def tokline(p):
     space(p, False)
     p.commit()
 
-    DEBUG('input:', p.input) # XXX
+    #DEBUG('input:', p.input) # XXX
     #   At the start of every iteration, we commit what the previous
     #   iteration consumed and generated.
     while (p.commit() or True) and not p.finished():
         p.commit() # XXX
-        DEBUG('loop: remain={}'.format(repr(p.remain())))
+        #DEBUG('loop: remain={}'.format(repr(p.remain())))
         #   Start by checking for a token, since any string matching a
         #   token takes priority over anything else.
         t = p.token()
         if t is not None:
-            DEBUG('token={}'.format(repr(t)))
+            #DEBUG('token={}'.format(repr(t)))
             p.commit()  # new start point for attempt to parse any argument
             #   Tokens that consume and generate the remainder of the line.
             if t == 'REM':  chars(p)
@@ -56,9 +56,9 @@ def tokline(p):
                 spaces(p); linenum(p, err='line number after GOTO')
             if t == 'THEN':
                 spaces(p); linenum(p)   # linenum or other tokens
-            DEBUG('handled token={}'.format(t)) # XXX
+            #DEBUG('handled token={}'.format(t)) # XXX
             continue
-        DEBUG('not token')
+        #DEBUG('not token')
         #   If not a token, we try to match the various other constants.
         if string_literal(p)    is not None: continue
         if ampersand_literal(p) is not None: continue
