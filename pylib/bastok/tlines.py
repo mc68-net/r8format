@@ -198,7 +198,7 @@ class BASFile():
                 raise self.BadHeader('expected MSX header {}, got {}' \
                     .format(b'\xFF', self._header))
         else:
-            raise ValueError('Unknown filetype: {}'.format(self.filetype))
+            raise ValueError('Unknown filetype: {}'.format(self._filetype))
 
     def filetype(self):     return self._filetype
     def header(self):       return self._header
