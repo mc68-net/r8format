@@ -8,7 +8,7 @@ if __name__ == '__main__': addsitedir(join(BASEDIR, 'pylib'))
 from    argparse  import ArgumentParser, FileType
 from    sys  import argv, stdin, stdout, stderr
 
-from    bastok.blines  import blines
+from    bastok.blines  import blines, stripeol
 from    bastok.msx2re  import tokenize
 from    bastok.msxchars import CHARMAP
 
@@ -54,14 +54,7 @@ def main(args):
             lines = blines(f.readlines())
     else:
         with open(args.input, 'rb') as f:
-            lines = f.readlines()
-            #   Remove the final ^Z that is the CP/M and DOS text file
-            #   terminator, if present. It's possible that with some CP/M
-            #   saves this could be many ^Z characters, filling out the
-            #   last block, but we've not seen that yet, so wait until we
-            #   do to see if and how it actually happens.
-            if lines[-1] == b'\x1A':
-                lines = lines[0:-1]
+            lines = stripeol(f.readlines())
     tlines = tokenize(cmap, lines)
     tlines.write_to(args.output)
 

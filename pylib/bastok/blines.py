@@ -33,3 +33,31 @@ def blines(plines, commentchar='‖'):
 
     blines.append(' '.join(bline))
     return blines[1:]
+
+def stripeol(lines):
+    ''' Given a sequence of binary sequences (`bytes` or anything else that
+        supports `fromhex()`), each representing a line, return a copy with
+        any CR, LF, or CR LF terminators removed from the line ends. If
+        the last line is a ^Z (0x1A) alone on the line, which is the CP/M
+        and DOS text file terminator, that entire line will be removed.
+
+        It may be possible that with some CP/M saves the EOF terminator
+        could be many ^Z characters, filling out the last block, but we've
+        not seen that yet, so wait until we do to see if and how it
+        actually happens.
+    '''
+    if len(lines) == 0:
+        return []
+
+    LF  = ord(type(lines[0]).fromhex('0A'))
+    CR  = ord(type(lines[0]).fromhex('0D'))
+    EOF =     type(lines[0]).fromhex('1A')
+
+    res = []
+    for l in lines:
+        if len(l) > 0 and l[-1] == LF:   l = l[0:-1]
+        if len(l) > 0 and l[-1] == CR:   l = l[0:-1]
+        res.append(l)
+    if res[-1] == EOF:
+        res = res[0:-1]
+    return res
