@@ -144,6 +144,9 @@ class TLines:
         stream.write(b'\xFF')       # type byte
         stream.write(self.text())
 
+####################################################################
+#   Small utility routines
+
 def le(n):
     ' Return _n_ as little-endian unsigned 16-bit int. '
     return struct.pack('<H', n)
@@ -153,3 +156,48 @@ def unle(bs):
         16-bit int.
     '''
     return struct.unpack('<H', bs[0:2])[0]
+
+####################################################################
+#   BASFile
+
+class BASFile():
+    ''' A representation of save of a tokenised BASIC program, i.e., a
+        ``.BAS`` file. This distinguishes between the file header
+        and the BASIC "text" itself and may be able to guess from
+        what system a file was saved.
+
+        `TYPES` is a list of all the filetypes this knows.
+    '''
+
+    class BadHeader(ValueError):
+        pass
+
+    TYPES = ['MSX']
+
+    def __init__(self, filebytes, filetype):
+        ''' Create a BASFile` from `filebytes` containing the contents of a
+            ``.BAS`` file (a tokenised save), and the given machine/BASIC
+            filetype. If `filetype` is none, this will try to guess the filetype.
+
+            A `BadHeader` will be thrown if the parse fails.
+        '''
+        self._filebytes = filebytes
+        self._filetype  = filetype
+        self._header    = None
+        self._txttab    = None
+
+        if len(filebytes) < 5:
+            raise ValueError(
+                'filesbytes len={} too small'.format(len(filebytes)))
+
+        if filetype == 'MSX':
+            self._header, self._txttab = filebytes[0:1], filebytes[1:]
+            if self._header != b'\xFF':
+                raise self.BadHeader('expected MSX header {}, got {}' \
+                    .format(b'\xFF', self._header))
+        else:
+            raise ValueError('Unknown filetype: {}'.format(self.filetype))
+
+    def filetype(self):     return self._filetype
+    def header(self):       return self._header
+    def txttab(self):       return self._txttab

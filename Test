@@ -39,6 +39,9 @@ pytest -q -o testpaths=pylib/ "$@"
 ftdata=.build/programs/
 mkdir -p $ftdata/detok
 
+qecho "------ basdump  simple.bas"
+bin/basdump  programs/simple.bas | diff - programs/simple.dump
+
 qecho "------ detok    simple.bas"
 bin/detok    programs/simple.bas >$ftdata/detok/simple.ba0
 diff -u {$ftdata/detok,programs}/simple.ba0

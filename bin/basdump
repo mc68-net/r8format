@@ -11,6 +11,9 @@ from    argparse  import ArgumentParser
 from    struct  import unpack
 import  sys
 
+from    bastok.tlines  import BASFile
+
+
 def printaddr(i_addr):
     print('  {:04X}: '.format(i_addr), end='')
 
@@ -81,23 +84,25 @@ def parseargs():
     arg('input', help='input file (required); use `-` for stdin')
     return p.parse_args()
 
+def eprint(s):
+    print(s, end='')
+
+def bprint(bs):
+    for b in bs:
+        print(' {:02X}'.format(b), end='')
+
 def main():
     if ARGS.input == '-':
         f = sys.stdin.buffer
     else:
         f = open(ARGS.input, 'rb')
 
-    #   TODO: This needs to be expanded to handle other MS-BASIC (and maybe
-    #   even non-MS-BASIC) formats.
-    type = f.read(1)
-    if type == b'':
-        raise RuntimeError('empty input')
-    elif type != b'\xFF':
-        raise RuntimeError('bad type byte ${:02X}'.format(type[0]))
-    else:
-        #                   XXX should not be using hard-coded addr here
-        if ARGS.address:    print('  8000: {:02X}'.format(type[0]))
-        else:               print('__TYPE: {:02X}'.format(type[0]))
+    bf = BASFile(f.read(), 'MSX')
+   #f.close()    # XXX not 'till we fix printbasline to use in-mem data
+
+    eprint('HEADER:')
+    bprint(bf.header())
+    print()
 
     #   TODO: The initial current address should be auto-detected from the
     #   next-line address and the first line length, and/or overridden by
@@ -106,6 +111,7 @@ def main():
 
     #   TODO: This assumes little-endian format. We need to be able to do
     #   big-endian for 6800.
+    f.seek(1)
     while True:
         i_nextaddr = printbasline(i_addr, f)
         if i_nextaddr is None:
@@ -113,7 +119,6 @@ def main():
             break
         else:
             i_addr = i_nextaddr
-    f.close()
 
 
 if __name__ == '__main__':
