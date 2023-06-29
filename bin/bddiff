@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+#
+#   bddiff - visual diff with `meld` of `basdump` output of two files
+#
+set -eu -o pipefail
+
+difftool=meld
+basdump="$(dirname "$0")/basdump"
+
+[[ ${#@} -eq 2 ]] || {
+    echo 1>&2 "Usage: $(basename "$0") FILE1 FILE2"
+    exit 2
+}
+
+exec $difftool <("$basdump" "$1") <("$basdump" "$2")
