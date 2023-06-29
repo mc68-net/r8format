@@ -19,8 +19,15 @@ import  sys
 from    bastok.tlines  import BASFile
 
 
+def eprint(s):
+    print(s, end='')
+
 def printaddr(i_addr):
     print('  {:04X}: '.format(i_addr), end='')
+
+def bprint(bs):
+    for b in bs:
+        print(' {:02X}'.format(b), end='')
 
 def vis(b):
     ' Return "visible" version of character code `b`. '
@@ -88,13 +95,6 @@ def parseargs():
     arg('-a', '--address', action='store_true', help='print memory addresses')
     arg('input', help='input file (required); use `-` for stdin')
     return p.parse_args()
-
-def eprint(s):
-    print(s, end='')
-
-def bprint(bs):
-    for b in bs:
-        print(' {:02X}'.format(b), end='')
 
 def main():
     if ARGS.input == '-':   f = sys.stdin.buffer
