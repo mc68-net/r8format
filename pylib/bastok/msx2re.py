@@ -1,5 +1,5 @@
 from    bastok.tlines  import TLines
-from    bastok.parser  import Parser, toksort, toktrans
+from    bastok.parser  import Parser
 from    bastok.msx2  import TOKENS, NEGATIVE
 from    struct  import pack
 import  re
