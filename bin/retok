@@ -49,12 +49,19 @@ def main(args):
                    for k, v in sorted(CHARMAP.items()) ]
                 )
 
-    if args.binary:
-        with open(args.input, 'rb') as f:
-            lines = f.readlines()
-    else:
+    if not args.binary:
         with open(args.input, 'r') as f:
             lines = blines(f.readlines())
+    else:
+        with open(args.input, 'rb') as f:
+            lines = f.readlines()
+            #   Remove the final ^Z that is the CP/M and DOS text file
+            #   terminator, if present. It's possible that with some CP/M
+            #   saves this could be many ^Z characters, filling out the
+            #   last block, but we've not seen that yet, so wait until we
+            #   do to see if and how it actually happens.
+            if lines[-1] == b'\x1A':
+                lines = lines[0:-1]
     tlines = tokenize(cmap, lines)
     tlines.write_to(args.output)
 
