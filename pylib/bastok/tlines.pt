@@ -112,16 +112,21 @@ def test_parsetext_no_txttab():
 ####################################################################
 #   BASFile
 
-def test_basfile_msx():
-    filebytes = b''.join([
-        b'\xFF',                # header
-        b'\x00\x00\x11\x11',    # next address and line number
-        b'\x8F\x00',            # REM statement
-    ])
+MSX_FILEBYTES = b''.join([
+    b'\xFF',                # header
+    b'\x00\x00\x11\x11',    # next address and line number
+    b'\x8F\x00',            # REM statement
+])
 
-    bf = BASFile(filebytes, 'MSX')
+def test_basfile_msx():
+    bf = BASFile(MSX_FILEBYTES, 'MSX')
     assert (b'\xFF',     b'\x00\x00\x11' ) \
         == (bf.header(), bf.txttab()[0:3])
 
     with pytest.raises(BASFile.BadHeader):
-        bf = BASFile(filebytes[1:], 'MSX')
+        bf = BASFile(MSX_FILEBYTES[1:], 'MSX')
+
+def test_basfile_read():
+    bf = BASFile(MSX_FILEBYTES, 'MSX')
+    assert   b'\x00\x00\x11\x11' == bf.read(4)
+    assert           b'\x8F\x00' == bf.read()

@@ -1,3 +1,4 @@
+from    io  import BytesIO
 import  struct
 
 class TLines:
@@ -185,6 +186,7 @@ class BASFile():
         self._filetype  = filetype
         self._header    = None
         self._txttab    = None
+        self._bio       = None
 
         if len(filebytes) < 5:
             raise ValueError(
@@ -201,3 +203,9 @@ class BASFile():
     def filetype(self):     return self._filetype
     def header(self):       return self._header
     def txttab(self):       return self._txttab
+
+    def read(self, n=None):
+        ' Read bytes from `txttab()` as a stream. '
+        if self._bio is None:
+            self._bio = BytesIO(self.txttab())
+        return self._bio.read(n)

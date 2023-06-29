@@ -49,8 +49,8 @@ def print_hex_contline(addr, data):
     for b in data:  print(vis(b), end='')
     print()
 
-def printbasline(i_addr, f):
-    nextaddr = f.read(2)
+def printbasline(i_addr, bf):
+    nextaddr = bf.read(2)
     i_nextaddr = unpack('<H', nextaddr)[0]
     if i_nextaddr == 0:
         if ARGS.address:    printaddr(i_addr)
@@ -58,7 +58,7 @@ def printbasline(i_addr, f):
         print('{:02X} {:02X} '.format(nextaddr[0], nextaddr[1]), end='')
         return None
 
-    lineno = f.read(2)
+    lineno = bf.read(2)
     i_lineno = unpack('<H', lineno)[0]
     if ARGS.address:    printaddr(i_addr)
     else:               print('L{:05d}: '.format(i_lineno), end='')
@@ -66,7 +66,7 @@ def printbasline(i_addr, f):
     print('{:02X} {:02X} '.format(lineno[0], lineno[1]), end='')
 
     linelen = i_nextaddr - i_addr
-    line = f.read(linelen - 4)      # include trailing $00
+    line = bf.read(linelen - 4)      # include trailing $00
 
     i_curpos = i_addr
     print_hex_firstline(i_lineno, line[:12])
@@ -92,13 +92,10 @@ def bprint(bs):
         print(' {:02X}'.format(b), end='')
 
 def main():
-    if ARGS.input == '-':
-        f = sys.stdin.buffer
-    else:
-        f = open(ARGS.input, 'rb')
-
+    if ARGS.input == '-':   f = sys.stdin.buffer
+    else:                   f = open(ARGS.input, 'rb')
     bf = BASFile(f.read(), 'MSX')
-   #f.close()    # XXX not 'till we fix printbasline to use in-mem data
+    f.close()
 
     eprint('HEADER:')
     bprint(bf.header())
@@ -111,15 +108,13 @@ def main():
 
     #   TODO: This assumes little-endian format. We need to be able to do
     #   big-endian for 6800.
-    f.seek(1)
     while True:
-        i_nextaddr = printbasline(i_addr, f)
+        i_nextaddr = printbasline(i_addr, bf)
         if i_nextaddr is None:
             print()
             break
         else:
             i_addr = i_nextaddr
-
 
 if __name__ == '__main__':
     ARGS = parseargs()
