@@ -19,15 +19,26 @@ import  sys
 from    bastok.tlines  import BASFile
 
 
-def eprint(s):
-    print(s, end='')
+def eprint(*args):
+    ' Print without newline at end. '
+    print(*args, end='')
 
-def printaddr(i_addr):
-    print('  {:04X}: '.format(i_addr), end='')
+def sprint(n):
+    ' Print `n` spaces. '
+    print(n * ' ', end='')
 
-def bprint(bs):
+def aprint(i_addr):
+    ' Print address prefix for line. '
+    print('  {:04X}:'.format(i_addr), end='')
+
+def hprint(bs):
+    ' Print hexdump bytes, each prefixed by a space. '
     for b in bs:
         print(' {:02X}'.format(b), end='')
+
+def vprint(bs):
+    ' Print "visible" characters. '
+    print(''.join(list(map(vis, bs))), end='')
 
 def vis(b):
     ' Return "visible" version of character code `b`. '
@@ -37,45 +48,35 @@ def vis(b):
 
 def print_hex_firstline(i_lineno, data):
     ' Print the remainder of the first line after the addr and lineno. '
-    blank = range(12 - len(data))       # columns without data, if any
-    #   hex
-    for b in data:  print('{:02X} '.format(b), end='')
-    for b in blank: print('   ', end='')
-    #   ASCII
-    pass;           print(' {:5d} '.format(i_lineno), end='')
-    for b in data:  print(vis(b), end='')
-    #   done with ine
-    print()
+    hprint(data); sprint(3 * (12 - len(data)))                  # hex
+    print('  {:5d} '.format(i_lineno), end=''); vprint(data)    # ASCII
+    print()                                                     # EOL
 
 def print_hex_contline(addr, data):
     ' Print continuation lines after the first one. '
-    blank = range(12 - len(data))       # columns without data, if any
-    if ARGS.address:    printaddr(addr)
-    else:               print('      : ', end='')
-    print('            ', end='')
+    if ARGS.address:    aprint(addr)
+    else:               eprint('      :')
+    eprint('            ')
     #   hex
-    for b in data:  print('{:02X} '.format(b), end='')
-    for b in blank: print('   ', end='')
-    #   ASCII
-    print('       ', end='')
-    for b in data:  print(vis(b), end='')
-    print()
+    hprint(data); sprint(3 * (12 - len(data)))                  # hex
+    eprint('        '); vprint(data)                            # ASCII
+    print()                                                     # EOL
 
 def printbasline(i_addr, bf):
     nextaddr = bf.read(2)
     i_nextaddr = unpack('<H', nextaddr)[0]
     if i_nextaddr == 0:
-        if ARGS.address:    printaddr(i_addr)
-        else:               print('___END: ', end='')
-        print('{:02X} {:02X} '.format(nextaddr[0], nextaddr[1]), end='')
+        if ARGS.address:    aprint(i_addr)
+        else:               eprint('___END:')
+        hprint(nextaddr)
         return None
 
     lineno = bf.read(2)
     i_lineno = unpack('<H', lineno)[0]
-    if ARGS.address:    printaddr(i_addr)
-    else:               print('L{:05d}: '.format(i_lineno), end='')
-    print('{:02X} {:02X} '.format(nextaddr[0], nextaddr[1]), end='')
-    print('{:02X} {:02X} '.format(lineno[0], lineno[1]), end='')
+    if ARGS.address:    aprint(i_addr)
+    else:               eprint('L{:05d}:'.format(i_lineno))
+    hprint(nextaddr)
+    hprint(lineno)
 
     linelen = i_nextaddr - i_addr
     line = bf.read(linelen - 4)      # include trailing $00
@@ -103,7 +104,7 @@ def main():
     f.close()
 
     eprint('HEADER:')
-    bprint(bf.header())
+    hprint(bf.header())
     print()
 
     #   TODO: The initial current address should be auto-detected from the
