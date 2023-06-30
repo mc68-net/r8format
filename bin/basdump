@@ -41,10 +41,23 @@ def vprint(bs):
     ' Print "visible" characters. '
     print(''.join(list(map(vis, bs))), end='')
 
+CONTROL_PICS = (
+    '␀', '␁', '␂', '␃', '␄', '␅', '␆', '␇',
+    '␈', '␉', '␊', '␋', '␌', '␍', '␎', '␏',
+    '␐', '␑', '␒', '␓', '␔', '␕', '␖', '␗',
+    '␘', '␙', '␚', '␛', '␜', '␝', '␞', '␟'
+)
+CONTROL_VIS = (
+    '₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇',
+    '₈', '₉', 'ₐ', '⋅', '⋅', '⋅', 'ₑ', '⋅',
+    '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸',
+    '⁹', '⋅', '⋅', '⋅', '⋅', '⋅', '⋅', '⋅'
+)
+
 def vis(b):
     ' Return "visible" version of character code `b`. '
-    if b <  0x20:       return '⋅'      # control char: dot operator
-    if b <  0x7F:       return chr(b)   # printable ASCII: the char itself
+    if b  < 0x20:       return CONTROL_VIS[b]
+    if b  < 0x7F:       return chr(b)   # printable ASCII: the char itself
     pass;               return '▥'      # token: cross-hatched box
 
 def printbasline(i_addr, bf):

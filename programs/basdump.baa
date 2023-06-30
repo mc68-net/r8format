@@ -10,4 +10,8 @@
 120 DATA 0,11,222,3333
 130 DATA 4444,55555
 140 DATA 0,11,222,3333,4444,55555,666666,7777777,88888888,999999999,ten ten ten,eleven eleven,twelve twelve twelve,thirteen thirteen thirteen thirteen thirteen thirteen
+200 ' Control chars. We avoid $01 encoding escape and various others that BASIC deals badly with.
+250 DATA "X	X"
+260 DATA "XX"
+270 DATA "XX"
 65000 END
