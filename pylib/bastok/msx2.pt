@@ -303,6 +303,7 @@ def test_data(t, s):
     (b'\x91"\x91":\x91"\x91',       'PRINT"\uF091":PRINT"\uF091'),
     (b'\x8F\x91',                   'REM\uF091'),
     (b':\x8F\xE6\x91',              "'\uF091"),
+    (b':\x8F',                      ':REM'),        # used to trigger a bug
     #   DATA
     (b'\x84\x84,"\x84"\x84:\x84',   'DATA\uF084,"\uF084"\uF084:DATA'),
     #   Multi-byte tokens
@@ -329,11 +330,12 @@ def test_detokenize_bad(t, err):
 
 
 @pytest.mark.parametrize('ln, toks, compact, expanded', [
-    (    0, b'\x91""',      '0 PRINT""',        '    0 PRINT ""'),
-    (60000, b'\x8F',        '60000 REM',        '60000 REM'),
-   #(   10, b'\x91:\x8F',   '10 PRINT:REM',     '   10 PRINT\n    : REM'),
-    ( None, b'\x91:\x91',   'PRINT:PRINT',      'PRINT\n    : PRINT'),
+    (    0, b'\x91""',      '0 PRINT""',            '    0 PRINT ""'),
+    (60000, b'\x8F',        '60000 REM',            '60000 REM'),
 
+    (   10, b'\x91:\x8FARKABLE',
+            '10 PRINT:REMARKABLE',
+            '   10 PRINT\n    : REMARKABLE'),
     ( None, b'\x84a,b,   c,"d", "e",   "f"',
             'DATAa,b,   c,"d", "e",   "f"',
             'DATA a, b,   c, "d", "e",   "f"'),

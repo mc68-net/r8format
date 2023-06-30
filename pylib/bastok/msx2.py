@@ -434,6 +434,8 @@ class Detokenizer:
             elif b == T_REM:
                 asc(b, 'REM')
                 self.remcontents()
+                #   No expandsp() here because we support tricks like
+                #   `10 REMARKABLE PROGRAM`
             elif self.token():
                 pass
             else:
@@ -506,9 +508,18 @@ class Detokenizer:
             self.byte()
             self.expandsp(); self.genasc('ELSE'); self.expandsp()
         elif self.peek() == T_QREM1:
-            #   Single-quote alternative form of REM
-            self.byte(); self.byte(T_QREM2)
-            self.genasc("'")
+            #   May be single-quote alternative to REM
+            self.byte();    # regular REM token
+            if self.peek() == T_QREM2:
+                self.byte(T_QREM2)
+                self.genasc("'")
+            else:
+                self.expandnl()
+                self.genasc(':')
+                self.expandsp()
+                self.genasc('REM')
+                #   No expandsp() here because we support tricks like
+                #   `10 REMARKABLE PROGRAM`
             self.remcontents()
         else:
             #   It's just a colon.
