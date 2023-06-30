@@ -10,7 +10,7 @@ import  sys
 
 from    bastok.tlines import TLines
 from    bastok.msx2 import Detokenizer
-from    bastok.msxchars import CHARMAP
+from    bastok.charset.msx import CHARMAP
 
 def die(exitcode, *msglines):
     for l in msglines:

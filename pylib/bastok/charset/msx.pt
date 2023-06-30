@@ -1,5 +1,5 @@
-from    bastok.msxchars  import *
-from    bastok.msxchars  import C00, C7F, C90, CA0, CFE
+from    bastok.charset.msx  import *
+from    bastok.charset.msx  import C00, C7F, C90, CA0, CFE
 import  pytest
 
 def test_blanks():
