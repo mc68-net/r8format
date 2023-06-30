@@ -43,7 +43,7 @@ def vprint(bs):
 
 def vis(b):
     ' Return "visible" version of character code `b`. '
-    if b <= 0x20:       return '⋅'      # control char: dot operator
+    if b <  0x20:       return '⋅'      # control char: dot operator
     if b <  0x7F:       return chr(b)   # printable ASCII: the char itself
     pass;               return '▥'      # token: cross-hatched box
 
