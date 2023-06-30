@@ -1,0 +1,13 @@
+1 'SAVE"basdump.bas"
+10 ' bin/basdump test code
+20 'This contains a mixture
+30 'of long and short lines
+40 'so that we can easily see
+50 'the effect on basdump's
+60 'output formatting.
+100 REM
+110 PRINT
+120 DATA 0,11,222,3333
+130 DATA 4444,55555
+140 DATA 0,11,222,3333,4444,55555,666666,7777777,88888888,999999999,ten ten ten,eleven eleven,twelve twelve twelve,thirteen thirteen thirteen thirteen thirteen thirteen
+65000 END

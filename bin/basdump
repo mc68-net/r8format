@@ -13,6 +13,7 @@ BASEDIR = dirname(dirname(abspath(__file__)))
 if __name__ == '__main__': addsitedir(join(BASEDIR, 'pylib'))
 
 from    argparse  import ArgumentParser
+from    itertools  import islice
 from    struct  import unpack
 import  sys
 
@@ -29,7 +30,7 @@ def sprint(n):
 
 def aprint(i_addr):
     ' Print address prefix for line. '
-    print('  {:04X}:'.format(i_addr), end='')
+    print('{:04X}:'.format(i_addr), end='')
 
 def hprint(bs):
     ' Print hexdump bytes, each prefixed by a space. '
@@ -46,54 +47,45 @@ def vis(b):
     if b <  0x7F:       return chr(b)   # printable ASCII: the char itself
     pass;               return '▥'      # token: cross-hatched box
 
-def print_hex_firstline(i_lineno, data):
-    ' Print the remainder of the first line after the addr and lineno. '
-    hprint(data); sprint(3 * (12 - len(data)))                  # hex
-    print('  {:5d} '.format(i_lineno), end=''); vprint(data)    # ASCII
-    print()                                                     # EOL
-
-def print_hex_contline(addr, data):
-    ' Print continuation lines after the first one. '
-    if ARGS.address:    aprint(addr)
-    else:               eprint('      :')
-    eprint('            ')
-    #   hex
-    hprint(data); sprint(3 * (12 - len(data)))                  # hex
-    eprint('        '); vprint(data)                            # ASCII
-    print()                                                     # EOL
-
 def printbasline(i_addr, bf):
     nextaddr = bf.read(2)
     i_nextaddr = unpack('<H', nextaddr)[0]
     if i_nextaddr == 0:
-        if ARGS.address:    aprint(i_addr)
-        else:               eprint('___END:')
+        aprint(i_addr)
         hprint(nextaddr)
         return None
 
     lineno = bf.read(2)
     i_lineno = unpack('<H', lineno)[0]
-    if ARGS.address:    aprint(i_addr)
-    else:               eprint('L{:05d}:'.format(i_lineno))
+    aprint(i_addr)
+    sprint(36)
     hprint(nextaddr)
     hprint(lineno)
+    sprint(3)
+    fill = '─' * (10 - len(str(i_lineno)))
+    print('─── {}: {}'.format(i_lineno, fill))
 
     linelen = i_nextaddr - i_addr
     line = bf.read(linelen - 4)      # include trailing $00
 
-    i_curpos = i_addr
-    print_hex_firstline(i_lineno, line[:12])
-    line = line[12:]; i_curpos += 12
-    while len(line) > 0:
-        print_hex_contline(i_curpos, line[:12])
-        line = line[12:]; i_curpos += 12
+    n = 16
+    chunks = [line[i:i + n] for i in range(0, len(line), n)]
+
+    i_curpos = i_addr + 4
+    for chunk in chunks:
+        aprint(i_curpos)
+        hprint(chunk)
+        sprint(3 * (n - len(chunk)))
+        sprint(3)
+        vprint(chunk)
+        print()
+        i_curpos += n
 
     return i_addr + linelen
 
 def parseargs():
     p = ArgumentParser(description='MS-BASIC hexdump')
     arg = p.add_argument
-    arg('-a', '--address', action='store_true', help='print memory addresses')
     arg('input', help='input file (required); use `-` for stdin')
     return p.parse_args()
 
@@ -103,7 +95,7 @@ def main():
     bf = BASFile(f.read(), 'MSX')
     f.close()
 
-    eprint('HEADER:')
+    eprint('HEAD:')
     hprint(bf.header())
     print()
 
