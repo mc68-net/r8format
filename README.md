@@ -132,12 +132,9 @@ preference:
 Caveats and Todo Items
 ----------------------
 
-* The only charset currently implemented is `ja`, MSX2 Japanese. `int`
-  (International) has about 70 code points that do not yet have
-  corresponding Unicode characters assigned (see disabled tests in
-  `pylib/bastok/msxchars.pt` and the code in the `bastok.msxchars` module).
-  These should not be difficult to add for someone familiar with this
-  charset and its multilingual use.
+* The only charsets currently implemented are `ja` (MSX2 Japanese) and
+  `int` (MSX2 International/European). The others should not be hard
+  to implement for those willing to find the matching Unicode chars.
 
 * It might be reasonable to be able to decode native characters, especially
   control sequences, to a multi-character Unicode sequence, e.g., 0x00 to
