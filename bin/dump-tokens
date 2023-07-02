@@ -8,17 +8,13 @@ if __name__ == '__main__': addsitedir(join(BASEDIR, 'pylib'))
 from    argparse  import ArgumentParser
 import  sys
 
-from    bastok.tlines import TLines
-from    bastok.msx2 import Detokenizer
-from    bastok.msxchars import CHARMAP
-
 def die(exitcode, *msglines):
     for l in msglines:
         print(l, file=sys.stderr)
     exit(exitcode)
 
 def parseargs():
-    p = ArgumentParser(description='MSX-BASIC detokenizer')
+    p = ArgumentParser(description='Search MS-BASIC ROM image for tokens')
     arg = p.add_argument
 
     arg('-s', '--start', type=int, default=0x34c1,
@@ -37,7 +33,7 @@ def main(args):
     bs = f.read()
 
     alptab_addr = args.start
-    print('alptab at 0x{:04X}'.format(alptab_addr))
+    print(' '*44 + '# ALPTAB at 0x{:04X}'.format(alptab_addr))
     a = alptab_addr
     kt = dict()
     # FIXME: we know the ATAB will be at the end of this table
@@ -47,7 +43,7 @@ def main(args):
     for i in range(0,26):
         prefix = chr(ord('A') + i)
         tab = 0x100 * bs[a+1] + bs[a]
-        print("table for '{}' at 0x{:04X}".format(prefix, tab))
+        print(' '*44  + "# addr=${:04X} '{}' table".format(tab, prefix))
         a += 2
         p = tab
         while True :
@@ -70,20 +66,10 @@ def main(args):
                 else:
                     token = bytes( (token,) )
                 p += 1
-                print("addr = {:04X}, keyword = {}, token = {}"
-                    .format(addr, repr(keyword), repr(token)))
+                tchars = ''.join(map(r'\x{:02X}'.format, token))
+                print("    (b'{:16} '{:15}),  # addr=${:04X}" \
+                    .format(tchars + "',", keyword + "',", addr))
                 kt[keyword] = token
-
-    by_token = sorted( [ (token, keyword) for (keyword, token) in kt.items() ] )
-    # print( '{}'.format(repr(by_token)))
-    for token, keyword in by_token:
-        t = '{},'.format(repr(token))
-        t = t[:4] + t[4:].upper().replace('X','x')
-        k = '{},'.format(repr(keyword))
-        print('    ({:15}{:16}),'.format(t,k))
-
-
-
 
 if __name__ == '__main__':
     main(parseargs())
