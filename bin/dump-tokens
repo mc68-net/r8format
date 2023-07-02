@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+
+from    os.path  import abspath, dirname, join
+from    site  import addsitedir
+BASEDIR = dirname(dirname(abspath(__file__)))
+if __name__ == '__main__': addsitedir(join(BASEDIR, 'pylib'))
+
+from    argparse  import ArgumentParser
+import  sys
+
+from    bastok.tlines import TLines
+from    bastok.msx2 import Detokenizer
+from    bastok.msxchars import CHARMAP
+
+def die(exitcode, *msglines):
+    for l in msglines:
+        print(l, file=sys.stderr)
+    exit(exitcode)
+
+def parseargs():
+    p = ArgumentParser(description='MSX-BASIC detokenizer')
+    arg = p.add_argument
+
+    arg('-s', '--start', type=int, default=0x34c1,
+            help='start of token table')
+    arg('input', help='input file (required); use `-` for stdin')
+
+    return p.parse_args()
+
+def main(args):
+
+    if args.input == '-':
+        f = sys.stdin.buffer
+    else:
+        f = open(args.input, 'rb')
+
+    bs = f.read()
+
+    alptab_addr = args.start
+    print('alptab at 0x{:04X}'.format(alptab_addr))
+    a = alptab_addr
+    kt = dict()
+    # FIXME: we know the ATAB will be at the end of this table
+    # and the table has 26 entries, so we can work our the mapped
+    # address of the table. We should calculate this and work out the file
+    # offsets based on this. Not all ROMS will be mapped to address 0x0000
+    for i in range(0,26):
+        prefix = chr(ord('A') + i)
+        tab = 0x100 * bs[a+1] + bs[a]
+        print("table for '{}' at 0x{:04X}".format(prefix, tab))
+        a += 2
+        p = tab
+        while True :
+            x = bs[p]
+            if x == 0x00:
+                p += 1
+                break
+            else:
+                keyword = prefix
+                addr = p
+                while x < 0x80:
+                    keyword += chr(x)
+                    p += 1
+                    x = bs[p]
+                keyword += chr(x & 0x7f)
+                p += 1
+                token = bs[p]
+                if token < 0x80:
+                    token = b'\xFF' + bytes( (0x80 + token,) )
+                else:
+                    token = bytes( (token,) )
+                p += 1
+                print("addr = {:04X}, keyword = {}, token = {}"
+                    .format(addr, repr(keyword), repr(token)))
+                kt[keyword] = token
+
+    by_token = sorted( [ (token, keyword) for (keyword, token) in kt.items() ] )
+    # print( '{}'.format(repr(by_token)))
+    for token, keyword in by_token:
+        t = '{},'.format(repr(token))
+        t = t[:4] + t[4:].upper().replace('X','x')
+        k = '{},'.format(repr(keyword))
+        print('    ({:15}{:16}),'.format(t,k))
+
+
+
+
+if __name__ == '__main__':
+    main(parseargs())
