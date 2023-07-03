@@ -123,7 +123,7 @@ class TLines:
         ''' Write the current tokenized text to `stream`,
             preceeded by a 0xFF file type byte.
         '''
-        stream.write(b'\xFF')       # type byte
+        # stream.write(b'\xFF')       # type byte # FIXME: PC-8001 hack
         stream.write(self.text())
 
     def __repr__(self):

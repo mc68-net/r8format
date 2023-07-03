@@ -1,4 +1,5 @@
 from    struct  import unpack
+import  bastok.pc8001           # FIXME: hack
 
 #   Token values mostly from MSX2 Technical Handbook, table 2.20.
 #   https://github.com/Konamiman/MSX2-Technical-Handbook/blob/master/md/Chapter2.md/#table-220--list-of-intermediate-codes
@@ -183,6 +184,8 @@ TOKENS = (
     #   anything like that.
     (b'\xFF\x85' b'ER' b'\xFF\x94', 'INTERVAL', ),
 )
+
+TOKENS=bastok.pc8001.TOKENS # FIXME: hack
 
 #   Tokens sorted by decending length, so that we can walk through this
 #   as a list of alternatives, ensuring that a word will match before

@@ -55,7 +55,7 @@ def main(args):
     else:
         with open(args.input, 'rb') as f:
             lines = stripeol(f.readlines())
-    tlines = tokenize(cmap, lines)
+    tlines = tokenize(cmap, lines, txttab=0x8021) # FIXME: N-BASIC TXTTAB
     tlines.write_to(args.output)
 
 if __name__ == '__main__':
