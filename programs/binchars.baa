@@ -3,4 +3,6 @@
 50 'The following characters use MSX 2-byte encoding.
 60 REM HAG
 70 PRINT "HAG"
+100 'Various encoding checks
+110 PRINT"&h1234=";&H1234
 

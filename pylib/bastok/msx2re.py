@@ -311,19 +311,17 @@ def string_literal(p, err=None):
         Return the consumed input string, including quotes.
     '''
     DQUOTE = '"'
-    s = ''
-    if p.peek() != DQUOTE:
+    if not p.string(DQUOTE):
         if err is None: return None
         raise p.ParseError('{}: {}'.format(err, repr(p.peek())))
-    p.consume(1); p.generate(b'"'); s += DQUOTE
+    p.generate(b'"')
     while True:
-        c = p.peek()
-        if c == None: return s
-        if c == DQUOTE:
-            p.consume(1)
+        if p.finished():
+            return True
+        if p.string(DQUOTE):
             p.generate(b'"')
-            return s + DQUOTE
-        s += char(p)
+            return True
+        char(p)
 
 def space(p, generate=True):
     ' Consume a single space, if present. '
@@ -351,6 +349,8 @@ def chars(p):
         char(p)
 
 def char(p):
+    #   XXX FIXME The parser knows the charset, but not which of the two
+    #             encodings to use!
     ''' Consume a Unicode character from the input, translate it to an
         native character using the `PState` `p`'s `charmap`, generate the
         native character to the output using MSX encoding, and return the
