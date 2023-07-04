@@ -65,27 +65,36 @@ def test_spaces_default():
     p = Parser('  x', ja_charmap)
     spaces(p); assert (b'  ', 'x') == (p.output(), p.remain())
 
-@pytest.mark.parametrize('s, b', [
-    ('""',          b'""'),
-    ('""x',         b'""'),
-    ('"',           b'"'),
-    ('"xyz',        b'"xyz'),
-    ('"Aaあ年".',   b'"Aa\x91\x01\x48"'),
-    ('"Aaあ年',     b'"Aa\x91\x01\x48'),
+@pytest.mark.parametrize('input, remain, generated', [
+    ('""',           '' ,   b'""'),
+    ('""x',         'x',    b'""'),
+    ('"',            '' ,   b'"'),
+    ('"xyz',         '' ,   b'"xyz'),
+    ('"Aaあ年".',   '.' ,   b'"Aa\x91\x01\x48"'),
+    ('"Aaあ年',      '' ,   b'"Aa\x91\x01\x48'),
 ])
-def test_string_literal_success(s, b):
-    p = Parser(s, ja_charmap)
-    string_literal(p)
-    p.commit()
-    assert b == p.output()
+def test_string_literal_success(input, remain, generated):
+    p = Parser(input, ja_charmap)
+    assert (             True,          generated, remain) \
+        == (string_literal(p), p.output_pending(), p.remain())
 
 def test_string_literal_error():
-    p = Parser('a'); assert None is string_literal(p)   # no errors
+    p = Parser('a')
+    assert (             None, 'a') \
+        == (string_literal(p), 'a')   # no error thrown, no parse, no consume
 
     p = Parser('a')
     with pytest.raises(p.ParseError) as ex:
         string_literal(p, 'Unexpected input')
     assert ex.match("Unexpected input: 'a'")
+
+def test_string_literal_bytes():
+    p = Parser(b'a', ja_charmap)
+    assert (None, b'a') == (string_literal(p), p.remain())
+
+    p = Parser(b'"abc"d', ja_charmap);
+    assert (             True,           b'"abc"',       b'd') \
+        == (string_literal(p), p.output_pending(), p.remain())
 
 @pytest.mark.parametrize('n, remain, s', [
     (0, '', '0'), (0, '', '000'),
