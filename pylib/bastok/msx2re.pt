@@ -135,11 +135,12 @@ def test_linenum_failure_size():
     ('&HffffG',             0xFFFF,  b'\x0C\xFF\xFF', 'G'   ),
     ('&O778',                 0o77,  b'\x0B\x3F\x00', '8'   ),
     ('&o177777',             65535,  b'\x0B\xFF\xFF', ''    ),
-   #('&b1012',               0b101,  b'????????????', '2'   ),
-   #('&b1111000011110000',  0xF0F0,  b'????????????', ''    )
+    ('&B1012',               0b101,  b'&B101',        '2'   ),
+    ('&b1111000011110000',  0xF0F0,  b'&B1111000011110000', '' ),
+    ('&b2',                      0,  b'&B',           '2'),
 ])
 def test_ampersand_literal(s, i, gen, remain):
-    p = Parser(s)
+    p = Parser(s, ja_charmap)
     assert (                   i,        gen,   remain) \
         == (ampersand_literal(p), p.output(), p.remain())
 

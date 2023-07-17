@@ -221,6 +221,21 @@ def ampersand_literal(p):
     else:
         return None
 
+    if base == 2:
+        #   Unlike the others, &B has no tokenised version; it's just ASCII.
+        p.generate(b'&B')
+        digits = ''
+        while True:
+            d = p.digit(2)
+            if d is None: break
+            digits += d
+            if isinstance(p.input, str):    # XXX
+                d = msx_encode(p, d)
+            p.generate(d)
+        p.commit()
+        if digits == '': digits = '0'
+        return int(digits, 2)
+
     digits = p.digits(base)
     if digits is None:
         #   A prefix not followed by a valid digit assumes a value of 0.
@@ -230,11 +245,7 @@ def ampersand_literal(p):
     #DEBUG('ampersand_literal:', base, digits, n, hex(n)) # XXX
     if n > 0xFFFF:
         p.error('Overflow')
-    if base != 2:
-        p.generate(pack('<H', n))
-    else:
-        #   XXX no tokenised version, do ASCII!
-        raise Exception('binary: write me!')
+    p.generate(pack('<H', n))
 
     p.commit()
     return n
