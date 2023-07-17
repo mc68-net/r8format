@@ -156,6 +156,11 @@ def test_ampersand_literal_overflow(s, msg):
         print(ampersand_literal(p))
     assert ex.match('Overflow at ' + msg)
 
+def test_ampersand_literal_bytes():
+    p = Parser(b'&b10&hf', ja_charmap)
+    assert (2, 15, b'&B10\x0C\x0F\x00') \
+        == (ampersand_literal(p), ampersand_literal(p), p.output())
+
 @pytest.mark.parametrize('s, d', [
     (              '',  None),
     #               consume, neg,    int,  frac,  type/exp
