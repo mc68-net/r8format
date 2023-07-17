@@ -239,7 +239,6 @@ def test_number(s, remain, n, tok):
 def test_number_bytes():
     p = Parser(b'-255%x', int_charmap)
     nn = number(p)
-    
     assert (  -255,     b'\xF2\x0F\xFF',       b'x') \
         == (    nn,  p.output_pending(), p.remain())
 
