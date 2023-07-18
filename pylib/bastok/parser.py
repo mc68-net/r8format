@@ -1,29 +1,8 @@
 ''' Parser Framework.
 
-    This consists of class `PState`, multable instances of which hold
-    parser state, and some generic parsing functions that operate on it.
-    Typically further special-purpose parsing functions will be added by
-    each particular parser.
-
-    Parsing functions always take a `PState` as the first parameter. They
-    may do (almost) any combination of the following:
-    - *Consume* input, updating `pos` if successful.
-    - *Generate* output, appending the output fragment to `PState.olist`.
-    - *Return* a value.
-    - *Fail*, consuming and generating nothing and returning an indication
-      of failure (but not throwing an exception).
-    - *Error*, consuming nothing and raising an exception.
-
-    Typical additional parameters that parsing functions may have are:
-    - Something to match. The parser will fail or error if the input at the
-      current position does not match this parameter.
-    - `genf`: A generator function that is passed the data about to be
-      consumed; its return value will be appended to `olist`. Nothing
-      is generated if ``genf=None``.
-    - `err`: Failure/error flag. When unable to successfully parse the
-      input `err=None` will return a failure and anything else will raise
-      an error with the that value in the error message/exception.
-
+    The `Parser` class contains parser and output generation state and
+    generic functions for operating on these. (More application-specific
+    functions are provded by the caller or subclasses.)
 '''
 
 import  re
@@ -33,25 +12,80 @@ class Parser:
     ''' A parser with mutable state consisting of:
 
         - An `input` sequence (never mutated) of application-dependent type
-          (usually `str` or `bytes`) that is *consumed* by the parser.
+          (usually `str` or `bytes`) that is _consumed_ by the parser.
           Individual items in this sequence are called _elements._ Note
           that the element data type is not necessarily the same as the
           sequence data type. (It is for `str`, but that's because Python
           is odd in having no character type.)
-        - The current parse position in the input, `pos`.
+        - Two current parse positions in the input: `pos_committed` and
+          `pos_pending` (see below for more details).
         - An optional `charset` for translating between Unicode and the
           `input` type when `input` is not a `str`. This should follow the
           `Charset` interface: `trans(n)` for native code point to `str`,
-          and `native(s)` for a single Unicode char to native.
-          XXX This should actually be a codec and deal with encoding
-          as well as code points?
-        - A `list` `olist` of fragments of parser-dependent type (usually
-          `bytes` or `str`) that when joined together are the output of the
-          parser. `gen()` appends to this list.
+          and `native(s)` for a single Unicode char to native. XXX This
+          should actually be a codec and deal with encoding as well as code
+          points?
+        - Two output lists, `olist_committed` and `olist_pending`. (See
+          below for more on committed vs. pending.) These contain list
+          fragements that when joined together are the output of the
+          parser. `generate()` adds new fragments to the ouptut list.
 
         Additional data that may be supplied are:
         - `tokens`, a sequence of ``(token_text, tokenized)`` pairs used
           by `token()`.
+
+        `Parser` use constant data that depends on the input sequence and
+        element types that can be expensive to initialise; the
+        `reset(input)` function is provided to allow re-using the `Parser`
+        instance for new input.
+
+        Methods (Functions)
+        -------------------
+
+        The public methods supplied by this class fall the following
+        categories. (Methods starting with ``_`` are not intended to be
+        part of the public API.)
+
+        1. Parser status and control. These do not depend on the types of
+           the input or output lists. `reset()`, `start()`, `commit()`,
+           `finished()`, `remain()`, `uncommitted()`.
+
+        2. Error handling and display. `ParseError`, `error()`,
+           `__str__()`.
+
+        3. Output generation. These are the only methods that generate
+           output. Note that a few parser status and control methods also
+           handle the output list, but have no dependency on the output
+           list type or output list element type. `generate()`, `output()`,
+           `output_pending()`.
+
+        4. Encoding-related methods, mainly used by parsing methods.
+           `encode_elem()`, `encode_seq()`.
+
+        5. Parsing methods. These are the only methods that attempt to
+           match and consume elements in the input. Any text to match
+           is always of `str` type; if the input type is not `str` the
+           Parser attempts to convert the `str` parameter(s) to the input
+           type.
+
+           If a parsing method fails to match, it generally returns `None`
+           and consumes nothing. (Some parsing methods may instead throw a
+           `ParseError`.)  Otherwise it returns a truthy value (usually a
+           sequence of the matching input elements) and updates the
+           _pending_ parse point. (These methods never call `start()` or
+           `commit()`.)
+
+           When elements of the input are returned, they are of the same
+           type as the input. For non-`str` inputs, you may need to pass
+           these return values to `str()` or do other appropriate processing
+           before before doing further work with them.
+
+           These methods include `peek()`, `consume(count)`, `string(s)`,
+           `string_in(strs)`, `re_compile()`, `re_match()`, `digit()`,
+           `digits()`, `token()`.
+
+        Committed and Pending Parse Points and Output Lists
+        ---------------------------------------------------
 
         The parser has two parse points and output lists: "committed" and
         "pending."
@@ -65,8 +99,8 @@ class Parser:
           - On failure leave the pending parse point unchanged and return
             `None`.
           - Note that parsing routines supplied in this class never
-            `start()` or `commit()`, as they're intended to be usable as
-            components within a larger sub-parser.
+            `start()` or `commit()`, as they're intended to be used as
+            components within a larger parser.
         - `commit()` sets the committed parse point to the pending parse
           point and appends all pending output to the committed output.
 
@@ -77,15 +111,6 @@ class Parser:
 
         XXX `start()`/`commit()` possibly should be re-entrant, using
         a stack of committed and pending parse points.
-
-        When elements of the input is returned, they are of the same type
-        as the input. For non-`str` inputs, you may need to pass these
-        return values to `str()` before doing further processing of them.
-
-        Parser use constant data that depends on the input sequence and
-        element types that can be expensive to initialise, so a
-        `reset(input)` function is provided to allow re-using the Parser
-        instance for new input.
     '''
 
     def __init__(self, input, charset=None, tokens=None):
@@ -101,6 +126,9 @@ class Parser:
         #   the methods that need them are not called.
         self.DIGITS     = dict()    # base → set of digits in that base
         self.toktab     = None      # sorted token table
+
+    ####################################################################
+    #   Parser status and control
 
     def reset(self, input=None):
         ''' Reset the parser to the initial state, possibly with new input.
@@ -128,14 +156,6 @@ class Parser:
         self.olist_committed    = []
         self.olist_pending      = []
 
-    def uncommitted(self):
-        ''' Return what remains after the _committed_ parse point.
-
-            This is normally used only for testing, error information or
-            other unusual situations.
-        '''
-        return self.input[self.pos_committed:]
-
     def start(self):
         ' Set pending parse point back to the committed parse point. '
         self.pos_pending = self.pos_committed
@@ -147,6 +167,27 @@ class Parser:
         self.pos_committed = self.pos_pending
         self.olist_committed.extend(self.olist_pending)
         self.olist_pending = []
+
+    def finished(self):
+        ''' Return `True` if the _pending_ parse point is at the end
+            of the input.
+        '''
+        return self.pos_pending >= len(self.input)
+
+    def remain(self):
+        ' Return what remains after the _pending_ parse point. '
+        return self.input[self.pos_pending:]
+
+    def uncommitted(self):
+        ''' Return what remains after the _committed_ parse point.
+
+            This is normally used only for testing, error information or
+            other unusual situations.
+        '''
+        return self.input[self.pos_committed:]
+
+    ####################################################################
+    #   Error handling and display
 
     class ParseError(ValueError): pass
 
@@ -164,7 +205,6 @@ class Parser:
 
     ####################################################################
     #   Generation Methods
-    #   _Only_ these methods generate output.
 
     def generate(self, x):
         ''' Append an output element to the pending output list.
@@ -201,7 +241,7 @@ class Parser:
 
 
     ####################################################################
-    #   Utility methods used by parsing methods.
+    #   Encoding-related methods
 
     def encode_elem(self, s):
         ''' Convert `str` `s`, which must be of length 1, to the input
@@ -250,20 +290,6 @@ class Parser:
 
     ####################################################################
     #   Parsing Methods
-    #
-    #   • Nothing here calls `start()` or `commit()`;
-    #     only the pending start point is used and updated.
-    #   • No output is generated unless the header comment says otherwise.
-
-    def finished(self):
-        ''' Return `True` if the _pending_ parse point is at the end
-            of the input.
-        '''
-        return self.pos_pending >= len(self.input)
-
-    def remain(self):
-        ' Return what remains after the _pending_ parse point. '
-        return self.input[self.pos_pending:]
 
     def peek(self):
         ''' Without consuming anything, return next input element at the
