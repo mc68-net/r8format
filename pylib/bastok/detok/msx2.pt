@@ -1,4 +1,4 @@
-from    bastok.msx2  import *
+from    bastok.detok.msx2  import *
 import  pytest
 
 class UTCharset:

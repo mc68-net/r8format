@@ -9,7 +9,7 @@ from    argparse  import ArgumentParser
 import  sys
 
 from    bastok.tlines import TLines
-from    bastok.msx2 import Detokenizer
+from    bastok.detok.msx2 import Detokenizer
 from    bastok.charset.msx import CHARMAP
 
 def die(exitcode, *msglines):
