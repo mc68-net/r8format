@@ -9,7 +9,7 @@ from    argparse  import ArgumentParser, FileType
 from    sys  import argv, stdin, stdout, stderr
 
 from    bastok.blines  import blines, stripeol
-from    bastok.msx2re  import tokenize
+from    bastok.retok.msx2  import tokenize
 from    bastok.charset.msx import CHARMAP
 
 ####################################################################

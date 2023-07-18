@@ -1,4 +1,4 @@
-from    bastok.msx2re  import *
+from    bastok.retok.msx2  import *
 from    bastok.charset.msx  import UTCharset, CHARMAP
 from    re  import escape
 from    struct  import pack
