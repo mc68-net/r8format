@@ -100,7 +100,6 @@ class Parser:
         #   works for Charsets that cannot do that conversion so long as
         #   the methods that need them are not called.
         self.DIGITS     = dict()    # base → set of digits in that base
-        self.DECDIGITS  = None
         self.toktab     = None      # sorted token table
 
     def reset(self, input=None):
