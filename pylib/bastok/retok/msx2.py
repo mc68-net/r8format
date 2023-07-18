@@ -188,16 +188,16 @@ def match_number(p):
 
     neg = -1 if m.group(1) else 0
     i = m.group(2); f = m.group(3);
-    if not isinstance(p.input, str):
+    if not p.strinput:
         i = ''.join(map(p.charset.trans, i))
     if (i == '') and (f is None):
         return None
-    if f is not None and not isinstance(p.input, str):
+    if f is not None and not p.strinput:
         f = ''.join(map(p.charset.trans, f))
     if f is not None: f = f[1:]
     #   XXX decode TE here if input is not str
     te = m.group(4)
-    if not isinstance(p.input, str) and te is not None:
+    if not p.strinput and te is not None:
         #   XXX is this correct? Should Parser be doing this translation back?
         te = ''.join(map(p.charset.trans, te))
     if (te is not None) and (te not in ('%', '!', '#')):
@@ -229,7 +229,7 @@ def ampersand_literal(p):
         if digits is None:
             n = 0
         else:
-            if isinstance(p.input, str):
+            if p.strinput:
                 p.generate(digits.encode('ASCII'))
             else:
                 p.generate(digits)
@@ -366,7 +366,7 @@ def char(p):
         - 0x7F: Cannot be encoded; raises `EncodingError`.
     '''
     c = i = p.consume(1)
-    if isinstance(p.input, str):
+    if p.strinput:
         i = msx_encode(p, c)
     p.generate(i)
     return c

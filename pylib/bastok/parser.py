@@ -16,7 +16,9 @@ class Parser:
           Individual items in this sequence are called _elements._ Note
           that the element data type is not necessarily the same as the
           sequence data type. (It is for `str`, but that's because Python
-          is odd in having no character type.)
+          is odd in having no character type.) The `strinput` instance
+          variable is `True` if the input sequence type is `str`,
+          indicating that Unicode input is being parsed.
         - Two current parse positions in the input: `pos_committed` and
           `pos_pending` (see below for more details).
         - An optional `charset` for translating between Unicode and the
@@ -47,8 +49,8 @@ class Parser:
         part of the public API.)
 
         1. Parser status and control. These do not depend on the types of
-           the input or output lists. `reset()`, `start()`, `commit()`,
-           `finished()`, `remain()`, `uncommitted()`.
+           the input or output lists. `reset()`, `strinput`, `start()`,
+           `commit()`, `finished()`, `remain()`, `uncommitted()`.
 
         2. Error handling and display. `ParseError`, `error()`,
            `__str__()`.
@@ -114,9 +116,10 @@ class Parser:
     '''
 
     def __init__(self, input, charset=None, tokens=None):
-        self.input    = input
-        self.charset  = charset
-        self.tokens   = tokens
+        self.input      = input
+        self._strinput  = None
+        self.charset    = charset
+        self.tokens     = tokens
         self.reset(input)
 
         #   Constants used by parsing routines. Any constants that rely
@@ -150,11 +153,25 @@ class Parser:
                 if not isinstance(input[0], elem_type):
                     err('element', type(input[0]), elem_type)
             self.input = input
+            self._strinput = isinstance(self.input, str)
 
         self.pos_committed      = 0
         self.pos_pending        = 0
         self.olist_committed    = []
         self.olist_pending      = []
+
+    @property
+    def strinput(self):
+        ''' `True` if the input sequence type is `str` (and thus the input
+            element type, too), indicating we're parsing Unicode input.
+            This indicates that parsing functions taking `str` will not
+            need to do conversion on them, and any that return values of
+            the input type will also return `str`.
+
+            `False` if the input sequence and element types are anything
+            other than `str`.
+        '''
+        return self._strinput
 
     def start(self):
         ' Set pending parse point back to the committed parse point. '
@@ -262,7 +279,7 @@ class Parser:
         if len(s) != 1:
             raise ValueError('encode_elem argument length {} != 1 for {}' \
                 .format(len(s), repr(s)))
-        if isinstance(self.input, str):
+        if self.strinput:
             return s
         elif self.charset is None:
             raise TypeError('Parser of input {} must have a charset' \
@@ -280,7 +297,7 @@ class Parser:
             class that take arguments giving text to match. See the header
             comment for `encode_all` for further information.
         '''
-        if isinstance(self.input, str):
+        if self.strinput:
             return s
         elif self.charset is None:
             raise TypeError('Parser of input {} must have a charset' \

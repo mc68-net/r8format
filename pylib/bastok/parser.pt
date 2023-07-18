@@ -22,6 +22,11 @@ def test_basedigits(base, digitchars):
 ####################################################################
 #   Minimal parser functionality on which other tests depend
 
+def test_strinput():
+    assert     Parser('').strinput
+    assert not Parser(b'').strinput
+    assert not Parser(None).strinput
+
 def test_encode_elem_str():
     p = Parser('')
     assert '1' == p.encode_elem('1')
