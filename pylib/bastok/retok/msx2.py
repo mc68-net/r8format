@@ -275,7 +275,7 @@ def linenum(p, gen=True, err=None):
     neg = False
     if p.string('-'): neg = True
 
-    ds = type(p.input)()
+    ds = p.inputtype()
     while True:
         d = p.digit()
         if d is None:

@@ -49,8 +49,8 @@ class Parser:
         part of the public API.)
 
         1. Parser status and control. These do not depend on the types of
-           the input or output lists. `reset()`, `strinput`, `start()`,
-           `commit()`, `finished()`, `remain()`, `uncommitted()`.
+           the input or output lists. `reset()`, `inputtype`, `strinput`,
+           `start()`, `commit()`, `finished()`, `remain()`, `uncommitted()`.
 
         2. Error handling and display. `ParseError`, `error()`,
            `__str__()`.
@@ -153,12 +153,18 @@ class Parser:
                 if not isinstance(input[0], elem_type):
                     err('element', type(input[0]), elem_type)
             self.input = input
+            self._inputtype = type(self.input)
             self._strinput = isinstance(self.input, str)
 
         self.pos_committed      = 0
         self.pos_pending        = 0
         self.olist_committed    = []
         self.olist_pending      = []
+
+    @property
+    def inputtype(self):
+        ' Return the type/constructor for the input type. '
+        return self._inputtype
 
     @property
     def strinput(self):
@@ -303,7 +309,7 @@ class Parser:
             raise TypeError('Parser of input {} must have a charset' \
                 .format(type(self.input)))
         else:
-            return type(self.input)(map(self.charset.native, s))
+            return self.inputtype(map(self.charset.native, s))
 
     ####################################################################
     #   Parsing Methods
@@ -385,7 +391,7 @@ class Parser:
             return self.consume(1)
 
     def digits(self, base=10):
-        ds = type(self.input)()
+        ds = self.inputtype()
         while True:
             d = self.digit(base)
             if d is not None:
