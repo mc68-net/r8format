@@ -263,7 +263,7 @@ def linenum(p, gen=True, err=None):
         If `err` is `None`, return `None` on failure, otherwise raise a
         `ParseError` with message 'expecting `err`' if the number was
         unparsable, or 'outside linenum range' if the number was parsed
-        but is < 0 or > 65529.
+        but is < 0 or > `TLines.MAXLIN_5`.
     '''
     def fail():
         if err is None: return None
@@ -275,25 +275,18 @@ def linenum(p, gen=True, err=None):
     neg = False
     if p.string('-'): neg = True
 
-    ds = p.inputtype()
-    while True:
-        d = p.digit()
-        if d is None:
-            break
-        else:
-            ds += d
+    ds = p.digits()
+    if ds is None:
+        if err is None: return None
+        p.error('expected ' + err)
 
     #DEBUG('ds:', type(ds), repr(ds))
     if not isinstance(ds, str):
         ds = ''.join(map(p.charset.trans, ds))
     #DEBUG('ds:', type(ds), repr(ds))
 
-    if ds == '':
-        if err is None: return None
-        p.error('expected ' + err)
-
     n = int(ds)
-    if n > 65529:   # XXX probably should not be hard-coded!
+    if n > TLines.MAXLIN_5:
         p.error('{} outside linenum range'.format(n))
     uint_16 = pack('<H', n)
     if gen:
