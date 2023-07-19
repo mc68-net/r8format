@@ -89,11 +89,20 @@ def number(p, gen=True, err=None):
     if d is None: return
     consume, neg, i, f, te = d
 
-    def genint(i):
-        ''' BASIC 16-bit int format is always non-negative 0-32767, with
-            a prefixed `NEGATIVE` token if negative. For convenience this
-            returns i, made negative if `neg`.
-        '''
+    #   MSX-BASIC numeric representations are always positive, so generate
+    #   a leading ``-`` token for negative numbers and the proceed with the
+    #   positive version.
+    if neg:
+        p.generate(NEGATIVE)
+
+    #   Int if forced with `%` (truncating any fractional portion) or we
+    #   have no type and no fractional portion.
+    if te == '%' or (f is None and te is None):
+        #   BASIC 16-bit int format is always non-negative 0-32767, with a
+        #   prefixed `NEGATIVE` token (above) if negative. For convenience
+        #   this returns i, made negative if `neg`.
+        #   Forcing int with % truncates any fractional part.
+        i = int(i)  # without base, works on bytes, too.
         if i > 32767:
             #   XXX Sadly, the number was consumed by match_number() so our
             #   parse pointer is wrong, and the 'after' part in the message
@@ -109,17 +118,6 @@ def number(p, gen=True, err=None):
         p.consume(consume)
         if neg: return -i
         else:   return i
-
-    #   MSX-BASIC numeric representations are always positive, so generate
-    #   a leading ``-`` token for negative numbers and the proceed with the
-    #   positive version.
-    if neg:
-        p.generate(NEGATIVE)
-
-    if te == '%':   #   Forcing int with % truncates any fractional part.
-        return genint(int(i))
-    if f is None and te is None:
-        return genint(int(i))
 
     p.error('XXX write me')
 
