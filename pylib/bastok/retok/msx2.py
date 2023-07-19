@@ -95,9 +95,9 @@ def number(p, gen=True, err=None):
     if neg:
         p.generate(NEGATIVE)
 
-    #   Int if forced with `%` (truncating any fractional portion) or we
-    #   have no type and no fractional portion.
-    if te == '%' or (f is None and te is None):
+    #   It's an int if forced with `%` (truncating any fractional portion)
+    #   or we have no type, no fractional portion and it's < 32768.
+    if te == '%' or (f is None and te is None and int(i) < 32768):
         #   BASIC 16-bit int format is always non-negative 0-32767, with a
         #   prefixed `NEGATIVE` token (above) if negative. For convenience
         #   this returns i, made negative if `neg`.
