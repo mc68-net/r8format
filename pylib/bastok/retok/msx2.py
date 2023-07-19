@@ -119,21 +119,24 @@ def number(p, gen=True, err=None):
         if neg: return -i
         else:   return i
 
-    p.error('XXX write me')
-
-    # print(i,f,e,t) # XXX
-    if i >= 32768 or e is not None or t in ['!', '#']:
-        if e is None: e = 0
-        if f is None: f = 0
-        #   XXX need D vs. E here for 1.2d3! → "\x1F…!"
-        #   XXX also remember: 1e0% → "\x1D…%"
-        return None
+    else:       # Otherwise we must use float representation.
+        DEBUG('number() float', neg, i, f, te)
+        if len(i) == 0:
+            i = b'0'
+        p.error('XXX write me')
+        # print(i,f,e,t) # XXX
+        if i >= 32768 or e is not None or t in ['!', '#']:
+            if e is None: e = 0
+            if f is None: f = 0
+            #   XXX need D vs. E here for 1.2d3! → "\x1F…!"
+            #   XXX also remember: 1e0% → "\x1D…%"
+            return None
 
 #   XXX This should also be documented in programs/*?
 ''' Numbers are parsed as follows:
     1. Optional leading `-` sign; always encodes as token $F2.
-    2. Integer portion, at least 1 digit required if no fractional
-       portion. (The regexp does not handle this latter requirement.)
+    2. Integer portion, at least 1 digit required if no fractional portion.
+       (The regexp does not handle this latter requirement.)
     3. Optional fractional portion: `.` followed by 0 or more digits.
     4. Optional type or exponent, but never both.
        - Type is one of ``[%!#]``. (`%` truncates fractional portion.)
