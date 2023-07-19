@@ -265,10 +265,6 @@ def linenum(p, gen=True, err=None):
         unparsable, or 'outside linenum range' if the number was parsed
         but is < 0 or > `TLines.MAXLIN_5`.
     '''
-    def fail():
-        if err is None: return None
-        p.error('expected ' + err)
-
     #DEBUG('linenum() on {}'.format(repr(p.remain()[0:10])))
     p.start()
 
@@ -287,6 +283,8 @@ def linenum(p, gen=True, err=None):
 
     n = int(ds)
     if n > TLines.MAXLIN_5:
+        #   We always raise an error here, even if not requested,
+        #   because we have a line number but it's not usable.
         p.error('{} outside linenum range'.format(n))
     uint_16 = pack('<H', n)
     if gen:
