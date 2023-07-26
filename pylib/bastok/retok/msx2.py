@@ -1,7 +1,7 @@
 from    bastok.tlines  import TLines
 from    bastok.parser  import Parser
 from    bastok.detok.msx2  import TOKENS, NEGATIVE
-from    itertools  import tee
+from    itertools  import dropwhile
 from    struct  import pack
 import  re
 
@@ -94,7 +94,7 @@ def number(p, gen=True, err=None):
     '''
     d = match_number(p)
     if d is None: return None
-    consume, neg, i, f, te = d
+    consume, neg, i, f, te = d      # `i`, `f` were converted to `str` for us
 
     #   MSX-BASIC numeric representations are always positive, so generate
     #   a leading ``-`` token for negative numbers and the proceed with the
@@ -106,10 +106,8 @@ def number(p, gen=True, err=None):
     #   or we have no type, no fractional portion and it's < 32768.
     if te == '%' or (f is None and te is None and int(i) < 32768):
         #   BASIC 16-bit int format is always non-negative 0-32767, with a
-        #   prefixed `NEGATIVE` token (above) if negative. For convenience
-        #   this returns i, made negative if `neg`.
-        #   Forcing int with % truncates any fractional part.
-        i = int(i)  # without base, works on bytes, too.
+        #   prefixed `NEGATIVE` token (above) if negative.
+        i = int(i)
         if i > 32767:
             p.error('int Overflow: {}'.format(i))
         if i < 10:
@@ -120,10 +118,17 @@ def number(p, gen=True, err=None):
             p.generate(pack('<BH', 0x1C, i))
 
     else:       # Otherwise we must use float representation.
-        DEBUG('number() float neg={} i={} f={} te={}'.format(neg, i, f, te))
+       #DEBUG('number() is float: neg={} i={} f={} te={}' \
+       #    .format(neg, repr(i), repr(f), te))
 
-        if f is None:   f = type(i)()
-        if te == '!' or len(i) <= 6:
+        i = i.lstrip('0')
+        if f is None:   f = ''
+        if len(i) > 0:
+            sigdigs = len(i) + len(f)
+        else:
+            sigdigs = len(f.lstrip('0'))
+
+        if te == '!' or sigdigs <= 6:
             #   We don't check for an `e`-type exponent because that does not
             #   force 4-byte float; it uses the length of the significand.
             significand_bytes = 3   # 4 bytes - 1 for exponent
@@ -133,18 +138,26 @@ def number(p, gen=True, err=None):
             p.generate(b'\x1F')
 
         #   XXX need to remove leading '0's from `i` and f to go negative!
+        i = ''.join(dropwhile(lambda d: d == '0', i))
         exponent = 0x40 + len(i)
+        if len(i) == 0:     # no digits in i; we need to make neg exponent
+            exponent -= len(f) - len(f.lstrip('0'))
+            f = f.lstrip('0')
         p.generate(bytes([exponent]))
 
         digits = iter(i + f)
-        for i in range(0, significand_bytes):
+        for last in [False] * (significand_bytes-1) + [True]:
             c1 = next(digits, '0')
             c2 = next(digits, '0')
             d1 = ord(c1) - ord('0')
             d2 = ord(c2) - ord('0')
+            #   XXX Should check next() again when `last` to see if we need
+            #   to round, which must be carried all the way back up to the.
+            #   first sig dig. But first have to decide if we do it correctly
+            #   or the Microsoft™ way: 0.99999999! → .1
             bcdpair = (d1 << 4) + d2
-            DEBUG('c1={} c2={} d1={} d2={} bcdpair=${:02X}' \
-                .format(repr(c1), repr(c2), d1, d2, bcdpair))
+           #DEBUG('c1={} c2={} d1={} d2={} bcdpair=${:02X}' \
+           #    .format(repr(c1), repr(c2), d1, d2, bcdpair))
             p.generate(bytes([bcdpair]))
 
     p.consume(consume)
@@ -171,6 +184,10 @@ def match_number(p):
         into a 5-tuple. Since parsing can still fail after this, nothing
         is consumed but the number of characters to consume on success
         is returned.
+
+        Note that this converted parsed elements to `str`, so the charset
+        must have a conversion between input element digits and Unicode
+        digits.
 
         This is parsed based on a match of `MATCH_DIGITS` above. Failure
         to match returns `None`. Otherwise a the 5-tuple is the following:

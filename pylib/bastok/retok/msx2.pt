@@ -246,8 +246,17 @@ def test_number_misc(s, remain, ok, tok):
     (             '0.05',   b'\x1D\x3F\x50\x00\x00'),
 
     #   proper counting of sig digs
-    (      '0.000000012',   b'\x1D\xFF\x12\x00\x00'),
-    (      '0.001234567',   b'\x1F\xFF\x12\x34\x56\x70\x00\x00\x00'),
+    (             '0.12',   b'\x1D\x40\x12\x00\x00'),
+    (     '0000000012.3',   b'\x1D\x42\x12\x30\x00'),
+    (      '0.000000012',   b'\x1D\x39\x12\x00\x00'),
+    (      '0.001234567',   b'\x1F\x3E\x12\x34\x56\x70\x00\x00\x00'),
+
+    #   proper rounding
+   #(        '12345678!',   b'\x1D\x48\x12\x34\x57'),
+   #(       '0.1999999!',   b'\x1D\x40\x20\x00\x00'),   # = .2
+   #(       '0.9999999!',   b'\x1D\x40\x20\x00\x00'),   # = .1 (MS)
+   #(       '0.9999999!',   b'\x1D\x41\x20\x00\x00'),   # = 1  (reality)
+
 #   ('-123456.789012e34',   b'\xF2\x1F6812345678901200'),
 
 #   (    '-3!',        b'\xF2\x1D................'),   # XXX leaves !
@@ -270,9 +279,9 @@ def test_number_bytes():
     assert ('OK',     b'\xF2\x0F\xFF',       b'x') \
         == (  ok,  p.output_pending(), p.remain())
 
-    p.reset(b'12345678!')
+    p.reset(b'87654321!')
     ok = number(p)
-    assert ('OK',  b'\x1D\x00\x12\x34\x56',        b'') \
+    assert ('OK',  b'\x1D\x48\x87\x65\x43',        b'') \
         == (  ok,       p.output_pending(), p.remain())
 
 @pytest.mark.parametrize('s', [ '32768%', '-32768%', '32768.1234%' ])
