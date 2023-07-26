@@ -156,9 +156,27 @@ def number(p, gen=True, err=None):
         #   If we have another unused digit, we round based on that.
         d3 = ord(next(digits, '0')) - ord('0')
         if d3 >= 5:
+            #DEBUG('befor round:', bcd_digits)
             #   But first have to decide if we do it correctly
             #   or the Microsoft™ way: 0.99999999! → .1
-            pass
+            for i in range(len(bcd_digits) -1, -1, -1):
+                d = bcd_digits[i]
+                #DEBUG('rounding digit {} from {}'.format(i, d))
+                bcd_digits[i] += 1
+                if bcd_digits[i] < 10: break
+                bcd_digits[i] = 0
+            if i == 0 and bcd_digits[i] == 0:
+                #   Rounding went all the way to the start. We need to
+                #   insert a 1 at the front and drop the last digit to keep
+                #   the same significand length.
+                bcd_digits = [1] + bcd_digits[0:-1]
+                #   XXX Here we should also increment the exponent by one,
+                #   to account for the significance of the new digit on the
+                #   front. But MS does not do this, and we choose to be
+                #   compatible with this bug because that makes testing
+                #   easier.
+                #exponent += 1   # And we already generated it anyway!
+            #DEBUG('after round:', bcd_digits)
 
         bcd_it = iter(bcd_digits)
         for d1, d2 in zip(bcd_it, bcd_it):
