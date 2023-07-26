@@ -120,9 +120,11 @@ def number(p, gen=True, err=None):
         else:   return i
 
     else:       # Otherwise we must use float representation.
-        DEBUG('number() float', neg, i, f, te)
+        DEBUG('number() float neg={} i={} f={} te={}'.format(neg, i, f, te))
         if len(i) == 0:
             i = b'0'
+
+
         p.error('XXX write me')
         # print(i,f,e,t) # XXX
         if i >= 32768 or e is not None or t in ['!', '#']:
