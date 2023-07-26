@@ -1,6 +1,7 @@
 from    bastok.tlines  import TLines
 from    bastok.parser  import Parser
 from    bastok.detok.msx2  import TOKENS, NEGATIVE
+from    itertools  import tee
 from    struct  import pack
 import  re
 
@@ -84,9 +85,15 @@ def number(p, gen=True, err=None):
         determined syntactically: the size of the number and presence of an
         exponent may change the type, sometimes even overriding the
         trailing type character.
+
+        This returns `None` on failure, unless something goes terribly
+        wrong in which case it raises a `ParseError`. On success it returns
+        the string 'OK', because it's not worth trying to parse the number
+        into Python format too when we don't need it and `True` is a bit
+        confusing to return because it's also the `int` 1.
     '''
     d = match_number(p)
-    if d is None: return
+    if d is None: return None
     consume, neg, i, f, te = d
 
     #   MSX-BASIC numeric representations are always positive, so generate
@@ -104,10 +111,6 @@ def number(p, gen=True, err=None):
         #   Forcing int with % truncates any fractional part.
         i = int(i)  # without base, works on bytes, too.
         if i > 32767:
-            #   XXX Sadly, the number was consumed by match_number() so our
-            #   parse pointer is wrong, and the 'after' part in the message
-            #   doesn't cover the whole int for reasons that need to be
-            #   investigated. Not clear how to fix this yet.
             p.error('int Overflow: {}'.format(i))
         if i < 10:
             p.generate(bytes([0x11 + i]))
@@ -115,24 +118,44 @@ def number(p, gen=True, err=None):
             p.generate(pack('<BB', 0x0F, i))
         else:
             p.generate(pack('<BH', 0x1C, i))
-        p.consume(consume)
-        if neg: return -i
-        else:   return i
 
     else:       # Otherwise we must use float representation.
         DEBUG('number() float neg={} i={} f={} te={}'.format(neg, i, f, te))
-        if len(i) == 0:
-            i = b'0'
 
+        if len(i) == 0:     i = b'0'
 
-        p.error('XXX write me')
-        # print(i,f,e,t) # XXX
-        if i >= 32768 or e is not None or t in ['!', '#']:
-            if e is None: e = 0
-            if f is None: f = 0
-            #   XXX need D vs. E here for 1.2d3! → "\x1F…!"
-            #   XXX also remember: 1e0% → "\x1D…%"
-            return None
+        if te == '!' or len(i) <= 6:
+            significand_bytes = 3   # 4 bytes - 1 for exponent
+            p.generate(b'\x1D')
+        else:
+            significand_bytes = 7   # 8 bytes - 1 for exponent
+            p.generate(b'\x1F')
+
+        #   XXX bogus exponent for the moment.
+        p.generate(b'\xEE')
+
+        digits = iter(i + f)
+        for i in range(0, significand_bytes):
+            c1 = next(digits, '0')
+            c2 = next(digits, '0')
+            d1 = ord(c1) - ord('0')
+            d2 = ord(c2) - ord('0')
+            bcdpair = (d1 << 4) + d2
+            DEBUG('c1={} c2={} d1={} d2={} bcdpair=${:02X}' \
+                .format(repr(c1), repr(c2), d1, d2, bcdpair))
+            p.generate(bytes([bcdpair]))
+
+    p.consume(consume)
+    return 'OK'
+
+       #p.error('XXX write me')
+       ## print(i,f,e,t) # XXX
+       #if i >= 32768 or e is not None or t in ['!', '#']:
+       #    if e is None: e = 0
+       #    if f is None: f = 0
+       #    #   XXX need D vs. E here for 1.2d3! → "\x1F…!"
+       #    #   XXX also remember: 1e0% → "\x1D…%"
+       #    return None
 
 #   XXX This should also be documented in programs/*?
 ''' Numbers are parsed as follows:
