@@ -122,17 +122,19 @@ def number(p, gen=True, err=None):
     else:       # Otherwise we must use float representation.
         DEBUG('number() float neg={} i={} f={} te={}'.format(neg, i, f, te))
 
-        if len(i) == 0:     i = b'0'
-
+        if f is None:   f = type(i)()
         if te == '!' or len(i) <= 6:
+            #   We don't check for an `e`-type exponent because that does not
+            #   force 4-byte float; it uses the length of the significand.
             significand_bytes = 3   # 4 bytes - 1 for exponent
             p.generate(b'\x1D')
         else:
             significand_bytes = 7   # 8 bytes - 1 for exponent
             p.generate(b'\x1F')
 
-        #   XXX bogus exponent for the moment.
-        p.generate(b'\xEE')
+        #   XXX need to remove leading '0's from `i` and f to go negative!
+        exponent = 0x40 + len(i)
+        p.generate(bytes([exponent]))
 
         digits = iter(i + f)
         for i in range(0, significand_bytes):
@@ -147,15 +149,6 @@ def number(p, gen=True, err=None):
 
     p.consume(consume)
     return 'OK'
-
-       #p.error('XXX write me')
-       ## print(i,f,e,t) # XXX
-       #if i >= 32768 or e is not None or t in ['!', '#']:
-       #    if e is None: e = 0
-       #    if f is None: f = 0
-       #    #   XXX need D vs. E here for 1.2d3! → "\x1F…!"
-       #    #   XXX also remember: 1e0% → "\x1D…%"
-       #    return None
 
 #   XXX This should also be documented in programs/*?
 ''' Numbers are parsed as follows:
