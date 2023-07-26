@@ -204,56 +204,65 @@ def test_match_digits_exp_and_type():
     assert (len(s)-1, -1, '123', '456',  -78) == match_number(p)
 
 @pytest.mark.parametrize('s, remain, ok, tok', [
-    #  input,  remaining unparsed, value returned,              tokenised data
-
-    #   Definitely not numbers
-    (                'a',  'a',  None,                            None),
-    (                '',    '',  None,                            None),
-
-    #   1-digit ints
-    (                '0',   '',  'OK',                         b'\x11'),
-    (                '9',   '',  'OK',                         b'\x1A'),
-    (               '-3',   '',  'OK',                     b'\xF2\x14'),
-    (              '-8%',   '',  'OK',                     b'\xF2\x19'),
-    (            '-8.9%',   '',  'OK',                     b'\xF2\x19'),
-    (               '0x',  'x',  'OK',                         b'\x11'),
-
-    #   1-byte ints
-    (               '10',   '',  'OK',                     b'\x0F\x0A'),
-    (              '99%',   '',  'OK',                     b'\x0F\x63'),
-    (             '-255',   '',  'OK',                 b'\xF2\x0F\xFF'),
-
-    #   2-byte ints
-    (              '256',   '',  'OK',                 b'\x1C\x00\x01'),
-    (            '32767',   '',  'OK',                 b'\x1C\xFF\x7F'),
-    (           '-32767',   '',  'OK',             b'\xF2\x1C\xFF\x7F'),
-    (          '-32767%',   '',  'OK',             b'\xF2\x1C\xFF\x7F'),
-    (      '-32767.999%',   '',  'OK',             b'\xF2\x1C\xFF\x7F'),
-
-    #   explicit float
-    (              '-3!',   '',  'OK',     b'\xF2\x1D\x41\x30\x00\x00'),
-
-    #   implict float
-    (            '32768',   '',  'OK',         b'\x1D\x45\x32\x76\x80'),
-    (           '-32768',   '',  'OK',     b'\xF2\x1D\x45\x32\x76\x80'),
-    (            '12.34',   '',  'OK',         b'\x1D\x42\x12\x34\x00'),
-    (             '0.05',   '',  'OK',         b'\x1D\x3F\x50\x00\x00'),
-#   ('-123456.789012e34',   '', -123456.789012e34, b'\xF2\x1F6812345678901200'),
-
-#   (    '-3!',       -3.0, b'\xF2\x1D................'),   # XXX leaves !
-#   (    '-3#',       -3.0, b'\xF2\x1F................'),   # XXX leaves #
-#   (    '3.1',        3.1,     b'\x1F................'),
-
-#   (   '5e0',         5.0,                b'XXX'),
-#   (    '6e',         6.0,                b'XXX'),
-
-#   #   XXX need to push back trailing % here?
-#   (  '1e2%',       100.0,                b'XXX'),
+    # input,  remaining unparsed, value returned,              tokenised data
+    (  'a',  'a',  None,  None),        # letter is not a number
+    (   '',   '',  None,  None),        # EOF is not a number
+    ( '0x',  'x',  'OK',  b'\x11'),     # leaves stuff after number unparsed
 ])
-def test_number(s, remain, ok, tok):
+def test_number_misc(s, remain, ok, tok):
     p = Parser(s)
     assert (number(p),                 tok,     remain) \
         == (       ok,  p.output_pending(), p.remain())
+
+@pytest.mark.parametrize('s, tok', [
+    #  input,  remaining unparsed, value returned,              tokenised data
+
+    #   1-digit ints
+    (                '0',   b'\x11'),
+    (                '9',   b'\x1A'),
+    (               '-3',   b'\xF2\x14'),
+    (              '-8%',   b'\xF2\x19'),
+    (            '-8.9%',   b'\xF2\x19'),
+
+    #   1-byte ints
+    (               '10',   b'\x0F\x0A'),
+    (              '99%',   b'\x0F\x63'),
+    (             '-255',   b'\xF2\x0F\xFF'),
+
+    #   2-byte ints
+    (              '256',   b'\x1C\x00\x01'),
+    (            '32767',   b'\x1C\xFF\x7F'),
+    (           '-32767',   b'\xF2\x1C\xFF\x7F'),
+    (          '-32767%',   b'\xF2\x1C\xFF\x7F'),
+    (      '-32767.999%',   b'\xF2\x1C\xFF\x7F'),
+
+    #   explicit float
+    (              '-3!',   b'\xF2\x1D\x41\x30\x00\x00'),
+
+    #   implict float
+    (            '32768',   b'\x1D\x45\x32\x76\x80'),
+    (           '-32768',   b'\xF2\x1D\x45\x32\x76\x80'),
+    (            '12.34',   b'\x1D\x42\x12\x34\x00'),
+    (             '0.05',   b'\x1D\x3F\x50\x00\x00'),
+
+    #   proper counting of sig digs
+    (      '0.000000012',   b'\x1D\xFF\x12\x00\x00'),
+    (      '0.001234567',   b'\x1F\xFF\x12\x34\x56\x70\x00\x00\x00'),
+#   ('-123456.789012e34',   b'\xF2\x1F6812345678901200'),
+
+#   (    '-3!',        b'\xF2\x1D................'),   # XXX leaves !
+#   (    '-3#',        b'\xF2\x1F................'),   # XXX leaves #
+#   (    '3.1',            b'\x1F................'),
+
+#   (   '5e0',         b'XXX'),
+#   (    '6e',         b'XXX'),
+
+#   #   XXX need to push back trailing % here?
+#   (  '1e2%',       b'XXX'),
+])
+def test_number(s, tok):
+    p = Parser(s)
+    assert (number(p), tok) == ('OK',  p.output_pending())
 
 def test_number_bytes():
     p = Parser(b'-255%x', int_charmap)
