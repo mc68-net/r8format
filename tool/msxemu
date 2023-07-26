@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+set -eu -o pipefail
+
+default_machine_msx1=National_CF-3300
+default_machine_msx2=Sony_HB-F1XD
+
+####################################################################
+
+die() { local code="$1"; shift; echo 1>&2 "$@"; exit $code; }
+
+set_winpty() {
+    #   On MINGW Bash in Windows we must run programs that use Windows
+    #   console I/O with `winpty` or we get no stdin/stdout/stderr (and
+    #   the program may appear to hang if it tries to read input).
+    #
+    #   Note that `winpty` is harmless when used to run a binary using
+    #   POSIX console I/O, but it will NOT work on a Bash script that
+    #   execs a Windows binary.
+    declare -g winpty=''
+    [[ "${MSYSTEM:-}" =~ (MSYS|MINGW).* ]] && winpty=winpty || true
+}
+
+set_openmsx() {
+    declare -g openmsx
+    for f in \
+        openmsx \
+        /usr/local/bin/openmsx \
+        /opt/[oO]pen[mM][sS][xX]/bin/openmsx \
+        "/c/Program Files/openMSX/openMSX.exe" \
+    ; do
+        openmsx="$f"
+        #   Note that we do NOT run under `winpty` here. On Unix, this works
+        #   normally, without stdout going to /dev/null. On Windows, `winpty`
+        #   produces a `stdout is not a tty` error when redirected, but without
+        #   `winpty` the `openmsx` output goes into the void anyway. So either
+        #    way, we get what we want, which is no error on successful run
+        #   and no output.
+        "$openmsx" --version >/dev/null 2>&1 && {
+            echo "Using $openmsx"
+            return 0
+        }
+    done
+    die 2 "Cannot find openmsx binary; openMSX installed?"
+}
+
+usage() {
+    local exitcode=0
+    [[ -n ${1-} ]] && {
+        echo 1>&2 "Unknown option: $1"; _
+        exitcode=64  # sysexit.h EX_USAGE
+    }
+    local nm="$(basename "$0")"
+    cat <<____
+Usage: $nm [-2|-1|-m MACHINE] [-f] [-d DISKA] [-s FILE] [-- OPTS]
+  -2            Emulate '$default_machine_msx2' (MSX2 w/FDD, default)
+  -1            Emulate '$default_machine_msx1' (MSX1 w/FDD)
+  -m MACHINE    Emulate MACHINE (must be a valid openMSX machine name)
+  -f            Add FM-PAC sound cartridge
+  -d DISKA      Path to dir or .dsk file for drive A: (default 'disk/')
+  -s FILE       Execute console commands from FILE after startup
+                (may be given multiple times)
+  -- OPTS       Pass OPTS on to openMSX. Must come after all other options.
+____
+    exit $exitcode
+}
+
+####################################################################
+
+basedir=$(cd "$(dirname "$0")/.." && pwd -P)
+set_winpty; set_openmsx
+
+machine="$default_machine_msx2"
+diska=; fmpac= scripts=();
+while [[ ${#@} -gt 0 ]]; do case "$1" in
+    -1)     shift; machine="$default_machine_msx1";;
+    -2)     shift; machine="$default_machine_msx2";;
+    -d)     shift; diska="$1"; shift;;
+    -f)     shift; fmpac='-ext fmpac';;
+    -h)     usage;;
+    -m)     shift; machine="$1"; shift;;
+    -s)     shift; scripts+=(-script "$1"); shift;;
+    --)     break;;
+    -*)     echo 1>&2 "Unknown option: $1"; usage;;
+    *)      break;;
+esac; done
+if [[ ${#@} -ne 0 ]]; then
+    [[ $1 == -- ]] || usage
+    shift;  # remaining $@ is now opts passed to openMSX
+fi
+[[ -n $diska ]]     || { diska="$basedir/programs/"; mkdir -p "$diska"; }
+[[ -r "$diska" ]]   || die 1 "Cannot read $diska"
+
+#   Notes:
+#   • Newer versions of openMSX might not need $winpty, but older ones do.
+#   • We put `-diska` _after_ any options to be passed directly to openMSX so
+#     so that the user can set up any `-ext` drives necessary to use the disk
+#     he wants to insert.
+#   • We must not run this in the background because on Windows that suppresses
+#     error messages.
+exec $winpty "$openmsx" \
+    -machine "$machine" $fmpac "$@" -diska "$diska" "${scripts[@]}"

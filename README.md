@@ -20,6 +20,7 @@ sets, but they may also be useful for people developing software in BASIC.
   unit tests. Any parameters passed to this will be passed on to `pytest`.
 - `pylib/bastok/`: A Python module containing the (de-)tokenization tools.
 - `programs/`: Test programs, both tokenised and ASCII.
+- `tool/`: Development tools.
 
 
 Character Sets
