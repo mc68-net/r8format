@@ -146,18 +146,23 @@ def number(p, gen=True, err=None):
         p.generate(bytes([exponent]))
 
         digits = iter(i + f)
-        for last in [False] * (significand_bytes-1) + [True]:
-            c1 = next(digits, '0')
-            c2 = next(digits, '0')
-            d1 = ord(c1) - ord('0')
-            d2 = ord(c2) - ord('0')
-            #   XXX Should check next() again when `last` to see if we need
-            #   to round, which must be carried all the way back up to the.
-            #   first sig dig. But first have to decide if we do it correctly
+        bcd_digits = []
+        for i in range(0, significand_bytes * 2):
+            c = next(digits, '0')
+            d = ord(c) - ord('0')
+            bcd_digits.append(d)
+            #DEBUG('c={} d={} bcd={}'.format(repr(c), d, bcd_digits))
+
+        #   If we have another unused digit, we round based on that.
+        d3 = ord(next(digits, '0')) - ord('0')
+        if d3 >= 5:
+            #   But first have to decide if we do it correctly
             #   or the Microsoft™ way: 0.99999999! → .1
+            pass
+
+        bcd_it = iter(bcd_digits)
+        for d1, d2 in zip(bcd_it, bcd_it):
             bcdpair = (d1 << 4) + d2
-           #DEBUG('c1={} c2={} d1={} d2={} bcdpair=${:02X}' \
-           #    .format(repr(c1), repr(c2), d1, d2, bcdpair))
             p.generate(bytes([bcdpair]))
 
     p.consume(consume)
