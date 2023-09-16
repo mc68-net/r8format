@@ -137,8 +137,6 @@ def number(p, gen=True, err=None):
             significand_bytes = 7   # 8 bytes - 1 for exponent
             p.generate(b'\x1F')
 
-        #   XXX need to remove leading '0's from `i` and f to go negative!
-        i = ''.join(dropwhile(lambda d: d == '0', i))
         exponent = 0x40 + len(i)
         if len(i) == 0:     # no digits in i; we need to make neg exponent
             exponent -= len(f) - len(f.lstrip('0'))
