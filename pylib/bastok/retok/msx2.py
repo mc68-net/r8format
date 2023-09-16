@@ -141,6 +141,8 @@ def number(p, gen=True, err=None):
         if len(i) == 0:     # no digits in i; we need to make neg exponent
             exponent -= len(f) - len(f.lstrip('0'))
             f = f.lstrip('0')
+        if isinstance(te, int):
+            exponent += te
         p.generate(bytes([exponent]))
 
         digits = iter(i + f)
@@ -197,7 +199,7 @@ def number(p, gen=True, err=None):
          equivalent: BASIC always uses single precision if the
          significand will fit, otherwise double precision with truncation.
 '''
-MATCH_DIGITS_S = r'(-)?(\d*)(\.\d*)?([%!#]|[dDeE]-?\d*)?'
+MATCH_DIGITS_S = r'(-)?(\d*)(\.\d*)?([%!#]|[dDeE][-+]?\d*)?'
 MATCH_DIGITS = None     # lazy initialisation
 
 def match_number(p):
