@@ -559,8 +559,17 @@ class Detokenizer:
             (MSX-BASIC does not allow a trailing type character after an
             exponent.)
 
-            XXX When tokenizing, it seems that MSX BASIC chooses single or
-            double precision based on the number of digits in the mantissa.
+            When encoding an nEm format, MS-BASIC chooses single or double
+            precision based on the number of sig digs in the significand:
+            if it's ≤6 single precision is used; otherwise double precision
+            is used. However, with nDm format, MS-BASIC always encodes as
+            double precision.
+
+            Unlike MS-BASIC, for an encoded double in exponent form we
+            always produce nDm, whereas MS-BASIC uses nEm for ≤6 sig digs
+            in the significand. We do this so that we properly round-trip
+            tokenised → ASCII → tokenised; MS-BASIC doesn't do this.
+            This also helps with readability for humans.
         '''
         bs = self.tline[self.p:self.p+blen]
         self.p += blen
@@ -570,8 +579,10 @@ class Detokenizer:
             raise TokenError('tokenized single prec may not be negative')
         if blen == 4:
             precchar = '!'
+            expchar  = 'E'
         elif blen == 8:
             precchar = '#'
+            expchar  = 'D'
         else:
             raise Exception('Internal error: len {} != 4 or 8'.format(bs))
 
@@ -601,8 +612,8 @@ class Detokenizer:
             #   for a "human-normalized" mantissa.
             fraction = mantissa[1:].rstrip('0')
             if fraction: fraction = '.' + fraction
-            self.genasc(
-                '{}{}E{:+d}'.format(mantissa[0], fraction, exponent-1))
+            self.genasc( '{}{}{}{:+d}'.format(
+                mantissa[0], fraction, expchar, exponent-1))
         elif exponent == -1:
             self.genasc('.0' + mantissa.rstrip('0') + precchar)
         elif exponent == 0:

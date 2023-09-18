@@ -181,6 +181,12 @@ def test_bcdstr(n, s):
     (b'\x3F\x10\x20\x30\x40\x50\x60\x78', '.010203040506078#'),
     (b'\x4A\x10\x20\x30\x40\x50\x60\x78', '1020304050.6078#'),
     (b'\x4E\x10\x20\x30\x40\x50\x60\x78', '10203040506078#'),
+    (b'\x6E\x10\x20\x30\x40\x50\x60\x78', '1.0203040506078D+45'),
+    (b'\x70\x10\x20\x34\x50\x00\x00\x00', '1.020345D+47'),
+    #   MS-BASIC decodes this as nEm instead of nDm when there are 6 sig digs
+    #   or less, even though a double is stored in the BASIC text. We use
+    #   nDm instead so that we can round-trip; see the code for details of why.
+    (b'\x70\x10\x20\x34\x00\x00\x00\x00', '1.02034D+47'),
 ])
 def test_real(b, s):
     dt = Detokenizer(UTCS, b)
