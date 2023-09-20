@@ -148,15 +148,15 @@ def test_bcdstr(n, s):
     #   E+14 form is used from exponent +14 upward and -3 downward
     #   Remember that printed form shifts decimal point 1 right and
     #   subtracts 1 from the exponent, compared to internal form where the
-    #   decimal point leads all the mantissa digits.
+    #   decimal point leads all the significand digits.
     (b'\x4F\x12\x34\x56',   '1.23456E+14'),
     (b'\x4F\x12\x00\x00',   '1.2E+14'),
     (b'\x4F\x70\x00\x00',   '7E+14'),
     (b'\x7F\x30\x00\x00',   '3E+62'),
     (b'\x3E\x12\x00\x00',   '1.2E-3'),
     (b'\x01\x45\x60\x00',   '4.56E-64'),
-    #   Internally denormalized mantissas are not normalized for output,
-    #   and any mantissa starting with two zeros wedges the machine on load.
+    #   Internally denormalized significands are not normalized for output,
+    #   and any significand starting with two zeros wedges the machine on load.
     (b'\x01\x02\x34\x56',   '0.23456E-64'),
     #   Exponent 0x00 seems to encode `0!`? Not sure if this is worth doing.
 
@@ -172,8 +172,8 @@ def test_bcdstr(n, s):
     (b'\x4E\x12\x34\x56',   '12345600000000!'),
 
     #   If the exponent byte is 0x00, the number is always 0, regardless
-    #   of the mantissa. (Zero normally seems to be tokenized as an exponent
-    #   and mantissa of all-zeros.)
+    #   of the significand. (Zero normally seems to be tokenized as an
+    #   exponent and significand of all-zeros.)
     (b'\x00\x00\x00\x00',   '0!'),
 
     #   Double precision works pretty much exactly the same as single.

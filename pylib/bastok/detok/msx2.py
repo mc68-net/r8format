@@ -552,7 +552,7 @@ class Detokenizer:
             of a positive constant, so this will raise an error if the sign
             bit in the constant itself is negative.
 
-            Following MSX-BASIC, we print just a mantissa with a trailing
+            Following MSX-BASIC, we print just a significand with a trailing
             ``!`` (single-precision) or ``#`` (double-precision) if the
             exponent is between -2 and +13 (as seen by the user), otherwise
             we print in exponent form without a trailing type character.
@@ -592,38 +592,38 @@ class Detokenizer:
             return
         if bs[0] == 0x00:
             #   This form causes the interpreter to wedge when loading the file.
-            raise TokenError('zero exponent with non-zero mantissa')
+            raise TokenError('zero exponent with non-zero significand')
 
         #     The exponent is biased by 0x40, so 0x40 is an exponent of 0
-        #   with the decimal point in front of all digits of the mantissa.
+        #   with the decimal point in front of all digits of the significand.
         #   In other words, exponent 0x40 is 0.nnnnnn × 10⁰.
-        #     But note that in printed form, mantissa is multiplied by ten,
+        #     But note that in printed form, significand is multiplied by ten,
         #   putting one digit before the decimal point, which requires
         #   reducing the exponent by 1.
         exponent = (bs[0] & 0x7F) - 0x40
-        mantissa = ''.join([self.bcdstr(b) for b in bs[1:]])
-        sigdigs = len(mantissa)
-       #print('exp', exponent, 'mantissa', mantissa, 'sigdigs', sigdigs) # XXX
+        significand = ''.join([self.bcdstr(b) for b in bs[1:]])
+        sigdigs = len(significand)
+       #print('exp', exponent, 'significand', significand, 'sigdigs', sigdigs)
 
         #   We must not use Python's floating point here because, being binary
         #   instead of BCD, it will occasionally round differently.
         if exponent > 14 or exponent <= -2:
             #   Exponent form with decimal point shifted one place to the right
-            #   for a "human-normalized" mantissa.
-            fraction = mantissa[1:].rstrip('0')
+            #   for a "human-normalized" significand.
+            fraction = significand[1:].rstrip('0')
             if fraction: fraction = '.' + fraction
             self.genasc( '{}{}{}{:+d}'.format(
-                mantissa[0], fraction, expchar, exponent-1))
+                significand[0], fraction, expchar, exponent-1))
         elif exponent == -1:
-            self.genasc('.0' + mantissa.rstrip('0') + precchar)
+            self.genasc('.0' + significand.rstrip('0') + precchar)
         elif exponent == 0:
-            self.genasc('.' + mantissa.rstrip('0') + precchar)
+            self.genasc('.' + significand.rstrip('0') + precchar)
         elif exponent <= sigdigs:
             #   We may have a decimal fractional part.
-            v = mantissa[0:exponent] + '.' + mantissa[exponent:]
+            v = significand[0:exponent] + '.' + significand[exponent:]
             self.genasc(v.rstrip('0').rstrip('.') + precchar)
         else:
-            self.genasc(str(int(mantissa) * 10**(exponent-6)) + precchar)
+            self.genasc(str(int(significand) * 10**(exponent-6)) + precchar)
 
     def char(self):
         ''' If we have a charset, consume a native-encoded char from the
