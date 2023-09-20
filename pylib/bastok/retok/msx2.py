@@ -94,7 +94,7 @@ def number(p, gen=True, err=None):
     '''
     d = match_number(p)
     if d is None: return None
-    consume, neg, i, f, te = d      # `i`, `f` were converted to `str` for us
+    consume, neg, i, f, typ, exp = d  # `i`, `f` were converted to `str` for us
 
     #   MSX-BASIC numeric representations are always positive, so generate
     #   a leading ``-`` token for negative numbers and the proceed with the
@@ -104,7 +104,7 @@ def number(p, gen=True, err=None):
 
     #   It's an int if forced with `%` (truncating any fractional portion)
     #   or we have no type, no fractional portion and it's < 32768.
-    if te == '%' or (f is None and te is None and int(i) < 32768):
+    if typ == '%' or (f is None and typ is None and int(i) < 32768):
         #   BASIC 16-bit int format is always non-negative 0-32767, with a
         #   prefixed `NEGATIVE` token (above) if negative.
         i = int(i)
@@ -118,8 +118,8 @@ def number(p, gen=True, err=None):
             p.generate(pack('<BH', 0x1C, i))
 
     else:       # Otherwise we must use float representation.
-       #DEBUG('number() is float: neg={} i={} f={} te={}' \
-       #    .format(neg, repr(i), repr(f), te))
+       #DEBUG('number() is float: neg={} i={} f={} typ={} exp={}' \
+       #    .format(neg, repr(i), repr(f), typ, exp))
 
         i = i.lstrip('0')
         if f is None:   f = ''
@@ -128,7 +128,7 @@ def number(p, gen=True, err=None):
         else:
             sigdigs = len(f.lstrip('0'))
 
-        if te == '!' or sigdigs <= 6:
+        if typ == '!' or (sigdigs <= 6 and typ != 'd'):
             #   We don't check for an `e`-type exponent because that does not
             #   force 4-byte float; it uses the length of the significand.
             significand_bytes = 3   # 4 bytes - 1 for exponent
@@ -141,8 +141,8 @@ def number(p, gen=True, err=None):
         if len(i) == 0:     # no digits in i; we need to make neg exponent
             exponent -= len(f) - len(f.lstrip('0'))
             f = f.lstrip('0')
-        if isinstance(te, int):
-            exponent += te
+        if exp is not None:
+            exponent += exp
         p.generate(bytes([exponent]))
 
         digits = iter(i + f)
@@ -204,7 +204,7 @@ MATCH_DIGITS = None     # lazy initialisation
 
 def match_number(p):
     ''' Parse basic syntax of number formats for all types of numbers
-        into a 5-tuple. Since parsing can still fail after this, nothing
+        into a 6-tuple. Since parsing can still fail after this, nothing
         is consumed but the number of characters to consume on success
         is returned.
 
@@ -227,11 +227,13 @@ def match_number(p):
            digits produces an empty `str` as a trailing `.` makes the number
            parse as a float.)
 
-        4. Type or exponent portion:
+        4. Type portion:
            - Not present: `None`
-           - Type: `str` of ``'%'``, ``'!'`` or ``'#'``.
-           - Exponent: `int` (positive or negative).
-             (This must be biased by the caller before tokenisation.)
+           - Type: `str` of ``'%'``, ``'!'``, ``'#'``, ``'e'``, ``'d'``.
+
+        5. Exponent: `None` if not present (no `d` or `e` in number)
+           or `int` (positive or negative) of the number read.
+           (This must be biased by the caller before tokenisation.)
     '''
 
     #   XXX get rid of p.re_compile() and have p.re_match() compile
@@ -257,12 +259,14 @@ def match_number(p):
     if not p.strinput and te is not None:
         #   XXX is this correct? Should Parser be doing this translation back?
         te = ''.join(map(p.charset.trans, te))
+    exp = None
     if (te is not None) and (te not in ('%', '!', '#')):
         if len(te) == 1: te += '0'  # D/E alone indicates exponent of 0
-        te = int(te[1:])
+        exp = int(te[1:])
+        te = te[0].lower()
     #print('neg:', repr(neg), 'i:', repr(i), 'f:', repr(f), 'te:', repr(te))
 
-    return (m.end(), neg, i, f, te)
+    return (m.end(), neg, i, f, te, exp)
 
 def ampersand_literal(p):
     ''' Read and consume ``&Hnnnn``, ``&Onnnn`` and ``&Bnnnn`` integer
