@@ -39,6 +39,8 @@ pytest -q -o testpaths=pylib/ "$@"
 ftdata=.build/programs/
 mkdir -p $ftdata/detok
 
+echo "====== bastok"
+
 qecho "------ basdump  basdump.bas"
 bin/basdump  programs/basdump.bas | diff - programs/basdump.dump
 
@@ -52,9 +54,12 @@ diff -u {$ftdata/detok,programs}/simple.ba1
 
 {
     f="binchars"
-    qecho "====== detok --binary $f.bas"
+    qecho "------ detok --binary $f.bas"
     bin/detok --binary programs/$f.bas >$ftdata/detok/$f.baa
     hexdiff {$ftdata/detok,programs}/$f.baa
 }
+
+echo "====== cmtconv"
+pylib/cmtconv/Test "$@"
 
 PASSED=true
