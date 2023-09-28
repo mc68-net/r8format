@@ -46,11 +46,17 @@ The programs under `bin/` include:
 
 #### cmtconv
 
-- `cmtconv`: Convert WAV files of cassette tape saves to `.cas` and other
-  data file formats, and vice versa.
+[`cmtconv`][cc] converts WAV files of cassette tape saves to `.cas` and
+other data file formats, and vice versa. It also understands higher-level
+formats such as BASIC and machine-language files. See
+[`doc/cmtconv.md`][cc] for full documentation.
+
+The programs under `bin/` include:
+- `cmtconv`: Conversion program. Use `-h` for help.
 
 #### Other Programs
 
+The programs under `bin/` include:
 - `msx-dasm`: Disassemble an MSX `BSAVE`-format program using `z80dasm`.
 
 
@@ -87,6 +93,7 @@ good places to get in touch, more or less in order of preference:
 
 <!-- Programs -->
 [bt]: ./doc/bastok.md
+[cc]: ./doc/cmtconv.md
 
 <!-- Support and Authors -->
 [0cjs]: https://github.com/0cjs
