@@ -53,6 +53,7 @@ formats such as BASIC and machine-language files. See
 
 The programs under `bin/` include:
 - `cmtconv`: Conversion program. Use `-h` for help.
+- `analyze-cmt`: Analysis of (usually unknown) CMT save formats in WAV files.
 
 #### Other Programs
 
