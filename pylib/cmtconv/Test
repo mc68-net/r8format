@@ -11,6 +11,7 @@
 #
 
 set -eu -o pipefail
+ulimit -v $((3*1024*1024))
 
 die() { echo 2>&1 FAILURE: "$@"; exit 1; }
 qecho() { [[ -n $quiet ]] && return; echo "$@"; }
