@@ -123,6 +123,13 @@ for bas in programs/[0-9][0-9]*.bas; do
 done
 
 {
+    f="expanded"
+    qecho "====== retok --squeeze $f.ba1"
+    bin/retok --squeeze programs/$f.ba1 >$ftdata/retok/$f.bas
+    hexdiff {$ftdata/retok,programs}/$f.bas
+}
+
+{
     f="binchars"
     qecho "------ detok --binary $f.bas"
     bin/detok --binary programs/$f.bas >$ftdata/detok/$f.baa

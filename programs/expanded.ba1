@@ -1,0 +1,19 @@
+5 GOTO 5000                 ‖ Setup
+   10 COLOR 0,0,0               ‖ black fg,bg,border
+    : SCREEN 5,,0
+    : SET PAGE  ,1 : CLS
+    : SET PAGE 1,0 : CLS
+    : AS=0
+
+‖ ──────────────────────────────
+
+  100 SET PAGE 0,0
+    : FOR PL = 0 TO 6
+    :   FOR I = 0 TO 1
+    :     FOR J = 0 TO 44 : NEXT
+    :     GOSUB 50
+    :   NEXT
+    : NEXT
+
+ 5020 IF A THEN 5030
+           ELSE 5060
