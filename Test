@@ -36,10 +36,12 @@ whexdiff() {
     echo "---   actual: $(tput setaf $acolor)$hactual$(tput sgr0)"
     #   Feeding a unified diff into wdiff gives us a bit of context
     #   in the output, which can be helpful.
+    echo XXX
     diff -U2 --label '' --label '' "$hexpected" "$hactual" \
         | wdiff -d \
             -w "$(tput setaf $ecolor)" -x "$(tput sgr0)" \
             -y "$(tput setaf $acolor)" -z "$(tput sgr0)"
+    echo YYY
 }
 
 ####################################################################
@@ -125,8 +127,8 @@ done
 {
     f="expanded"
     qecho "====== retok --squeeze $f.ba1"
-    bin/retok --squeeze programs/$f.ba1 >$ftdata/retok/$f.bas
-    hexdiff {$ftdata/retok,programs}/$f.bas
+    bin/retok --squeeze       programs/$f.ba1 >$ftdata/retok/$f.bas
+    whexdiff "$ftdata/retok"  programs/$f.bas  $ftdata/retok/$f.bas
 }
 
 {

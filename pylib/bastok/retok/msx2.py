@@ -9,7 +9,7 @@ def DEBUG(*args):
     from sys import stderr
     print('DEBUG:', *args, file=stderr)
 
-def tokenize(charmap, lines, txttab=0x8001):
+def tokenize(charmap, lines, txttab=0x8001, squeeze=False):
     ''' Tokenise a sequence of lines of BASIC code, returning them in
         a `TLines` object with a start address of `txttab`.
     '''
@@ -20,12 +20,12 @@ def tokenize(charmap, lines, txttab=0x8001):
     for l in lines:
         #   XXX check for duplicate line numbers and replace?
         parser.reset(l)
-        ln, tokens = tokline(parser)
+        ln, tokens = tokline(parser, squeeze=squeeze)
         tl.setline(ln, tokens)
     #DEBUG('tlines:', repr(tl))
     return tl
 
-def tokline(p):
+def tokline(p, squeeze=False):
     ''' Tokenize a line of BASIC in `Parser` `p`. Return an `(int, bytes)`
         tuple with the line number and tokenized line data or raise a
         `ParseError` if parsing fails.
@@ -54,9 +54,9 @@ def tokline(p):
             if t == 'DATA': chars(p)    # XXX no space compression yet!
             #   Tokens that take special arguments.
             if t == 'GOTO' or t == 'GOSUB':
-                spaces(p); linenum(p, err='line number after GOTO')
+                spaces(p, not squeeze); linenum(p, err='line number after GOTO')
             if t == 'THEN':
-                spaces(p); linenum(p)   # linenum or other tokens
+                spaces(p, not squeeze); linenum(p)   # linenum or other tokens
             #DEBUG('handled token={}'.format(t)) # XXX
             continue
         #DEBUG('not token')
