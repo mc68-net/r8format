@@ -41,6 +41,7 @@ def tokline(p, squeeze=False):
     #   iteration consumed and generated.
     while (p.commit() or True) and not p.finished():
         p.commit() # XXX
+        spaces(p, not squeeze)
         #DEBUG('loop: remain={}'.format(repr(p.remain())))
         #   Start by checking for a token, since any string matching a
         #   token takes priority over anything else.
