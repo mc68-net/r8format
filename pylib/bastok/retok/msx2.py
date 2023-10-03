@@ -56,7 +56,7 @@ def tokline(p, squeeze=False):
             #   Tokens that take special arguments.
             if t == 'GOTO' or t == 'GOSUB':
                 spaces(p, not squeeze); linenum(p, err='line number after GOTO')
-            if t == 'THEN':
+            if t == 'THEN' or t == 'ELSE':
                 spaces(p, not squeeze); linenum(p)   # linenum or other tokens
             #DEBUG('handled token={}'.format(t)) # XXX
             continue
