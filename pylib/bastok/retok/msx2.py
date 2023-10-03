@@ -69,6 +69,11 @@ def tokline(p, squeeze=False):
         #   This should _not_ be converted because it's not in a string,
         #   REM or DATA statement, and we simply don't know what it is.
         #   (The BASIC interpreter will deal with it if it's an error.)
+
+        #   XXX try to parse a variable name here first: letter followed
+        #   by [letter|number|'_'|???] (look it up in the manual, including
+        #   checking if var names can start with '_')
+
         b = p.consume(1); p.generate(bytes([ord(b)]))
 
     p.commit()
