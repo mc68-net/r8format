@@ -24,8 +24,8 @@ whexdiff() {
     cmp "$expected" "$actual" && return 0
     #   Create temporary files for the hexdumps because that makes it easier
     #   to use `meld` or similar graphical tools on them after a failure.
-    local hexpected="$builddir/$(basename "$expected").dump"
-    local hactual="$builddir/$(basename "$actual").dump"
+    local hexpected="$builddir/$(basename "$expected").exp.dump"
+    local hactual="$builddir/$(basename "$actual").act.dump"
     bin/basdump "$expected" > "$hexpected"
     bin/basdump "$actual" > "$hactual"
 
