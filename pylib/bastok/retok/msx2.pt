@@ -311,7 +311,7 @@ TLPARSER = Parser('', ja_charmap, TOKENS)
     ( 10, b'\x8F SAVE',             '10 REM SAVE'),
     ( 10, b':\x8F\xE6 SAVE',        "10 ' SAVE"),
     ( 20, b'\x91: \x8Fark=:=',      '20 PRINT: REMark=:='),
-    ( 30, b'A$\xEF"a"\xF1"\x91"',   '30 A$="a"+"あ"'),
+    ( 30, b'A2$\xEF"a"\xF1"\x91"',  '30 A2$="a"+"あ"'),
     #   $0E is prefix for a 16-bit little-endian int.
     ( 40, b'\x89\x20\x0E\x2E\x16',  '40 GOTO 5678'), # 5678=$162E
     #  41 24 ef 22 61 22 f1 22 91 22

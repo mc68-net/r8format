@@ -1,0 +1,4 @@
+    1 'SAVE"10ja-var.bas"
+   10 A0=13
+    : PRINT A0+1
+   20 SET PAGE1,0

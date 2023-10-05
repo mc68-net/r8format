@@ -65,15 +65,12 @@ def tokline(p, squeeze=False):
         if string_literal(p)    is not None: continue
         if ampersand_literal(p) is not None: continue
         if number(p)            is not None: continue
+        if variable(p)          is not None: continue
+
         #   Failing that, pass the next byte straight through.
         #   This should _not_ be converted because it's not in a string,
         #   REM or DATA statement, and we simply don't know what it is.
         #   (The BASIC interpreter will deal with it if it's an error.)
-
-        #   XXX try to parse a variable name here first: letter followed
-        #   by [letter|number|'_'|???] (look it up in the manual, including
-        #   checking if var names can start with '_')
-
         b = p.consume(1); p.generate(bytes([ord(b)]))
 
     p.commit()
@@ -82,7 +79,29 @@ def tokline(p, squeeze=False):
 class EncodingError(ValueError): pass
 
 def data(p):
+    #   XXX is this the parser that should do
+    #   space compression on DATA statements?
     p.error('XXX Write DATA parser!')
+
+MATCH_VARNAME_S = r'[A-Za-z][A-Za-z0-9]*'
+MATCH_VARNAME   = None      # lazy initialisation
+
+def variable(p):
+    ''' A variable name is a letter followed by any number of letters and
+        numbers.
+    '''
+    global MATCH_VARNAME
+    if MATCH_VARNAME is None:
+        MATCH_VARNAME = p.re_compile(MATCH_VARNAME_S)
+
+    v = p.re_match(MATCH_VARNAME_S)
+    if v is None: return None
+
+    va = v.group() # DEBUG('matched:', va)
+    p.generate(bytes(va.encode('ASCII')))
+    p.consume(v.end())
+    return va
+
 
 def number(p, gen=True, err=None):
     ''' Convert digits to an appropriate internal representation.
