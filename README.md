@@ -85,7 +85,7 @@ good places to get in touch, more or less in order of preference:
 ### Authors
 
 - Curt J. Sampson <cjs@cynic.net> (GitHub:[0cjs] Discord:`0cjs`)
-- [Stuart Croy][ <stuartcroy@mac.com> (GitHub:[croys])
+- Stuart Croy (GitHub:[croys])
 
 
 
