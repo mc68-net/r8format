@@ -7,4 +7,6 @@
 60   PRINT I, A$
 70 NEXT I
 80 DATA abc,金π♠,"gh,i",jkl
+90 A1=1:AB2=2:A34=3
+95 PRINTA1;AB2;A34
 99 END
