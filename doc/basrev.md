@@ -37,6 +37,16 @@ Routines:
 - `KRNSVC`/,`C44DE`: Save `:` to KBUF
 - `KRNSAV`/`C44E0`: Save char in A to KBUF, w/check for overflow (err code 25)
 
+DORES,DNUM handling:
+- J42D9: in string; ignore both (STRNG ignores values of both)
+- J42F3: both ← 0 whenver we encounter a `:` (not in string or rem)
+- J42F3: both ← 1 on DATA token
+
+TODO:
+- support for `?` → PRINT and `_` → CALL
+- list of all ~14 tokens with line number as operand
+- chars that need to be converted to upper case (beacuse outside of str/rem?)
+- consider that `TIME` variable is a tokenised keyword, not same as `TI`
 
 
 <!-------------------------------------------------------------------->
