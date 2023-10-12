@@ -38,13 +38,31 @@ Routines:
 - `KRNSAV`/`C44E0`: Save char in A to KBUF, w/check for overflow (err code 25)
 
 DORES,DNUM handling:
+- `CRUNCH`: both ← 0
+  - `J42F3`/`J4301`: on DATA token, both ← 1
 - J42D9: in string; ignore both (STRNG ignores values of both)
 - J42F3: both ← 0 whenver we encounter a `:` (not in string or rem)
-- J42F3: both ← 1 on DATA token
+- `TRYAGA`/`J4365` keyword matching loop: when matches keyword that is a
+  function token (`AND`, `ABS`, etc.), DONUM ← 0
+- `J43AB`: checks for tokens taking lineno as operand (`GOTO` etc.):
+  - yes: `J43C6`: DONUM ← 1
+  - no:  `J43C4`: DONUM ← 0
+- `J441D`: start parse of non-letter; `J442C` parse number: reads DONUM
+  to determine how it parses.
+- `KRNSAV` saves byte to KBUF: doesn't touch it
+- `J44A2`: not-letter and not-number check: both ← unchanged
+- `J44EB`: is-letter and not-keyword routine: always entered with A=0, so
+  DEC A gives DONUM ← -1. Space chars never reach this as they were handled
+  at the very start of parsing.
+- `J44FA`: replace most ctrl chars w/space
+  (called from parse not-letter not-number; includes e.g. `,`)
+  - `J4509`: if DONUM = -1, set to 0, otherwise retain DONUM value
 
 TODO:
+- Replace ctrl chars w/space excepting TAB and LF
 - support for `?` → PRINT and `_` → CALL
-- list of all ~14 tokens with line number as operand
+- list of all ~14 tokens with line number as operand: RESTORE AUTO RENUM
+  DELETE RESUME ERL ELSE RUN LIST LLIST GOTO RETURN THEN GOSUB
 - chars that need to be converted to upper case (beacuse outside of str/rem?)
 - consider that `TIME` variable is a tokenised keyword, not same as `TI`
 
