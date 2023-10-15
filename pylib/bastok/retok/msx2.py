@@ -1,6 +1,6 @@
 from    bastok.tlines  import TLines
 from    bastok.parser  import Parser
-from    bastok.detok.msx2  import TOKENS, NEGATIVE
+from    bastok.detok.msx2  import TOKENS, TOKFLAGS, NEGATIVE
 from    itertools  import dropwhile
 from    struct  import pack
 import  re
@@ -54,10 +54,8 @@ def tokline(p, squeeze=False):
             if t == "'":    chars(p)
             if t == 'DATA': chars(p)    # XXX no space compression yet!
             #   Tokens that take special arguments.
-            if t == 'GOTO' or t == 'GOSUB':
-                spaces(p, not squeeze); linenum(p, err='line number after GOTO')
-            if t == 'THEN' or t == 'ELSE':
-                spaces(p, not squeeze); linenum(p)   # linenum or other tokens
+            if TOKFLAGS.get(t, 0) & 1:
+                spaces(p, not squeeze); linenum(p)  # if no err, fine; continue
             #DEBUG('handled token={}'.format(t)) # XXX
             continue
         #DEBUG('not token')
