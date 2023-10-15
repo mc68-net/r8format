@@ -56,6 +56,9 @@ def tokline(p, squeeze=False):
             #   Tokens that take special arguments.
             if TOKFLAGS.get(t, 0) & 1:
                 spaces(p, not squeeze); linenum(p)  # if no err, fine; continue
+                #   Differs from MS-BASIC: we tokenize "GOTO12!34" as
+                #   token(GOTO) lineno(12) "!" int(34); they do lineno(34)
+                #   because DONUM is not reset at that point.
             #DEBUG('handled token={}'.format(t)) # XXX
             continue
         #DEBUG('not token')

@@ -37,7 +37,7 @@ Routines:
 - `KRNSVC`/,`C44DE`: Save `:` to KBUF
 - `KRNSAV`/`C44E0`: Save char in A to KBUF, w/check for overflow (err code 25)
 
-DORES,DNUM handling:
+DORES,DONUM handling:
 - `CRUNCH`: both ← 0
   - `J42F3`/`J4301`: on DATA token, both ← 1
 - J42D9: in string; ignore both (STRNG ignores values of both)
@@ -58,13 +58,16 @@ DORES,DNUM handling:
   (called from parse not-letter not-number; includes e.g. `,`)
   - `J4509`: if DONUM = -1, set to 0, otherwise retain DONUM value
 
+DONE:
+- list of all ~14 tokens with line number as operand: RESTORE AUTO RENUM
+  DELETE RESUME ERL ELSE RUN LIST LLIST GOTO RETURN THEN GOSUB
+
 TODO:
 - Replace ctrl chars w/space excepting TAB and LF
 - support for `?` → PRINT and `_` → CALL
-- list of all ~14 tokens with line number as operand: RESTORE AUTO RENUM
-  DELETE RESUME ERL ELSE RUN LIST LLIST GOTO RETURN THEN GOSUB
 - chars that need to be converted to upper case (beacuse outside of str/rem?)
 - consider that `TIME` variable is a tokenised keyword, not same as `TI`
+- DONUM handling like MS-BASIC
 
 
 <!-------------------------------------------------------------------->
