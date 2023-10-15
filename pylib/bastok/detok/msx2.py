@@ -192,7 +192,7 @@ TOKENS = (
 #   its prefix.
 DETOKENS = sorted(
     ((e[0], e[1]) for e in TOKENS),                             # token, ASCII
-    key=lambda t: len(t[0]), reverse=True)
+    key=lambda t: len(t[1]), reverse=True)
 
 TOKFLAGS = dict( (e[1], e[2]) for e in TOKENS if len(e) > 2 )   # ASCII, flags
 

@@ -368,6 +368,10 @@ def test_detokenize_expand(ln, toks, compact, expanded):
     dte = Detokenizer(MSXCP, toks, lineno=ln, expand=True)
     assert expanded == dte.detokenized()
 
-def test_repl():
-    pass
-    #assert [] == DETOKENS[0:8]
+def test_detoken_sort():
+    l = len(DETOKENS[0][1])
+    for tok, asc in DETOKENS:
+        l1 = len(asc)
+        assert len(asc) <= l, \
+            "DETOKENS not monotonically decreasing at {}".format(asc)
+        l = min(l, l1)
