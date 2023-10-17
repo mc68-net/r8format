@@ -53,8 +53,7 @@ def tokline(p, squeeze=False):
             if t == 'REM':  chars(p)
             if t == "'":    chars(p)
             if t == 'DATA': chars(p)    # XXX no space compression yet!
-            #   Tokens that take special arguments.
-            if TOKFLAGS.get(t, 0) & 1:
+            if TOKFLAGS[t] & TOKFLAGS.LINENO:       # may take lineno?
                 spaces(p, not squeeze); linenum(p)  # if no err, fine; continue
                 #   Differs from MS-BASIC: we tokenize "GOTO12!34" as
                 #   token(GOTO) lineno(12) "!" int(34); they do lineno(34)
