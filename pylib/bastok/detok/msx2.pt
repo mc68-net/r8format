@@ -369,7 +369,7 @@ def test_detokenize_expand(ln, toks, compact, expanded):
     assert expanded == dte.detokenized()
 
 def test_detoken_sort():
-    l = len(DETOKENS[0][1])
+    l = len(DETOKENS[0][1])     # length of text (ASCII) form of first token
     for tok, asc in DETOKENS:
         l1 = len(asc)
         assert len(asc) <= l, \
