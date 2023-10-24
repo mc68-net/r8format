@@ -41,16 +41,16 @@ Filenames are in the format `NNcc-sss.ext` where:
 Filename extensions encode the following meanings about file contents:
 - `*.bas`: ² Tokenised BASIC files as saved by MSX `SAVE "..."`.
 - `*.baa`: ² ASCII BASIC files as saved by MSX `SAVE "...",A`
-- `*.ba2`: ² ASCII BASIC files modified with alternate forms that MSX-BASIC
-             reads but does not generate (e.g., `1.0` instead of `1!`).
-             (These are optional and tested only when they exist.)
 - `*.ba0`: ³ Detokenised BASIC files in non-expanded format.
 - `*.ba1`: ³ Detokenised BASIC files in expanded (`detok -e` option) format.
 - `*.ba2`: ³ Detokenised BASIC files in expanded format with additional
-             (human-supplied) comments and formatting.
+             (human-supplied) comments and formatting, and alternate forms
+             that MSX-BASIC reads but does not generate (e.g., `1.0`
+             instead of `1!`). These are optional and tested only when
+             they exist.
 
-For the functional tests, the `*.ba2` file is optional (the test for it
-will be skipped if not present); all others are required.
+All of the above files are required except the `*.ba2` file; the test to
+tokenise that is skipped if it's not present.
 
 Notes:
 - ¹ The emulator will truncate long filenames to make them fit the MSX 8.3
