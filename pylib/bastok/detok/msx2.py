@@ -187,12 +187,15 @@ TOKENS = (
     (b'\xFF\x85' b'ER' b'\xFF\x94', 'INTERVAL', 0),
 )
 
-#   Tokens sorted by decending length, so that we can walk through this
-#   as a list of alternatives, ensuring that a word will match before
-#   its prefix.
-DETOKENS = sorted(
-    ((tok, text) for (tok, text, _) in TOKENS),
-    key=lambda tup: len(tup[1]), reverse=True)  # tup[1] = text
+#   Tokens sorted by decending length of token, so that we can walk through
+#   this as a list of alternatives, ensuring that a long token will match
+#   before a shorter token that is its strict prefix.
+def detok_sort(toktab):
+    return sorted(
+        ((tok, text) for (tok, text, _) in toktab),
+        key=lambda tup: len(tup[0]), reverse=True)  # tup[1] = encoded token
+
+DETOKENS = detok_sort(TOKENS)
 
 class TOKFLAGS_C (dict):
     LINENO = LINENO
