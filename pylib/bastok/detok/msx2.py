@@ -189,8 +189,6 @@ TOKENS = (
 #   its prefix.
 DETOKENS = sorted(TOKENS, key=lambda t: len(t[0]), reverse=True)
 
-TOKTAB = dict(TOKENS)
-
 def tokbytes(s):
     ''' Return the bytes (1 or more) of the token for the given keyword `s`.
         The token must exist in the table or LookupError will be thrown.

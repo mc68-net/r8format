@@ -47,9 +47,6 @@ def test_tokbytes():
     with pytest.raises(LookupError):
         tokbytes('NOT FOUND')
 
-def test_toktab():
-    assert 'LEFT$' == TOKTAB[b'\xFF\x81']
-
 def test_T_():
     ' Make sure we correctly extracted certain tokens. '
     assert 0x84 == T_DATA
