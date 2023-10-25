@@ -61,10 +61,10 @@ DORES,DONUM handling:
 DONE:
 - list of all ~14 tokens with line number as operand: RESTORE AUTO RENUM
   DELETE RESUME ERL ELSE RUN LIST LLIST GOTO RETURN THEN GOSUB
+- support for `?` → PRINT but not `_` → CALL (that's 5.x only, not MSX)
 
 TODO:
 - Replace ctrl chars w/space excepting TAB and LF
-- support for `?` → PRINT and `_` → CALL
 - chars that need to be converted to upper case (beacuse outside of str/rem?)
 - consider that `TIME` variable is a tokenised keyword, not same as `TI`
 - DONUM handling like MS-BASIC

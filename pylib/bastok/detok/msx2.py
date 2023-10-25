@@ -26,6 +26,7 @@ TOKENS = (
     (b'\x8F',       'REM',      0),
     (b'\x90',       'STOP',     0),
     (b'\x91',       'PRINT',    0),
+    (b'\x91',       '?',        0),         # alias must be after "real" keyword
     (b'\x92',       'CLEAR',    0),
     (b'\x93',       'LIST',     LINENO),
     (b'\x94',       'NEW',      0),
