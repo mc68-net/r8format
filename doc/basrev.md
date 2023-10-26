@@ -38,17 +38,18 @@ Routines:
 - `KRNSAV`/`C44E0`: Save char in A to KBUF, w/check for overflow (err code 25)
 
 DORES,DONUM handling:
-- `CRUNCH`: both ← 0
+- `CRUNCH`/`C42B2`: both ← 0
   - `J42F3`/`J4301`: on DATA token, both ← 1
 - J42D9: in string; ignore both (STRNG ignores values of both)
 - J42F3: both ← 0 whenver we encounter a `:` (not in string or rem)
-- `TRYAGA`/`J4365` keyword matching loop: when matches keyword that is a
-  function token (`AND`, `ABS`, etc.), DONUM ← 0
+- `TRYAGA`/`J4365` keyword matching loop
+  - additionally, when matches keyword that is a function token
+    (`AND`, `ABS`, etc.), DONUM ← 0
 - `J43AB`: checks for tokens taking lineno as operand (`GOTO` etc.):
   - yes: `J43C6`: DONUM ← 1
   - no:  `J43C4`: DONUM ← 0
-- `J441D`: start parse of non-letter; `J442C` parse number: reads DONUM
-  to determine how it parses.
+- `J441D`: start parse of non-letter;
+    `J442C` parse number: reads DONUM to determine how it parses.
 - `KRNSAV` saves byte to KBUF: doesn't touch it
 - `J44A2`: not-letter and not-number check: both ← unchanged
 - `J44EB`: is-letter and not-keyword routine: always entered with A=0, so
@@ -68,6 +69,7 @@ TODO:
 - chars that need to be converted to upper case (beacuse outside of str/rem?)
 - consider that `TIME` variable is a tokenised keyword, not same as `TI`
 - DONUM handling like MS-BASIC
+- Handle `GO TO` "funny GO"?
 
 
 <!-------------------------------------------------------------------->

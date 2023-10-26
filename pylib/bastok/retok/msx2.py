@@ -41,10 +41,10 @@ def tokline(p, squeeze=False):
     #   iteration consumed and generated.
     while (p.commit() or True) and not p.finished():
         p.commit() # XXX
+       #DEBUG('loop: remain={}'.format(repr(p.remain())))
         spaces(p, not squeeze)
-        #DEBUG('loop: remain={}'.format(repr(p.remain())))
-        #   Start by checking for a token, since any string matching a
-        #   token takes priority over anything else.
+        if string_literal(p)    is not None: continue
+        #   MS-BASIC resets DONUM on `:` here
         t = p.token()
         if t is not None:
             #DEBUG('token={}'.format(repr(t)))
@@ -62,9 +62,8 @@ def tokline(p, squeeze=False):
             continue
         #DEBUG('not token')
         #   If not a token, we try to match the various other constants.
-        if string_literal(p)    is not None: continue
-        if ampersand_literal(p) is not None: continue
         if number(p)            is not None: continue
+        if ampersand_literal(p) is not None: continue
         if variable(p)          is not None: continue
 
         #   Failing that, pass the next byte straight through.
