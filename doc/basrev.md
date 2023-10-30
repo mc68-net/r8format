@@ -39,6 +39,7 @@ Routines:
 
 DORES,DONUM handling:
 - `CRUNCH`/`C42B2`: both ← 0
+  - `J42C2` crunch loop continue point
   - `J42F3`/`J4301`: on DATA token, both ← 1
 - J42D9: in string; ignore both (STRNG ignores values of both)
 - J42F3: both ← 0 whenver we encounter a `:` (not in string or rem)
@@ -59,6 +60,13 @@ DORES,DONUM handling:
   (called from parse not-letter not-number; includes e.g. `,`)
   - `J4509`: if DONUM = -1, set to 0, otherwise retain DONUM value
 
+Utility routines:
+- `MAKUPL`: load A,(HL) and fallthrough to:
+- `MAKUPS`: make A upper-case: upper(A) if lower(A) or A not affected
+            (return flags never used)
+- `ISLET`: load A,(HL) and fallthrough to:
+- `ISLET2`: return carry set if A in range ['A'...'Z']
+
 DONE:
 - list of all ~14 tokens with line number as operand: RESTORE AUTO RENUM
   DELETE RESUME ERL ELSE RUN LIST LLIST GOTO RETURN THEN GOSUB
@@ -70,6 +78,7 @@ TODO:
 - consider that `TIME` variable is a tokenised keyword, not same as `TI`
 - DONUM handling like MS-BASIC
 - Handle `GO TO` "funny GO"?
+- DATA statements when unquoted need lead/trail spaces squeezed
 
 
 <!-------------------------------------------------------------------->
