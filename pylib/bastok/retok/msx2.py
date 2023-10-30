@@ -34,9 +34,18 @@ def tokline(p, squeeze=False):
     #   fragments that do not start with a line number.
     ln = linenum(p, gen=False, err='line number')
     space(p, False)
-    p.commit()
+    p.commit() # XXX
+   #DEBUG('input:', p.input)
 
-    #DEBUG('input:', p.input) # XXX
+    #   MS-BASIC has a `DONUM` variable external to the parse (`CRUNCH`) loop
+    #   designed to help properly deal with variable names with numbers in
+    #   them that makes for some "interesting" behaviour. Rather than try to
+    #   do this in a better (and/or more clear) way we simply do the same thing
+    #   with a `donum` variable. (MS also uses this for handling line number
+    #   tokenisation; for clarity we do not--more on this below.)
+    NUM_ENCODE = 0; NUM_ASCII = -1      #  MS-BASIC `DONUM` values
+    donum = NUM_ENCODE
+
     #   At the start of every iteration, we commit what the previous
     #   iteration consumed and generated.
     while (p.commit() or True) and not p.finished():
@@ -59,18 +68,23 @@ def tokline(p, squeeze=False):
                 #   token(GOTO) lineno(12) "!" int(34); they do lineno(34)
                 #   because DONUM is not reset at that point.
             #DEBUG('handled token={}'.format(t)) # XXX
+            donum = NUM_ENCODE
             continue
-        #DEBUG('not token')
+       #DEBUG('not token')
         #   If not a token, we try to match the various other constants.
-        if number(p)            is not None: continue
-        if ampersand_literal(p) is not None: continue
-        if variable(p)          is not None: continue
+        if variable(p) is not None:  donum = NUM_ASCII; continue
+       #DEBUG('not variable')
+        if donum == NUM_ENCODE and number(p) is not None:  continue
+        if ampersand_literal(p) is not None:  continue
 
         #   Failing that, pass the next byte straight through.
         #   This should _not_ be converted because it's not in a string,
         #   REM or DATA statement, and we simply don't know what it is.
         #   (The BASIC interpreter will deal with it if it's an error.)
-        b = p.consume(1); p.generate(bytes([ord(b)]))
+        b = p.consume(1)
+       #DEBUG('passthrough byte {}'.format(b))
+        p.generate(bytes([ord(b)]))
+        donum = NUM_ENCODE
 
     p.commit()
     return (ln, p.output())
