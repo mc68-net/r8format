@@ -97,7 +97,14 @@ def data(p, squeeze=False):
         return
 
     #   XXX obviously wrong
-    chars(p)
+    while not p.finished():
+        spaces(p, not squeeze)
+        if string_literal(p):
+            spaces(p, not squeeze)
+        else:
+            # read data item to `,` or `:`
+            # generate all _including_ trailing spaces except at EOL
+            chars(p)
 
 MATCH_VARNAME_S = r'[A-Za-z][A-Za-z0-9]*'
 MATCH_VARNAME   = None      # lazy initialisation
