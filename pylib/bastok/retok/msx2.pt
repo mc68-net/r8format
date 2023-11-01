@@ -57,13 +57,13 @@ def test_chars():
 ])
 def test_spaces(s, b, r):
     p = Parser(s, ja_charmap)
-    spaces(p);        assert (b, r) == (p.output(), p.remain())
+    spaces(p);        assert (b, r) == (p.output(1), p.remain())
     p = Parser(s, ja_charmap)
     spaces(p, False); assert (None, r) == (p.output(), p.remain())
 
 def test_spaces_default():
     p = Parser('  x', ja_charmap)
-    spaces(p); assert (b'  ', 'x') == (p.output(), p.remain())
+    spaces(p); assert (b'  ', 'x') == (p.output(1), p.remain())
 
 @pytest.mark.parametrize('input, remain, generated', [
     ('""',           '' ,   b'""'),
@@ -303,19 +303,21 @@ def test_digits_int_overflow(s):
         number(p)
     assert ex.match('int Overflow: 32768')
 
-@pytest.mark.parametrize('squeeze, input, expected', [
-    (False, '',                         b''),
-    (True,  '',                         b''),
-    (True,  ' a',                       b'a'),
-    (True,  ' " a,b " ',                b'" a,b "'),
-   #(True,  ' a, b',                    b'a,b'),
-    (False, 'a,  b b  , " c, " ,d,e',      b'a,  b b  , " c, " ,d,e'),
+@pytest.mark.parametrize('squeeze, input, expected', [  # TS = "trailing spaces"
+    (0, '',                     b''),
+    (0, 'a,  b b  , " c, " ,d,e',      b'a,  b b  , " c, " ,d,e'),
+    (1,  '',                     b''),
+    (2,  ' a',                   b'a'),
+    (3,  ' " a,b " ,c',          b'" a,b ",c'),  # TS removed after str
+   #(4,  ' a , b',               b'a ,b'),       # TS kept when not EOL
+   #(5,  ' a, b ',               b'a,b'),        # TS dropped when EOL
    #(True,  'a,  b b  , " c, " ,d,e',      b'a,b b," c, ",d,e'),
 ])
 def test_data(squeeze, input, expected):
     p = Parser(input, ja_charmap)
     p.generate(b'')     # set output data type
     data(p, squeeze)
+    print('output_committed: {}'.format(p.output(1)))
     assert (expected,           '') \
         == (p.output_pending(), p.remain())
 

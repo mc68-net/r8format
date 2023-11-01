@@ -95,14 +95,12 @@ def data(p, squeeze=False):
     if not squeeze:
         chars(p)
         return
-
-    #   XXX obviously wrong
     while not p.finished():
         spaces(p, not squeeze)
         if string_literal(p):
             spaces(p, not squeeze)
         else:
-            # read data item to `,` or `:`
+            # read data item to `,` or `:` or EOL
             # generate all _including_ trailing spaces except at EOL
             chars(p)
 
@@ -441,7 +439,6 @@ def spaces(p, generate=True):
             if generate: p.generate(msx_encode(p, ' '))
         else:
             break
-        p.commit()
 
 def chars(p):
     ' Do char() until end of input. '
