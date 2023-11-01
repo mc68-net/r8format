@@ -49,8 +49,16 @@ Filename extensions encode the following meanings about file contents:
              instead of `1!`). These are optional and tested only when
              they exist.
 
-All of the above files are required except the `*.ba2` file; the test to
-tokenise that is skipped if it's not present.
+Files matching `programs/[0-9][0-9]*.bas` are tested within a standard loop
+that expects the above formats with the following additional restrictions:
+- The `.bas` and `.baa` in fully "squeezed" format, with no unnecessary
+  whitespace.
+- The `.ba0` is the `detok` (without expansion) of the `.bas`
+- The `.ba1` is the `detok --expand` of the `.bas`.
+- All of the above files are required except the `.ba2` file; the test to
+  tokenise that is skipped if it's not present. (Nothing is detokenised to
+  try to produce the `.ba2`, so this may have any extra formatting and
+  comments in it you like.
 
 Notes:
 - ¹ The emulator will truncate long filenames to make them fit the MSX 8.3

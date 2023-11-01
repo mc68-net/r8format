@@ -79,6 +79,8 @@ TODO:
 - consider that `TIME` variable is a tokenised keyword, not same as `TI`
 - Handle `GO TO` "funny GO"?
 - DATA statements when unquoted need lead/trail spaces squeezed
+- Extra test outside .ba[012] loop to confirm non-expand/non-squeeze
+  preservation of spaces.
 
 
 <!-------------------------------------------------------------------->
