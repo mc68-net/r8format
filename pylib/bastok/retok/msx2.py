@@ -61,7 +61,7 @@ def tokline(p, squeeze=False):
             #   Tokens that consume and generate the remainder of the line.
             if t == 'REM':  chars(p)
             if t == "'":    chars(p)
-            if t == 'DATA': chars(p)    # XXX no space compression yet!
+            if t == 'DATA': data(p, squeeze)
             if TOKFLAGS[t] & TOKFLAGS.LINENO:       # may take lineno?
                 spaces(p, not squeeze); linenum(p)  # if no err, fine; continue
                 #   Differs from MS-BASIC: we tokenize "GOTO12!34" as
@@ -91,10 +91,13 @@ def tokline(p, squeeze=False):
 
 class EncodingError(ValueError): pass
 
-def data(p):
-    #   XXX is this the parser that should do
-    #   space compression on DATA statements?
-    p.error('XXX Write DATA parser!')
+def data(p, squeeze=False):
+    if not squeeze:
+        chars(p)
+        return
+
+    #   XXX obviously wrong
+    chars(p)
 
 MATCH_VARNAME_S = r'[A-Za-z][A-Za-z0-9]*'
 MATCH_VARNAME   = None      # lazy initialisation

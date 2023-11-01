@@ -303,6 +303,18 @@ def test_digits_int_overflow(s):
         number(p)
     assert ex.match('int Overflow: 32768')
 
+@pytest.mark.parametrize('squeeze, input, expected', [
+    (False, '',                      b''),
+    (True,  '',                      b''),
+    (False, 'a, b , " c ",  d',      b'a, b , " c ",  d'),
+])
+def test_data(squeeze, input, expected):
+    p = Parser(input, ja_charmap)
+    p.generate(b'')     # set output data type
+    data(p, squeeze)
+    assert (expected,           '') \
+        == (p.output_pending(), p.remain())
+
 ####################################################################
 
 TLPARSER = Parser('', ja_charmap, TOKENS)

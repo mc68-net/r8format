@@ -78,9 +78,6 @@ bin/basdump  programs/basdump.bas | diff - programs/basdump.dump
 for bas in programs/[0-9][0-9]*.bas; do
     f=$(basename $bas .bas)
 
-    #   XXX Need to fix retok --squeeze to remove spaces around DATA items.
-    [[ $f == 70ja-data ]] && continue
-
     qecho "====== detok    $f.bas"
     bin/detok    programs/$f.bas >$ftdata/detok/$f.ba0
     diff -u {$ftdata/detok,programs}/$f.ba0
