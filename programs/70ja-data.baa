@@ -1,5 +1,5 @@
 1 'SAVE"70ja-dat.bas"
 30 FORI=0TO3:READA$:PRINTI,A$:NEXTI
-80 DATAabc,EP€,"gh,i",jkl
+80 DATAabc,EP€,"gh,i","jk , l",mno
 99 END
 

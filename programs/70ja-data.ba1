@@ -3,5 +3,5 @@
     : READ A$
     : PRINT I,A$
     : NEXT I
-   80 DATA abc, 金π♠, "gh,i", jkl
+   80 DATA abc, 金π♠, "gh,i", "jk , l", mno
    99 END
