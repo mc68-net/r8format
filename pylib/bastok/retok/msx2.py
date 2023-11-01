@@ -56,18 +56,23 @@ def tokline(p, squeeze=False):
         #   MS-BASIC resets DONUM on `:` here
         t = p.token()
         if t is not None:
-            #DEBUG('token={}'.format(repr(t)))
-            p.commit()  # new start point for attempt to parse any argument
-            #   Tokens that consume and generate the remainder of the line.
-            if t == 'REM':  chars(p)
-            if t == "'":    chars(p)
+           #DEBUG('token={}'.format(repr(t)))
+            #   Only REMs keep spaces after the token when squeezing because
+            #   the "argument" is not parsed; they then consume to EOL.
+            if t == 'REM':  chars(p); continue
+            if t == "'":    chars(p); continue
+            #   Otherwise squeeze spaces if necessary and set a new start
+            #   point where we attempt to parse any argument.
+            spaces(p, not squeeze)
+            p.commit()
+            #   If the token takes an argument, attempt to parse it.
             if t == 'DATA': chars(p)    # XXX no space compression yet!
             if TOKFLAGS[t] & TOKFLAGS.LINENO:       # may take lineno?
-                spaces(p, not squeeze); linenum(p)  # if no err, fine; continue
+                linenum(p)  # if no err, fine; continue
                 #   Differs from MS-BASIC: we tokenize "GOTO12!34" as
                 #   token(GOTO) lineno(12) "!" int(34); they do lineno(34)
                 #   because DONUM is not reset at that point.
-            #DEBUG('handled token={}'.format(t)) # XXX
+           #DEBUG('handled token={}'.format(t)) # XXX
             donum = NUM_ENCODE
             continue
        #DEBUG('not token')
@@ -431,7 +436,6 @@ def spaces(p, generate=True):
             if generate: p.generate(msx_encode(p, ' '))
         else:
             break
-        p.commit()
 
 def chars(p):
     ' Do char() until end of input. '
