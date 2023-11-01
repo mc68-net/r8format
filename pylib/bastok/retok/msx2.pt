@@ -134,6 +134,14 @@ def test_linenum_failure_size():
         linenum(p, gen=False, err='xyz')
     assert ex.match('65530 outside linenum range at')
 
+def test_linenum_failure_badnum_pending():
+    ' Generates a parse failure after the parse is partially successful. '
+    p = Parser('-X')
+    with pytest.raises(p.ParseError) as ex:
+        linenum(p, gen=True, err='line number')
+    p.commit()
+    assert '-X' == p.remain()
+
 @pytest.mark.parametrize('s, i, gen, remain', [
     ('',                      None,            None,  ''    ),
     ('01',                    None,            None,  '01'  ),
