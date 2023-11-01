@@ -96,14 +96,12 @@ def data(p, squeeze=False):
     if not squeeze:
         chars(p)
         return
-
-    #   XXX obviously wrong
     while not p.finished():
         spaces(p, not squeeze)
         if string_literal(p):
             spaces(p, not squeeze)
         else:
-            # read data item to `,` or `:`
+            # read data item to `,` or `:` or EOL
             # generate all _including_ trailing spaces except at EOL
             chars(p)
 
