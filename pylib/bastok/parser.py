@@ -251,13 +251,22 @@ class Parser:
         cls = type(olist[0])
         return cls().join(olist)
 
-    def output(self):
+    def output(self, uncommitedAllowed=False):
         ''' Return the joined-together committed output list.
 
             The object used for joining will be a new instance of the class
             of the first object in the list. E.g., if the first object is
             `b'0x01'`, `bytes().join(olist_committed)` will be called.
+
+            This will throw a `RuntimeError` if there is uncommited output
+            available as that's almost certainly a sign that you forgot a
+            `commit()` or `start()` (the latter to roll back) somewhere.
+            You can disable this check by setting `uncommitedAllowed` to
+            `True`.
         '''
+        if not uncommitedAllowed and self.olist_pending != []:
+            raise RuntimeError('attempt to get output when uncommited output'
+                ' not committed or rolled back: {}'.format(self.olist_pending))
         return self._output(self.olist_committed)
 
     def output_pending(self):

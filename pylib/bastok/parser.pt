@@ -85,14 +85,14 @@ def test_Parser_commit():
     p.start()
     assert (b'a', b'bcd', b'abcd') == (c(), p.remain(), p.uncommitted())
     assert (b'b',  b'cd', b'abcd') == (c(), p.remain(), p.uncommitted())
-    assert (None,    'x', None)    == (g('x'), p.output_pending(), p.output())
-    assert (None,   'xy', None)    == (g('y'), p.output_pending(), p.output())
+    assert (None,    'x', None)    == (g('x'), p.output_pending(), p.output(1))
+    assert (None,   'xy', None)    == (g('y'), p.output_pending(), p.output(1))
 
     p.start()
     assert (b'a', b'bcd', b'abcd') == (c(), p.remain(), p.uncommitted())
     assert (b'b',  b'cd', b'abcd') == (c(), p.remain(), p.uncommitted())
-    assert (None,    'z', None)    == (g('z'), p.output_pending(), p.output())
-    assert (None,   'zw', None)    == (g('w'), p.output_pending(), p.output())
+    assert (None,    'z', None)    == (g('z'), p.output_pending(), p.output(1))
+    assert (None,   'zw', None)    == (g('w'), p.output_pending(), p.output(1))
 
     p.commit()
     assert b'cd' == p.remain();         assert None == p.output_pending()
@@ -100,6 +100,10 @@ def test_Parser_commit():
 
     p.start()
     assert (b'c', b'd', b'cd') == (c(), p.remain(), p.uncommitted())
+    assert (None,  'v', 'zw')  == (g('v'), p.output_pending(), p.output(1))
+    with pytest.raises(RuntimeError) as ex:
+        p.output()
+    assert ex.match('uncommited output not committed or rolled back')
 
 def test_parser_without_ASCII():
     ''' Test the parser with a codec that cannot convert any ASCII
@@ -142,9 +146,9 @@ def test_Parser_generate_type_error():
 
 def test_Parser_generate_commit():
     p = Parser('')
-    p.generate(b'a1');  assert    None is p.output()
+    p.generate(b'a1');  assert    None is p.output(1)
     p.commit();         assert   b'a1' == p.output()
-    p.generate(b'b2');  assert   b'a1' == p.output()
+    p.generate(b'b2');  assert   b'a1' == p.output(1)
     p.commit();         assert b'a1b2' == p.output()
 
 
