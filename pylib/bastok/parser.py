@@ -210,6 +210,29 @@ class Parser:
         '''
         return self.input[self.pos_committed:]
 
+    def transactional(f):
+        def wrap(p):
+            #   XXX Ensure we're not already in a transaction.
+            wrapped_return = f(p)
+            if isinstance(wrapped_return, Parser.FAILURE):
+                return None
+            if isinstance(wrapped_return, Parser.SUCCESS):
+                return wrapped_return.retval
+            raise RuntimeError(
+                'transactional parser did not return success or failure')
+        return wrap
+
+    class FAILURE:  pass
+    class SUCCESS:
+        def __init__(self, retval): self.retval = retval
+
+    def success(self, retval):
+        return self.SUCCESS(retval)
+
+    def failure(self):
+        #   XXX rollback transaction
+        return self.FAILURE()
+
     ####################################################################
     #   Error handling and display
 
