@@ -77,19 +77,26 @@ def test_parser_consume_bytes():
 def test_Parser_commit():
     p = Parser(b'abcd')
     c = p.consume
+    g = p.generate
 
-    assert b'abcd' == p.uncommitted()
-
-    p.start()
-    assert (b'a', b'bcd', b'abcd') == (c(), p.remain(), p.uncommitted())
-    assert (b'b',  b'cd', b'abcd') == (c(), p.remain(), p.uncommitted())
+    assert b'abcd' == p.remain();       assert None == p.output_pending()
+    assert b'abcd' == p.uncommitted();  assert None == p.output()
 
     p.start()
     assert (b'a', b'bcd', b'abcd') == (c(), p.remain(), p.uncommitted())
     assert (b'b',  b'cd', b'abcd') == (c(), p.remain(), p.uncommitted())
+    assert (None,    'x', None)    == (g('x'), p.output_pending(), p.output())
+    assert (None,   'xy', None)    == (g('y'), p.output_pending(), p.output())
+
+    p.start()
+    assert (b'a', b'bcd', b'abcd') == (c(), p.remain(), p.uncommitted())
+    assert (b'b',  b'cd', b'abcd') == (c(), p.remain(), p.uncommitted())
+    assert (None,    'z', None)    == (g('z'), p.output_pending(), p.output())
+    assert (None,   'zw', None)    == (g('w'), p.output_pending(), p.output())
 
     p.commit()
-    assert b'cd' == p.remain()
+    assert b'cd' == p.remain();         assert None == p.output_pending()
+    assert b'cd' == p.uncommitted();    assert 'zw' == p.output()
 
     p.start()
     assert (b'c', b'd', b'cd') == (c(), p.remain(), p.uncommitted())

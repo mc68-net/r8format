@@ -182,6 +182,7 @@ class Parser:
     def start(self):
         ' Set pending parse point back to the committed parse point. '
         self.pos_pending = self.pos_committed
+        self.olist_pending = []
 
     def commit(self):
         ''' Move committed parse point forward to the pending parse point
