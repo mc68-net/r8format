@@ -156,6 +156,7 @@ class Parser:
             self._inputtype = type(self.input)
             self._strinput = isinstance(self.input, str)
 
+        self.transaction_pending = False
         self.pos_committed      = 0
         self.pos_pending        = 0
         self.olist_committed    = []
@@ -179,8 +180,19 @@ class Parser:
         '''
         return self._strinput
 
-    def start(self):
+    def pending(self):
+        ''' Return True if there are any uncommitted consumed characters
+            or any uncommited output. This is not the same thing as being
+            in a transaction since, even if we've not explicitly started
+            a transaction all consumption and output routines are pending
+            consumption and output until `commit()` is called.
+        '''
+        return self.pos_pending != self.pos_committed \
+            or len(self.olist_pending) > 0
+
+    def rollback(self):
         ' Set pending parse point back to the committed parse point. '
+        self.transaction_pending = False
         self.pos_pending = self.pos_committed
         self.olist_pending = []
 
@@ -191,6 +203,7 @@ class Parser:
         self.pos_committed = self.pos_pending
         self.olist_committed.extend(self.olist_pending)
         self.olist_pending = []
+        self.transaction_pending = False
 
     def finished(self):
         ''' Return `True` if the _pending_ parse point is at the end
@@ -212,12 +225,22 @@ class Parser:
 
     def transactional(f):
         def wrap(p):
-            #   XXX Ensure we're not already in a transaction.
+            if p.pending():
+                raise RuntimeError('Cannot start transaction with pending'
+                    ' consumption ({}) or output ({})'.format(
+                        repr(p.input[p.pos_committed:p.pos_pending]),
+                        repr(p.output_pending())))
+            if p.transaction_pending:
+                raise RuntimeError('Illegal attempt to nest transactions')
+            p.transaction_pending = True
             wrapped_return = f(p)
             if isinstance(wrapped_return, Parser.FAILURE):
                 return None
             if isinstance(wrapped_return, Parser.SUCCESS):
-                return wrapped_return.retval
+                if wrapped_return.retval is not None:
+                    return wrapped_return.retval
+                else:
+                    raise RuntimeError('Parser.success() cannot return None')
             raise RuntimeError(
                 'transactional parser did not return success or failure')
         return wrap
@@ -227,10 +250,11 @@ class Parser:
         def __init__(self, retval): self.retval = retval
 
     def success(self, retval):
+        self.commit()
         return self.SUCCESS(retval)
 
     def failure(self):
-        #   XXX rollback transaction
+        self.rollback()
         return self.FAILURE()
 
     ####################################################################

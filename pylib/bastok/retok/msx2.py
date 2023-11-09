@@ -368,7 +368,7 @@ def linenum(p, gen=True, err=None):
         but is < 0 or > `TLines.MAXLIN_5`.
     '''
     #DEBUG('linenum() on {}'.format(repr(p.remain()[0:10])))
-    p.start()
+    p.rollback()
 
     neg = False
     if p.string('-'): neg = True

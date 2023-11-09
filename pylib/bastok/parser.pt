@@ -79,26 +79,34 @@ def test_Parser_commit():
     c = p.consume
     g = p.generate
 
+    assert not p.pending()
     assert b'abcd' == p.remain();       assert None == p.output_pending()
     assert b'abcd' == p.uncommitted();  assert None == p.output()
 
-    p.start()
+    p.rollback()
+    assert not p.pending()
     assert (b'a', b'bcd', b'abcd') == (c(), p.remain(), p.uncommitted())
+    assert     p.pending()
     assert (b'b',  b'cd', b'abcd') == (c(), p.remain(), p.uncommitted())
     assert (None,    'x', None)    == (g('x'), p.output_pending(), p.output(1))
     assert (None,   'xy', None)    == (g('y'), p.output_pending(), p.output(1))
+    assert     p.pending()
 
-    p.start()
+    p.rollback()
+    assert not p.pending()
+    assert (None,    'z', None)    == (g('z'), p.output_pending(), p.output(1))
+    assert     p.pending()
+    assert (None,   'zw', None)    == (g('w'), p.output_pending(), p.output(1))
     assert (b'a', b'bcd', b'abcd') == (c(), p.remain(), p.uncommitted())
     assert (b'b',  b'cd', b'abcd') == (c(), p.remain(), p.uncommitted())
-    assert (None,    'z', None)    == (g('z'), p.output_pending(), p.output(1))
-    assert (None,   'zw', None)    == (g('w'), p.output_pending(), p.output(1))
+    assert     p.pending()
 
     p.commit()
+    assert not p.pending()
     assert b'cd' == p.remain();         assert None == p.output_pending()
     assert b'cd' == p.uncommitted();    assert 'zw' == p.output()
 
-    p.start()
+    p.rollback()
     assert (b'c', b'd', b'cd') == (c(), p.remain(), p.uncommitted())
     assert (None,  'v', 'zw')  == (g('v'), p.output_pending(), p.output(1))
     with pytest.raises(RuntimeError) as ex:
@@ -106,41 +114,53 @@ def test_Parser_commit():
     assert ex.match('uncommited output not committed or rolled back')
 
 def test_parser_transactional_failure():
-    p = Parser('abcd'); c = p.consume;  g = p.generate
+    p = Parser('abcd');  outpend = p.output_pending
     @Parser.transactional
-    def pt_failure(p):      g(c(2)); return p.failure()
-    assert None is pt_failure(p)
-    assert (    'abcd',               None,          'abcd',       None) \
-        == (p.remain(), p.output_pending(), p.uncommitted(), p.output())
+    def pt_failure(p):  p.generate(p.consume(2)); return p.failure()
+    assert (         None,     'abcd',      None,          'abcd',       None) \
+        == (pt_failure(p), p.remain(), outpend(), p.uncommitted(), p.output())
 
 def test_parser_transactional_success():
-    p = Parser('abcd'); c = p.consume;  g = p.generate
+    p = Parser('abcd');  outpend = p.output_pending
     @Parser.transactional
-    def pt_success(p):      g(c(2)); return p.success('ef')
-    assert 'ef' == pt_success(p)
-    assert (      'cd',               None,            'cd',       'ab') \
-        == (p.remain(), p.output_pending(), p.uncommitted(), p.output())
+    def pt_success(p):  p.generate(p.consume(2)); return p.success('ef')
+    assert (         'ef',       'cd',      None,            'cd',       'ab') \
+        == (pt_success(p), p.remain(), outpend(), p.uncommitted(), p.output())
 
 def test_parser_transactional_no_commit_or_rollback():
-    p = Parser('abcd'); c = p.consume;  g = p.generate
+    p = Parser('abcd')
     @Parser.transactional
-    def pt_neither(p):      g(c(2)); return None
+    def pt_neither(p):  p.generate(p.consume(2)); return None
     with pytest.raises(RuntimeError) as ex:
         pt_neither(p)
     assert ex.match('transactional parser did not return success or failure')
 
+def test_parser_transactional_start_with_pending():
+    p = Parser('abcd')
+    @Parser.transactional
+    def pt(p):  return p.success(True)
+    p.consume(1)
+    with pytest.raises(RuntimeError) as ex:
+        pt(p)
+    assert ex.match('with pending')
+
 def test_parser_transactional_nested():
-    p = Parser('abcd'); c = p.consume;  g = p.generate
+    p = Parser('abcd')
     @Parser.transactional
-    def pt_outer(p): pt_inner(p)
+    def pt_outer(p):  pt_inner(p)
     @Parser.transactional
-    def pt_inner(p): return p.success(True)
+    def pt_inner(p):  return p.success(True)
     with pytest.raises(RuntimeError) as ex:
         pt_outer(p)
     assert ex.match('attempt to nest transactions')
 
 def test_parser_transactional_success_cannot_return_none():
-    assert 0
+    p = Parser('abcd')
+    @Parser.transactional
+    def pt(p):  return p.success(None)
+    with pytest.raises(RuntimeError) as ex:
+        pt(p)
+    assert ex.match('cannot return None')
 
 def test_parser_without_ASCII():
     ''' Test the parser with a codec that cannot convert any ASCII
@@ -268,11 +288,11 @@ def test_parser_string_in():
     p = Parser(b'abcd', TestCodec())
     #   Any iterable should work, so we use several different ones.
 
-    p.start();
+    p.rollback();
     assert b'ab' == p.string_in(set(['ab']))
     assert b'cd' == p.string_in(('cd',))
 
-    p.start()
+    p.rollback()
     assert  None is p.string_in(['xx', 'cd', 'xx'])
     assert b'ab' == p.string_in(['xx', 'ab', 'xx'])
     assert  None is p.string_in(['xx', 'ab', 'xx'])
