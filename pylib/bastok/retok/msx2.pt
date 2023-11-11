@@ -56,14 +56,15 @@ def test_chars():
     ('  '   , b'  ' , ''),
 ])
 def test_spaces(s, b, r):
-    p = Parser(s, ja_charmap)
-    spaces(p);        assert (b, r) == (p.output(), p.remain())
-    p = Parser(s, ja_charmap)
-    spaces(p, False); assert (None, r) == (p.output(), p.remain())
+    p = Parser(s, ja_charmap); spaces(p, generate=True)
+    assert (b, r) == (p.output_pending(), p.remain())
+
+    p = Parser(s, ja_charmap); spaces(p, generate=False)
+    assert (None, r) == (p.output_pending(), p.remain())
 
 def test_spaces_default():
     p = Parser('  x', ja_charmap)
-    spaces(p); assert (b'  ', 'x') == (p.output(), p.remain())
+    spaces(p); assert (b'  ', 'x') == (p.output_pending(), p.remain())
 
 @pytest.mark.parametrize('input, remain, generated', [
     ('""',           '' ,   b'""'),

@@ -51,7 +51,7 @@ def tokline(p, squeeze=False):
     while (p.commit() or True) and not p.finished():
         p.commit() # XXX
        #DEBUG('loop: remain={}'.format(repr(p.remain())))
-        spaces(p, not squeeze)
+        spaces(p, not squeeze); p.commit()
         if string_literal(p)    is not None: continue
         #   MS-BASIC resets DONUM on `:` here
         t = p.token()
@@ -63,7 +63,8 @@ def tokline(p, squeeze=False):
             if t == "'":    chars(p)
             if t == 'DATA': data(p, squeeze)
             if TOKFLAGS[t] & TOKFLAGS.LINENO:       # may take lineno?
-                spaces(p, not squeeze); linenum(p)  # if no err, fine; continue
+                spaces(p, not squeeze); p.commit()
+                linenum(p)  # if no err, fine; continue
                 #   Differs from MS-BASIC: we tokenize "GOTO12!34" as
                 #   token(GOTO) lineno(12) "!" int(34); they do lineno(34)
                 #   because DONUM is not reset at that point.
@@ -432,7 +433,6 @@ def spaces(p, generate=True):
             if generate: p.generate(msx_encode(p, ' '))
         else:
             break
-        p.commit()
 
 def chars(p):
     ' Do char() until end of input. '
