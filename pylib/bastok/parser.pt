@@ -123,9 +123,12 @@ def test_parser_transactional_failure():
 def test_parser_transactional_success():
     p = Parser('abcd');  outpend = p.output_pending
     @Parser.transactional
-    def pt_success(p):  p.generate(p.consume(2)); return p.success('ef')
+    def pt_success(p, retval='ef'):
+        p.generate(p.consume(2))
+        return p.success(retval)
     assert (         'ef',       'cd',      None,            'cd',       'ab') \
         == (pt_success(p), p.remain(), outpend(), p.uncommitted(), p.output())
+    assert 'gh' == pt_success(p, 'gh')
 
 def test_parser_transactional_no_commit_or_rollback():
     p = Parser('abcd')

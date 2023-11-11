@@ -224,7 +224,7 @@ class Parser:
         return self.input[self.pos_committed:]
 
     def transactional(f):
-        def wrap(p):
+        def wrap(p, *args, **kwargs):
             if p.pending():
                 raise RuntimeError('Cannot start transaction with pending'
                     ' consumption ({}) or output ({})'.format(
@@ -233,7 +233,7 @@ class Parser:
             if p.transaction_pending:
                 raise RuntimeError('Illegal attempt to nest transactions')
             p.transaction_pending = True
-            wrapped_return = f(p)
+            wrapped_return = f(p, *args, **kwargs)
             if isinstance(wrapped_return, Parser.FAILURE):
                 return None
             if isinstance(wrapped_return, Parser.SUCCESS):
