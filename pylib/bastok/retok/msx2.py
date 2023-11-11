@@ -309,6 +309,7 @@ def match_number(p):
 
     return (m.end(), neg, i, f, te, exp)
 
+@Parser.transactional
 def ampersand_literal(p):
     ''' Read and consume ``&Hnnnn``, ``&Onnnn`` and ``&Bnnnn`` integer
         literals and generate their tokenised version. Raises a
@@ -321,7 +322,7 @@ def ampersand_literal(p):
     elif p.string_in(['&B', '&b']):
         base = 2
     else:
-        return None
+        return p.failure()
 
     digits = p.digits(base)
    #DEBUG('ampersand_literal digits:', repr(digits))
@@ -348,8 +349,7 @@ def ampersand_literal(p):
             p.error('Overflow')
         p.generate(pack('<H', n))
 
-    p.commit()
-    return n
+    return p.success(n)
 
 @Parser.transactional
 def linenum(p, gen=True, err=None):
