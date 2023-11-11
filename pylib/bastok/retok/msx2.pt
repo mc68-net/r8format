@@ -137,8 +137,8 @@ def test_linenum_failure_size():
 def test_linenum_failure_badnum_pending():
     ' Generates a parse failure after the parse is partially successful. '
     p = Parser('-X')
-    with pytest.raises(p.ParseError) as ex:
-        linenum(p, gen=True, err='line number')
+    assert None is linenum(p, gen=True)
+    assert '-X' == p.remain()
     p.commit()
     assert '-X' == p.remain()
 

@@ -351,6 +351,7 @@ def ampersand_literal(p):
     p.commit()
     return n
 
+@Parser.transactional
 def linenum(p, gen=True, err=None):
     ''' Consume the ASCII representation of a line number and return it as
         an `int`. Like the MS tokeniser, this accepts negative line numbers
@@ -368,15 +369,13 @@ def linenum(p, gen=True, err=None):
         but is < 0 or > `TLines.MAXLIN_5`.
     '''
     #DEBUG('linenum() on {}'.format(repr(p.remain()[0:10])))
-    p.rollback()
-
     neg = False
     if p.string('-'): neg = True
 
     ds = p.digits()
     if ds is None:
-        if err is None: return None
-        p.error('expected ' + err)
+        if err is None: return p.failure()
+        p.error('expected ' + err)  # XXX does not rollback!
 
     #DEBUG('ds:', type(ds), repr(ds))
     if not isinstance(ds, str):
@@ -392,8 +391,7 @@ def linenum(p, gen=True, err=None):
     if gen:
         if neg: p.generate(NEGATIVE)
         p.generate(b'\x0E' + uint_16)
-    p.commit()
-    return -n if neg else n
+    return p.success(-n if neg else n)
 
 def string_literal(p, err=None):
     ''' Consume a string literal starting with `"` and ending with the next
