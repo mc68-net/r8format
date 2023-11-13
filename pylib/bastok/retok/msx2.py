@@ -68,6 +68,9 @@ def tokline(p, squeeze=False):
                 #   Differs from MS-BASIC: we tokenize "GOTO12!34" as
                 #   token(GOTO) lineno(12) "!" int(34); they do lineno(34)
                 #   because DONUM is not reset at that point.
+                #   XXX BROKEN actually here we need to continue parsing
+                #   linenos because of computed GOTO/GOSUB a la
+                #   ON STRIG GOSUB 200,300
             #DEBUG('handled token={}'.format(t)) # XXX
             donum = NUM_ENCODE
             continue

@@ -72,15 +72,17 @@ DONE:
   DELETE RESUME ERL ELSE RUN LIST LLIST GOTO RETURN THEN GOSUB
 - support for `?` → PRINT but not `_` → CALL (that's 5.x only, not MSX)
 - DONUM handling like MS-BASIC
+- DATA statements when unquoted need lead/trail spaces squeezed
 
 TODO:
 - Replace ctrl chars w/space excepting TAB and LF
 - chars that need to be converted to upper case (beacuse outside of str/rem?)
 - consider that `TIME` variable is a tokenised keyword, not same as `TI`
 - Handle `GO TO` "funny GO"?
-- DATA statements when unquoted need lead/trail spaces squeezed
 - Extra test outside .ba[012] loop to confirm non-expand/non-squeeze
   preservation of spaces.
+- Switch to MS-style "all numbers in lineno until whenever" to handle
+  computed GOSUB etc.
 
 
 <!-------------------------------------------------------------------->
