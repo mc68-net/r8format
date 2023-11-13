@@ -103,9 +103,6 @@ def data(p, squeeze=False):
     if MATCH_DATA_EOL is None:
         MATCH_DATA_EOL = p.re_compile(r' *$')
 
-    if not squeeze:
-        chars(p)
-        return p.success(True)
     while not p.finished():     # items remaining to parse
         spaces(p, not squeeze)
         if string_literal(p):

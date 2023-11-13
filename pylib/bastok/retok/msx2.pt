@@ -315,7 +315,7 @@ def test_digits_int_overflow(s):
 @pytest.mark.parametrize('squeeze, input, expected', [  # TS = "trailing spaces"
     (0, '',                     b''),
     (0, 'a,  b b  , " c, " ,d,e', b'a,  b b  , " c, " ,d,e'),
-   #(0, ' ":a" , b : PRINT',        b' ":a" , b '),
+    (0, ' ":a" , b : PRINT',        b' ":a" , b :'),
     (1,  '',                    b''),
     (2,  ' a',                  b'a'),
     (3,  ' ":a", b : PRINT',    b'":a",b:'),    # XXX consume/gen colon, too?
