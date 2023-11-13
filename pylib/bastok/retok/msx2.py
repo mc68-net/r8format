@@ -92,18 +92,37 @@ def tokline(p, squeeze=False):
 
 class EncodingError(ValueError): pass
 
+MATCH_END_DATUM = None
+MATCH_DATA_EOL  = None
+
+@Parser.transactional
 def data(p, squeeze=False):
+    global MATCH_END_DATUM, MATCH_DATA_EOL
+    if MATCH_END_DATUM is None:
+        MATCH_END_DATUM = p.re_compile(r' *([,:])')
+    if MATCH_DATA_EOL is None:
+        MATCH_DATA_EOL = p.re_compile(r' *$')
+
     if not squeeze:
         chars(p)
-        return
-    while not p.finished():
+        return p.success(True)
+    while not p.finished():     # items remaining to parse
         spaces(p, not squeeze)
         if string_literal(p):
             spaces(p, not squeeze)
         else:
-            # read data item to `,` or `:` or EOL
-            # generate all _including_ trailing spaces except at EOL
-            chars(p)
+            while not p.finished():
+                if p.re_match(MATCH_END_DATUM):
+                    spaces(p, not squeeze)
+                    c = char(p) # consume/generate , or :
+                    if c in (':', b':'):
+                        return p.success(True)
+                    break
+                elif p.re_match(MATCH_DATA_EOL):
+                    return p.success(True)
+                else:
+                    c = char(p)
+    return p.success(True)
 
 MATCH_VARNAME_S = r'[A-Za-z][A-Za-z0-9]*'
 MATCH_VARNAME   = None      # lazy initialisation
