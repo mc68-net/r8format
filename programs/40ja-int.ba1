@@ -12,3 +12,5 @@
     : GOTO 123!
 43856 ELSE 235
     : ELSE XY
+43872 GOTO -1,,-2,3
+    : LET A=5

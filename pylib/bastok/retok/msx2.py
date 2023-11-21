@@ -43,42 +43,53 @@ def tokline(p, squeeze=False):
     #   do this in a better (and/or more clear) way we simply do the same thing
     #   with a `donum` variable. (MS also uses this for handling line number
     #   tokenisation; for clarity we do not--more on this below.)
-    NUM_ENCODE = 0; NUM_ASCII = -1      #  MS-BASIC `DONUM` values
+    NUM_ASCII   = -1    # Digits tokenised as ASCII
+    NUM_ENCODE  =  0    # Digits tokenised as ints, floats, etc.
+    NUM_LINENUM =  1    # Digits tokenised as line numbers (unsigned int16)
     donum = NUM_ENCODE
 
     #   At the start of every iteration, we commit what the previous
     #   iteration consumed and generated.
     while (p.commit() or True) and not p.finished():
         p.commit() # XXX
-       #DEBUG('loop: remain={}'.format(repr(p.remain())))
+       #DEBUG('loop: donum={} remain={}'.format(donum, repr(p.remain())))
         spaces(p, not squeeze); p.commit()
         if string_literal(p)    is not None: continue
         #   MS-BASIC resets DONUM on `:` here
+        if char(p, ':'):
+            p.commit()
+            donum = NUM_ENCODE
+            continue
         t = p.token()
         if t is not None:
-            #DEBUG('token={}'.format(repr(t)))
+           #DEBUG('token={}'.format(repr(t)))
             p.commit()  # new start point for attempt to parse any argument
             #   Tokens that consume and generate the remainder of the line.
-            if t == 'REM':  chars(p)
-            if t == "'":    chars(p)
+            if t == 'REM':  anychars(p)
+            if t == "'":    anychars(p)
             if t == 'DATA': data(p, squeeze)
-            if TOKFLAGS[t] & TOKFLAGS.LINENO:       # may take lineno?
-                spaces(p, not squeeze); p.commit()
-                linenum(p)  # if no err, fine; continue
-                #   Differs from MS-BASIC: we tokenize "GOTO12!34" as
-                #   token(GOTO) lineno(12) "!" int(34); they do lineno(34)
-                #   because DONUM is not reset at that point.
-                #   XXX BROKEN actually here we need to continue parsing
-                #   linenos because of computed GOTO/GOSUB a la
-                #   ON STRIG GOSUB 200,300
-            #DEBUG('handled token={}'.format(t)) # XXX
-            donum = NUM_ENCODE
+            if t == '-':    continue  # start of number so does not change donum
+            if TOKFLAGS[t] & 0: # XXX don't have TOKFLAGS.FUNCTION yet
+                donum = NUM_ENCODE
+            elif TOKFLAGS[t] & TOKFLAGS.LINENO:       # may take lineno?
+                donum = NUM_LINENUM
+            else:
+                donum = NUM_ENCODE
             continue
        #DEBUG('not token')
         #   If not a token, we try to match the various other constants.
-        if variable(p) is not None:  donum = NUM_ASCII; continue
-       #DEBUG('not variable')
-        if donum == NUM_ENCODE and number(p) is not None:  continue
+        if variable(p) is not None:
+            donum = NUM_ASCII
+            continue
+        #   XXX comment about linenums
+        #   Differs from MS-BASIC: we tokenize "GOTO12!34" as
+        #   token(GOTO) lineno(12) "!" int(34); they do lineno(34)
+        #   because DONUM is not reset at that point.
+        #   XXX BROKEN actually here we need to continue parsing
+        #   linenos because of computed GOTO/GOSUB a la
+        #   ON STRIG GOSUB 200,300
+        if donum == NUM_LINENUM and linenum(p) is not None:  continue
+        if donum == NUM_ENCODE  and  number(p) is not None:  continue
         if ampersand_literal(p) is not None:  continue
 
         #   Failing that, pass the next byte straight through.
@@ -88,7 +99,8 @@ def tokline(p, squeeze=False):
         b = p.consume(1)
        #DEBUG('passthrough byte {}'.format(b))
         p.generate(bytes([ord(b)]))
-        donum = NUM_ENCODE
+        if donum == NUM_ASCII:
+            donum = NUM_ENCODE
 
     p.commit()
     return (ln, p.output())
@@ -114,14 +126,14 @@ def data(p, squeeze=False):
             while not p.finished():
                 if p.re_match(MATCH_END_DATUM):
                     spaces(p, not squeeze)
-                    c = char(p) # consume/generate , or :
+                    c = anychar(p) # consume/generate , or :
                     if c in (':', b':'):
                         return p.success(True)
                     break
                 elif p.re_match(MATCH_DATA_EOL):
                     return p.success(True)
                 else:
-                    c = char(p)
+                    c = anychar(p)
     return p.success(True)
 
 MATCH_VARNAME_S = r'[A-Za-z][A-Za-z0-9]*'
@@ -437,13 +449,18 @@ def string_literal(p, err=None):
         if p.string(DQUOTE):
             p.generate(b'"')
             return True
-        char(p)
+        anychar(p)
+
+def char(p, c, generate=True):
+    if p.peek() not in (c, ord(c)):
+        return False
+    if generate: anychar(p)
+    else:        p.consume()
+    return True
 
 def space(p, generate=True):
     ' Consume a single space, if present. '
-    if p.peek() in (' ', ord(' ')):
-        if generate: char(p)
-        else:        p.consume()
+    char(p, ' ', generate)
 
 def spaces(p, generate=True):
     ''' Consume zero or more space characters.
@@ -458,12 +475,12 @@ def spaces(p, generate=True):
         else:
             break
 
-def chars(p):
-    ' Do char() until end of input. '
+def anychars(p):
+    ' Do anychar() until end of input. '
     while not p.finished():
-        char(p)
+        anychar(p)
 
-def char(p):
+def anychar(p):
     #   XXX FIXME The parser knows the charset, but not which of the two
     #             encodings to use!
     ''' Consume a Unicode character from the input, translate it to an
