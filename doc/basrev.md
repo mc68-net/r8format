@@ -39,7 +39,7 @@ Routines:
 
 DORES,DONUM handling:
 - `CRUNCH`/`C42B2`: both ← 0
-  - `J42C2` crunch loop continue point
+  - `J42C2` crunch loop continue point (so DONUM not changed on loop restart)
   - `J42F3`/`J4301`: on DATA token, both ← 1
 - J42D9: in string; ignore both (STRNG ignores values of both)
 - J42F3: both ← 0 whenver we encounter a `:` (not in string or rem)

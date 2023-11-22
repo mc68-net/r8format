@@ -60,6 +60,15 @@ def tokline(p, squeeze=False):
             p.commit()
             donum = NUM_ENCODE
             continue
+        #   XXX do digit check here? This gives us cases:
+        #   0. case DONUM:
+        #       encode: parse complete number; continue
+        #       lineno: parse complete line number; continue
+        #       ASCII:  single char passed through; continue
+        #   1. Check for keyword; if keyword, continue
+        #       (but if function keyword, reset DONUM=encode)
+        #   2. not-keyword letter, pass through, DONUM=ascii, continue
+        #   3. anything else, ctrl-char-subst/passthrough, DONUM=encode; continue
         t = p.token()
         if t is not None:
            #DEBUG('token={}'.format(repr(t)))
@@ -78,9 +87,6 @@ def tokline(p, squeeze=False):
             continue
        #DEBUG('not token')
         #   If not a token, we try to match the various other constants.
-        if variable(p) is not None:
-            donum = NUM_ASCII
-            continue
         #   XXX comment about linenums
         #   Differs from MS-BASIC: we tokenize "GOTO12!34" as
         #   token(GOTO) lineno(12) "!" int(34); they do lineno(34)
@@ -99,8 +105,8 @@ def tokline(p, squeeze=False):
         b = p.consume(1)
        #DEBUG('passthrough byte {}'.format(b))
         p.generate(bytes([ord(b)]))
-        if donum == NUM_ASCII:
-            donum = NUM_ENCODE
+       #if donum == NUM_ASCII:
+       #    donum = NUM_ENCODE
 
     p.commit()
     return (ln, p.output())

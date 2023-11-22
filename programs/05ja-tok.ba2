@@ -2,3 +2,4 @@
 10 ?                ‖ Retokenised to PRINT
 20 CALL SYSTEM      ‖ CALL is tokenised
 30 _SYSTEM          ‖ Unlike MS-BASIC 5.x, _ is not tokenised to CALL!
+40 C2 AND 2 AND ABS(2)  ‖ XXX describe me
