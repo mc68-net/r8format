@@ -57,6 +57,7 @@ Usage: $nm [-2|-1|-m MACHINE] [-f] [-d DISKA] [-s FILE] [-- OPTS]
   -m MACHINE    Emulate MACHINE (must be a valid openMSX machine name)
   -f            Add FM-PAC sound cartridge
   -d DISKA      Path to dir or .dsk file for drive A: (default 'disk/')
+  -D            No drive (drive A not mapped to -d value above)
   -s FILE       Execute console commands from FILE after startup
                 (may be given multiple times)
   -- OPTS       Pass OPTS on to openMSX. Must come after all other options.
@@ -70,11 +71,15 @@ basedir=$(cd "$(dirname "$0")/.." && pwd -P)
 set_winpty; set_openmsx
 
 machine="$default_machine_msx2"
-diska=; fmpac= scripts=();
+diskaopt=-diska
+diska=
+fmpac=
+scripts=()
 while [[ ${#@} -gt 0 ]]; do case "$1" in
     -1)     shift; machine="$default_machine_msx1";;
     -2)     shift; machine="$default_machine_msx2";;
     -d)     shift; diska="$1"; shift;;
+    -D)     shift; diskaopt='';;
     -f)     shift; fmpac='-ext fmpac';;
     -h)     usage;;
     -m)     shift; machine="$1"; shift;;
@@ -87,8 +92,10 @@ if [[ ${#@} -ne 0 ]]; then
     [[ $1 == -- ]] || usage
     shift;  # remaining $@ is now opts passed to openMSX
 fi
-[[ -n $diska ]]     || { diska="$basedir/programs/"; mkdir -p "$diska"; }
-[[ -r "$diska" ]]   || die 1 "Cannot read $diska"
+if [[ -n $diskaopt ]]; then
+    [[ -n $diska ]]     || { diska="$basedir/programs/"; mkdir -p "$diska"; }
+    [[ -r "$diska" ]]   || die 1 "Cannot read $diska"
+fi
 
 #   Notes:
 #   • Newer versions of openMSX might not need $winpty, but older ones do.
@@ -98,4 +105,6 @@ fi
 #   • We must not run this in the background because on Windows that suppresses
 #     error messages.
 exec $winpty "$openmsx" \
-    -machine "$machine" $fmpac "$@" -diska "$diska" "${scripts[@]}"
+    -machine "$machine" $fmpac "$@" \
+    $diskaopt ${diskaopt:+"$diska"} \
+    "${scripts[@]}"
