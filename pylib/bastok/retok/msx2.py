@@ -105,8 +105,8 @@ def tokline(p, squeeze=False):
         b = p.consume(1)
        #DEBUG('passthrough byte {}'.format(b))
         p.generate(bytes([ord(b)]))
-       #if donum == NUM_ASCII:
-       #    donum = NUM_ENCODE
+        if b.isalpha():
+            donum = NUM_ASCII
 
     p.commit()
     return (ln, p.output())
