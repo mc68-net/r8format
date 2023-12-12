@@ -107,6 +107,8 @@ def tokline(p, squeeze=False):
         p.generate(bytes([ord(b)]))
         if b.isalpha():
             donum = NUM_ASCII
+        elif donum == NUM_ASCII:
+            donum = NUM_ENCODE
 
     p.commit()
     return (ln, p.output())
