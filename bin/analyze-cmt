@@ -38,9 +38,11 @@ def parse_args():
         "'char' for just the 0/1 symbols on one line")
     a('-B', '--bytes', action='store_true')
     a('-m', '--mark-baud', type=int, default=2400)
-    a('--mark-pulses', type=int, default=2)
+    a('--mark-pulses', type=int, default=2, help=\
+        'number of mark-baud pulses for a single mark bit')
     a('-s', '--space-baud', type=int, default=1200)
-    a('--space-pulses', type=int, default=2)
+    a('--space-pulses', type=int, default=2, help=\
+        'number of space-baud pulses for a single space bit')
     a('--start', default='m')
     a('--stop', default='ss')
     a('--reverse-bits', action='store_true')
