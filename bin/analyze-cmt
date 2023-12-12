@@ -33,7 +33,9 @@ def parse_args():
     a('-g', '--gradient-factor',type=float, default=0.5)
     a('-d', '--dump-pulses', action='store_true')
     a('-t', '--tolerance',type=float, default=0.25)
-    a('-b', '--bitstream',type=str)
+    a('-b', '--bitstream', type=str, help=\
+        "BITSTREAM='line' for one symbol per line; "
+        "'char' for just the 0/1 symbols on one line")
     a('-B', '--bytes', action='store_true')
     a('-m', '--mark-baud', type=int, default=2400)
     a('--mark-pulses', type=int, default=2)
