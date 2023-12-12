@@ -45,7 +45,8 @@ def parse_args():
         'number of space-baud pulses for a single space bit')
     a('--start', default='m')
     a('--stop', default='ss')
-    a('--reverse-bits', action='store_true')
+    a('--reverse-bits', action='store_true', help=\
+        'decode LSB first rather than MSB first')
     a('--invert-bits', action='store_true')
     a('-p', '--to-pulses', action='store_true')
     a('-P', '--from-pulses', action='store_true')
