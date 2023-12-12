@@ -77,7 +77,10 @@ def tokline(p, squeeze=False):
             if t == 'REM':  anychars(p)
             if t == "'":    anychars(p)
             if t == 'DATA': data(p, squeeze)
-            if t == '-':    continue  # start of number so does not change donum
+            if t == '-':
+                if donum == NUM_ASCII:
+                    donum = NUM_ENCODE
+                continue  # start of number so does not change donum
             if TOKFLAGS[t] & 0: # XXX don't have TOKFLAGS.FUNCTION yet
                 donum = NUM_ENCODE
             elif TOKFLAGS[t] & TOKFLAGS.LINENO:       # may take lineno?

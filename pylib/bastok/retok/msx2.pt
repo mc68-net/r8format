@@ -343,6 +343,8 @@ TLPARSER = Parser('', ja_charmap, TOKENS)
     ( 40, b'\x89\x20\x0E\x2E\x16',  '40 GOTO 5678'), # 5678=$162E
     ( 50, b'\x89 \x0E\x10\x00,,\x0E\x11\x00,,\x0E\x12\x00:\x0F\x13',
                                     '50 GOTO 16,,17,,18:19'),
+    #   minus sign might start a number, _or_ be an operator
+    ( 60, b'T\xEFT\xF2\x12',        '60 T=T-1'),
     #  41 24 ef 22 61 22 f1 22 91 22
 ])
 def test_tokline(lineno, tokens, line):
