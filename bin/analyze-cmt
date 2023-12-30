@@ -31,8 +31,9 @@ def parse_args():
     a('-r', '--report-bauds', action='store_true' ) # count cycles per well-known baud rates
     a(      '--baud', type=float, default=1200)
     a('-g', '--gradient-factor',type=float, default=0.5)
-    a('-d', '--dump-pulses', action='store_true')
     a('-t', '--tolerance',type=float, default=0.25)
+    a('-d', '--dump-pulses', action='store_true')
+    a('-l', '--pulse-length-stats', action='store_true')
     a('-b', '--bitstream', type=str, help=\
         "BITSTREAM='line' for one symbol per line; "
         "'char' for just the 0/1 symbols on one line")
@@ -173,6 +174,40 @@ def dump_pulses(args, pulses):
         idx += 1
 
 
+def dump_pulse_length_stats(args, pulses):
+    # Create histogram for run lengths
+    buckets = dict( (i, 0) for i in range(0,33) )
+    buckets['>'] = 0
+
+    b = args.baud
+    tol = args.tolerance
+    low = (1.0 + math.log(1.0 - tol)) * 0.5/b
+    high = (1.0 + math.log(1.0 + tol)) * 0.5/b
+    idx = 0
+    n = len(pulses)
+    while idx < n:
+        dur = pulses[idx][2]
+        if dur >= low and dur <= high:
+            c = 0
+            while idx < n and dur >= low and dur <= high:
+                c += 1
+                idx += 1
+                if idx < n:
+                    dur = pulses[idx][2]
+            if c > 32:
+                buckets['>'] += 1
+            else:
+                buckets[c] += 1
+        else:
+            idx += 1
+
+    # Report
+    print('Run lengths for baud {}'.format(b))
+    print('{:>12} {:>8}'.format('Run Length', 'Count'))
+    for l in chain(range(0,33), '>'):
+        c = buckets[l]
+        print('{:>12} {:>8}'.format(l, c))
+
 def dump_bitstream(args, pulses):
     valid = ('line', 'char')
     if args.bitstream not in valid:
@@ -198,11 +233,14 @@ def dump_bitstream(args, pulses):
             else:                       print('x',end='')
         else:
             if c == au.PULSE_MARK:
-                print('{:012.6f}, 1, {:09.3f}, {}'.format(e[0], 1e6 * e[2], e[1]))
+                print('{}, {:012.6f}, 1, {:09.3f}, {}'
+                      .format(idx, e[0], 1e6 * e[2], e[1]))
             elif c == au.PULSE_SPACE:
-                print('{:012.6f}, 0, {:09.3f}, {}'.format(e[0], 1e6 * e[2], e[1]))
+                print('{}, {:012.6f}, 0, {:09.3f}, {}'
+                      .format(idx, e[0], 1e6 * e[2], e[1]))
             else:
-                print('{:012.6f}, X, {:09.3f}, {}'.format(e[0], 1e6 * e[2], e[1]))
+                print('{}, {:012.6f}, X, {:09.3f}, {}'
+                      .format(idx, e[0], 1e6 * e[2], e[1]))
         if c == au.PULSE_MARK:          idx += args.mark_pulses
         elif c == au.PULSE_SPACE:       idx += args.space_pulses
         else:                           idx += 1
@@ -214,7 +252,12 @@ def dump_bytes(args, pulses):
     # Find start bit patterm
     (idx, _) = pd.next_mark(pulses, 0)
     #lg.v3('Mark at {}', pulses[idx][0])
-    print('Mark at {}'.format(pulses[idx][0]))
+    print('Mark at {} - {}'.format(idx, pulses[idx][0]))
+
+    idx = pd.next_space(pulses, idx, 1)
+    print('Space at {} - {}'.format(idx, pulses[idx][0]))
+
+    print('Searching from {} - {}'.format(idx, pulses[idx][0]))
 
     # Attempt to read a byte and keep trying until we get a byte
     byte_read = False
@@ -223,21 +266,22 @@ def dump_bytes(args, pulses):
             i = idx
             (idx, b) = pd.read_byte(pulses, idx)
             byte_read = True
-            print('Byte read at {}'.format(pulses[i][0]))
+            print('Byte read at {} - {}: {:02x}'.format(i, pulses[i][0], b))
         except Exception as ex:
             idx += 1
     c = '.' if b<32 or b>127 else chr(b)
-    print('{:012.6f}, {:02x}, {}'.format(pulses[idx][0], b, c))
+    print('{} {:012.6f}, {:02x}, {}'.format(idx, pulses[idx][0], b, c))
     # Keep reading bytes until we can't
     err = 0
     while idx < len(pulses):
         try:
             (idx, b) = pd.read_byte(pulses, idx)
             if err > 0:
-                print('{:012.6f}, failed to read byte for previous {} pulses'.format(pulses[idx][0], err))
+                print(
+                    '{} - {:012.6f}, failed to read byte for previous {} pulses'.format(idx, pulses[idx][0], err))
                 err=0
             c = '.' if b<32 or b>127 else chr(b)
-            print('{:012.6f}, {:02x}, {}'.format(pulses[idx][0], b, c))
+            print('{}, {:012.6f}, {:02x}, {}'.format(idx, pulses[idx][0], b, c))
         except Exception as ex:
             err += 1
             idx += 1
@@ -316,6 +360,8 @@ def main(args):
         report_bauds(args, pulses)
     if args.dump_pulses:
         dump_pulses(args, pulses)
+    if args.pulse_length_stats:
+        dump_pulse_length_stats(args, pulses)
     if args.bitstream:
         dump_bitstream(args, pulses)
     if args.bytes:
