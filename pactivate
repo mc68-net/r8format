@@ -1,4 +1,4 @@
-#   pactivate v0.3.3    https://github.com/0cjs/pactivate
+#   pactivate version 0.4.0   https://github.com/cynic-net/pactivate
 
 [ -n "$BASH_VERSION" ] || { echo 1>&2 "source (.) this with Bash."; exit 9; }
 #   https://stackoverflow.com/a/28776166/107294
@@ -22,10 +22,17 @@ while [[ $# -gt 0 ]]; do case "$1" in
     *)  echo 1>&2 "pactivate: unknown argument: $1"; __pa_cleanup; return 2;;
 esac; done;
 
-__pa_python=python3     # XXX should default to `py` for Windows
-#   Even if it's a dangling link (-e fails) we use it so that user sees error.
-[[ -e $__pa_basedir/.python || -L $__pa_basedir/.python ]] \
-    && __pa_python=$__pa_basedir/.python
+if [[ -e $__pa_basedir/.python || -L $__pa_basedir/.python ]]; then
+    #   Even if it's a dangling link (-e fails) we use it so that the
+    #   user sees the error.
+    __pa_python=$__pa_basedir/.python
+else
+    #   We test `py` only in Windows/MINGW because the Unix `py` program
+    #   (from the pythonpy package) is a different thing we never want to use.
+    for __pa_python in ${MSYSTEM:+py} python3 python PYTHON_NOT_FOUND; do
+        "$__pa_python" --version >/dev/null 2>&1 && break
+    done
+fi
 "$__pa_python" --version >/dev/null 2>&1 || {
     [[ -L $__pa_python ]] \
         && echo "$__pa_python -> $(readlink "$__pa_python")"
@@ -64,7 +71,7 @@ mkdir -p "$__pa_bootdir"    # also ensures that $__pa_builddir exists
     }
     #   get-pip.py produces spurious upgrade notices on older Python versions
     #   such as 3.6 or 2.7; --disable-pip-version-check suppresses these.
-    curl ${__pa_quiet:+--silent} \
+    curl '-#' ${__pa_quiet:+--silent} \
         "https://bootstrap.pypa.io/pip/$__pa_pyver/get-pip.py" \
         | "$__pa_python" - \
             $__pa_quiet -t "$__pa_bootdir" --disable-pip-version-check \
@@ -75,9 +82,11 @@ mkdir -p "$__pa_bootdir"    # also ensures that $__pa_builddir exists
 [[ -d $__pa_bootdir/virtualenv/ ]] || {
     echo '----- Installing bootstrap virtualenv'
     #   This install produces spurious "bootstrap/.../bin already exists"
-    #   messages; --upgrade suppresses these.
+    #   messages; --upgrade suppresses these. However, --upgrade also seems
+    #   to entirely remove the bin/ directory, so we "re-install" pip
+    #   (which will not re-download it) to restore bin/pip as well.
     PYTHONPATH="$__pa_bootdir" "$__pa_bootdir/bin/pip" \
-        $__pa_quiet install --upgrade -t "$__pa_bootdir" virtualenv
+        $__pa_quiet install --upgrade -t "$__pa_bootdir" pip virtualenv
 }
 
 [[ -d $__pa_builddir/virtualenv/ ]] || {
@@ -98,7 +107,7 @@ mkdir -p "$__pa_bootdir"    # also ensures that $__pa_builddir exists
     fi
     echo -n "Version: " && "$__pa_python" --version
     PYTHONPATH="$__pa_bootdir" "$__pa_python_deref" -s -m virtualenv \
-        $__pa_quiet --prompt $(dirname "$__pa_basedir") \
+        $__pa_quiet --prompt $(basename "$__pa_basedir") \
         "$__pa_builddir/virtualenv/" \
     && [[ -f "$__pa_requirements" ]] \
     && "$__pa_builddir/virtualenv/bin/pip" \
