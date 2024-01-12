@@ -43,7 +43,8 @@ def test_setdata_regular():
 
     with pytest.raises(AttributeError) as ex:
         block.filedata = b''
-    assert ex.match("can't set attribute")
+    assert ex.match(
+        r"can't set attribute|has no setter")   # Python ≤3.10 | ≥3.11
 
     d55 = b'\xAA\x55\xAA\x55'
     block.setdata(d55); assert (d55, 0x29) == (block.filedata, block.checksum)
@@ -79,7 +80,8 @@ def test_make_EOF_block():
 
     with pytest.raises(AttributeError) as ex:
         block.filedata = b''
-    assert ex.match("can't set attribute")
+    assert ex.match(
+        r"can't set attribute|has no setter")   # Python ≤3.10 | ≥3.11
 
 def test_setdata_end():
     ' Setting data on the end block would be used to confirm the checksum. '
