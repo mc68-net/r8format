@@ -149,7 +149,7 @@ ____
 
 libdir=$(cd "$(dirname "$0")" && pwd -P)
 projdir=$(cd "$(dirname "$0")/../.." && pwd -P)
-cmtconv="$projdir/bin/cmtconv"
+cmtconv=cmtconv
 
 quiet=
 verbose=

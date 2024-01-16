@@ -8,6 +8,17 @@ authors = [
     { name = 'Stuart Croy', email = 'stuartcroy@mac.com' },
 ]
 
+[project.scripts]
+#   bastok
+basdump         = 'bastok.cli.basdump:main'
+blines          = 'bastok.cli.blines:main'
+detok           = 'bastok.cli.detok:main'
+#   binary
+msx-dasm        = 'binary.cli.msx_dasm:main'
+#   cmtconv
+analyze-cmt     = 'cmtconv.cli.analyze_cmt:main'
+cmtconv         = 'cmtconv.cli.cmtconv:main'
+
 [build-system]
 requires = ['setuptools']
 build-backend = 'setuptools.build_meta'

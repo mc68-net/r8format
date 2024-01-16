@@ -7,11 +7,6 @@
 #   at arbitrary 16-byte intervals.
 #
 
-from    os.path  import abspath, dirname, join
-from    site  import addsitedir
-BASEDIR = dirname(dirname(abspath(__file__)))
-if __name__ == '__main__': addsitedir(join(BASEDIR, 'pylib'))
-
 from    argparse  import ArgumentParser
 from    itertools  import islice
 from    struct  import unpack
@@ -103,8 +98,10 @@ def parseargs():
     return p.parse_args()
 
 def main():
-    if ARGS.input == '-':   f = sys.stdin.buffer
-    else:                   f = open(ARGS.input, 'rb')
+    args = parseargs()
+
+    if args.input == '-':   f = sys.stdin.buffer
+    else:                   f = open(args.input, 'rb')
     bf = BASFile(f.read(), 'MSX')
     f.close()
 
@@ -128,7 +125,3 @@ def main():
             break
         else:
             i_addr = i_nextaddr
-
-if __name__ == '__main__':
-    ARGS = parseargs()
-    main()

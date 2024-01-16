@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
 
-from    os.path  import abspath, dirname, join
-from    site  import addsitedir
-BASEDIR = dirname(dirname(abspath(__file__)))
-if __name__ == '__main__': addsitedir(join(BASEDIR, 'pylib'))
-
 from    argparse  import ArgumentParser
 import  sys
 
@@ -33,7 +28,8 @@ def parseargs():
 
     return p.parse_args()
 
-def main(args):
+def main():
+    args = parseargs()
 
     if args.expand and args.binary:
         die(2, '--binary and --expand are incompatible')
@@ -75,6 +71,3 @@ def main(args):
         out.write(endline)
     if args.dos_text:
         out.write(b'\x1A')
-
-if __name__ == '__main__':
-    main(parseargs())

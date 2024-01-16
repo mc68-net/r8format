@@ -20,13 +20,11 @@
 '''
 
 from    argparse import ArgumentParser
-from    os.path  import abspath, basename, dirname, exists, join
+from    os.path  import basename, exists, join
 from    struct  import unpack
 from    subprocess  import run
 from    tempfile  import TemporaryDirectory
 import  sys
-
-BASEDIR = dirname(dirname(abspath(__file__)))
 
 def warn(*msgparts):
     print(' '.join(msgparts), file=sys.stderr)
@@ -86,6 +84,3 @@ def main():
 
     with TemporaryDirectory() as tmpdir:
         disasm(args, tmpdir)
-
-if __name__ == '__main__':
-    main()

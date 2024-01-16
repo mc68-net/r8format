@@ -7,18 +7,16 @@
 #   mark/space, the bitstream, and then byte framing.
 #
 
-import  wave
-from    os.path  import abspath, dirname, join
-from    site  import addsitedir
 from    argparse import ArgumentParser
-from    itertools import chain
 from    functools import partial
+from    itertools import chain
 import  math
 import  statistics
-import  sys, os
+import  sys
+import  wave
 
-#   Configure and use b8tool's Python library path
-B8_HOME = dirname(dirname(abspath(__file__)))
+from    cmtconv.analyze import *
+import  cmtconv.audio as au, cmtconv.logging as lg
 
 parseint = partial(int, base=0)     # Parse an int recognizing 0xNN etc.
 
@@ -337,7 +335,8 @@ def save_wav(args, pulses, sample_dur):
     w.setframerate(44100)
     w.writeframes(bytes(samples))
 
-def main(args):
+def main():
+    args = parse_args()
     print(args)
     if args.from_pulses:
         pulses = load_pulses(args)
@@ -368,9 +367,3 @@ def main(args):
         dump_bytes(args, pulses)
     if args.save_wav:
         save_wav(args, pulses, sample_dur)
-
-if __name__ == '__main__':
-    addsitedir(join(B8_HOME, 'pylib'))
-    import  cmtconv.audio as au, cmtconv.logging as lg
-    from    cmtconv.analyze import *
-    main(parse_args())

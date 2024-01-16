@@ -20,15 +20,9 @@
     additional spaces); use the retokenizer to do that.
 '''
 
-from    os.path  import abspath, dirname, join
-from    site  import addsitedir
-BASEDIR = dirname(dirname(abspath(__file__)))
-if __name__ == '__main__': addsitedir(join(BASEDIR, 'pylib'))
-
 from    sys import argv
 from    bastok.blines  import blines
 
-####################################################################
-
-with open(argv[1], encoding='UTF-8') as f:
-    for l in blines(f.readlines()): print(l)
+def main():
+    with open(argv[1], encoding='UTF-8') as f:
+        for l in blines(f.readlines()): print(l)

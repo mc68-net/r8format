@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
-from    os.path  import abspath, dirname, join
 from    site  import addsitedir
 from    argparse import ArgumentParser
 from    functools import partial
 import  sys, os
 
-#   Configure and use b8tool's Python library path
-B8_HOME = dirname(dirname(abspath(__file__)))
+import  cmtconv.formats as fm, cmtconv.logging as lg
+
 
 parseint = partial(int, base=0)     # Parse an int recognizing 0xNN etc.
 
@@ -56,7 +55,8 @@ def parse_args():
 
     return args
 
-def main(args):
+def main():
+    args = parse_args()
     reader = fm.FORMATS[args.input_format][0]
     blocks = reader(args.platform, args.input, **args.reader_optargs)
 
@@ -64,8 +64,3 @@ def main(args):
         writer = fm.FORMATS[args.output_format][1]
         writer(args.platform, blocks, args.output)
         #   XXX relies on exit() to close files
-
-if __name__ == '__main__':
-    addsitedir(join(B8_HOME, 'pylib'))
-    import cmtconv.formats as fm, cmtconv.logging as lg
-    main(parse_args())

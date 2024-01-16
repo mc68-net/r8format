@@ -48,20 +48,20 @@ mkdir -p $ftdata/detok
 echo "====== bastok"
 
 qecho "------ basdump  basdump.bas"
-bin/basdump  programs/basdump.bas | diff - programs/basdump.dump
+basdump  programs/basdump.bas | diff - programs/basdump.dump
 
 qecho "------ detok    simple.bas"
-bin/detok    programs/simple.bas >$ftdata/detok/simple.ba0
+detok    programs/simple.bas >$ftdata/detok/simple.ba0
 diff -u {$ftdata/detok,programs}/simple.ba0
 
 qecho "------ detok -e simple.bas"
-bin/detok -e programs/simple.bas >$ftdata/detok/simple.ba1
+detok -e programs/simple.bas >$ftdata/detok/simple.ba1
 diff -u {$ftdata/detok,programs}/simple.ba1
 
 {
     f="binchars"
     qecho "------ detok --binary $f.bas"
-    bin/detok --binary programs/$f.bas >$ftdata/detok/$f.baa
+    detok --binary programs/$f.bas >$ftdata/detok/$f.baa
     hexdiff {$ftdata/detok,programs}/$f.baa
 }
 
