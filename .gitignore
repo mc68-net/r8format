@@ -1,5 +1,10 @@
 __pycache__/
 
+#   Local repo build dir and developer local files.
 /.build/
 /tags
 /tmp/
+
+#   pyproject-build output files.
+/dist/
+/pylib/r8format.egg-info/

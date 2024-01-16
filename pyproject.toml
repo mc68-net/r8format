@@ -1,0 +1,16 @@
+[project]
+name = 'r8format'
+description = 'Retrocomputing 8-bit file format manipulation tools'
+version = '0.0.0'
+dependencies = []
+authors = [
+    { name = 'Curt J. Sampson', email = 'cjs@cynic.net' },
+    { name = 'Stuart Croy', email = 'stuartcroy@mac.com' },
+]
+
+[build-system]
+requires = ['setuptools']
+build-backend = 'setuptools.build_meta'
+
+[tool.setuptools.packages.find]
+where = ['pylib/']
