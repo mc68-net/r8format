@@ -22,3 +22,15 @@ in raw format) but `parecord` (use SIGINT to stop recording):
 
 The `pavucontrol` window can be used to view levels during recording and
 playback.
+
+
+Similar Tools
+-------------
+
+- MAME [Castool]: Converts various formats (CoCo `.CAS`, C64 `.TAP`, etc.
+  etc.) to WAV files for use with MAME.
+
+
+
+<!-------------------------------------------------------------------->
+[Castool]: https://docs.mamedev.org/tools/castool.html
