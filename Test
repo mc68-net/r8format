@@ -26,6 +26,13 @@ quiet=
 for arg in "$@"; do [[ $arg == -q ]] && quiet=-q; done
 
 . ./pactivate -q
+pip show r8format 2>/dev/null \
+    | grep -s 'Editable project location:' >/dev/null \
+|| {
+    echo "Installing editable r8format..."
+    pip install -q -e .
+}
+
 
 ####################################################################
 #   Unit Tests
