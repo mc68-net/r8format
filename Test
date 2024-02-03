@@ -26,7 +26,6 @@ quiet=
 for arg in "$@"; do [[ $arg == -q ]] && quiet=-q; done
 
 . ./pactivate -q
-export PYTHONPATH="$basedir/pylib"
 
 ####################################################################
 #   Unit Tests
