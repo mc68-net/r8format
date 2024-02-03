@@ -37,7 +37,7 @@ pip show r8format 2>/dev/null \
 ####################################################################
 #   Unit Tests
 
-pytest -q -o testpaths=pylib/ "$@"
+pytest -q "$@"      # use pyproject.toml for configuration
 
 ####################################################################
 #   Functional Tests
