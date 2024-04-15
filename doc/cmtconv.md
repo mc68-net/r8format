@@ -3,8 +3,8 @@ cmtconv - CMT (Cassette Tape) Image Generation/Conversion
 
 ### Playing CMT (Cassette Tape) Images
 
-`b8tool/bin/cmtconv` is used to generate `.wav` files that can be played
-into microcomputers. It can be handy to play these directly from your
+`cmtconv` is used to generate `.wav` files that can be played into
+microcomputers. It can be handy to play these directly from your
 development host, and even more handy to add an separate audio interface
 (usually USB) to dedicate to this.
 

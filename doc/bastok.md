@@ -12,7 +12,7 @@ sets, but they may also be useful for people developing software in BASIC.
 
 #### Files and directories
 
-- `bin/detok`: A command-line detokenization tool. Given an input filename,
+- `detok`: A command-line detokenization tool. Given an input filename,
   it will read that as a tokenized BASIC file and print the detokenized
   version to stdout in UTF-8 (the user's locale is ignored) or GHB/MSX-BASIC
   (see below) encoding. Give the `-h` option for help.
@@ -38,7 +38,7 @@ also define their own character sets.
 
 BASIC program text is always considered to be printable ASCII text (i.e.,
 control characters are not allowed) and is converted to its Unicode
-equivalent. Since `bin/detok` always generates UTF-8 output when doing
+equivalent. Since `detok` always generates UTF-8 output when doing
 conversion, these parts of the program will always be ASCII as well. BASIC
 program text is all text in a BASIC program except for: string constants,
 `DATA` statement arguments and what follows `REM`. The quotes surrounding a
@@ -66,7 +66,7 @@ The GHB encoding maps:
 The detokenizer converts GHB encoded characters to Unicode characters
 using a built-in or (soon) user-specified mapping. (You can see the list of
 currently known MSX character sets by by giving any unknown character set
-name to the `-c` option of a command-line program, e.g., `bin/detok -c - -`.)
+name to the `-c` option of a command-line program, e.g., `detok -c - -`.)
 
 The use of ASCII in BASIC program text and an MSX character set in string
 constants allows you to edit a BASIC program that uses a custom MSX
