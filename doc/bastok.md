@@ -18,7 +18,7 @@ sets, but they may also be useful for people developing software in BASIC.
   (see below) encoding. Give the `-h` option for help.
 - `Test`: A Bash script to set up a Python virtual environment and run the
   unit tests. Any parameters passed to this will be passed on to `pytest`.
-- `pylib/bastok/`: A Python module containing the (de-)tokenization tools.
+- `psrc/bastok/`: A Python module containing the (de-)tokenization tools.
 - `programs/`: Test programs, both tokenised and ASCII.
 - `tool/`: Development tools.
 

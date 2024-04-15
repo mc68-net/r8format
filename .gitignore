@@ -7,4 +7,4 @@ __pycache__/
 
 #   pyproject-build output files.
 /dist/
-/pylib/r8format.egg-info/
+/psrc/r8format.egg-info/

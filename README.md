@@ -8,7 +8,7 @@ used on old 8-bit computers.
 #### Installation
 
 The tools are run directly from the `bin/` directory; no installation is
-required. The libraries are under `pylib/`. All files under `bin/` that
+required. The libraries are under `psrc/`. All files under `bin/` that
 use the libraries find them under the `pylib/` at the same level.
 
 These are tested only under Linux (the top level `./Test` script will run
