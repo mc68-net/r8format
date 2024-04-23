@@ -11,14 +11,15 @@ This is a [PyPA] package than can be built/installed with any compliant
 tool, such as Pip. We suggest you install it in a virtualenv, but this
 isn't necessary. Typical methods of installation include:
 
+    #   Install the most recent release from PyPI
+    pip install r8format        # https://pypi.org/project/r8format/
+
     #   Install the latest version directly from GitHub.
     pip install git+https://github.com/mc68-net/r8format.git
 
     #   Install local copy of the repo in editable form.
     #   You almost certainly want to be using a virtual environment for this.
     pip install -q -e ./r8format
-
-A [PyPI] package is planned.
 
 On Linux, the top-level `./Test` script in the repo will run both the
 unit and functional (command-line) tests. This has been tested only
@@ -101,7 +102,6 @@ good places to get in touch, more or less in order of preference:
 
 <!-------------------------------------------------------------------->
 [PyPA]: https://packaging.python.org/en/latest/specifications/
-[PyPI]: https://pypi.org/
 
 <!-- Programs -->
 [bt]: ./doc/bastok.md
