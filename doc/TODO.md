@@ -2,6 +2,9 @@ r8format TODO List
 ==================
 
 High priority:
+- Convert the functional tests in `Test` to use pytest so that they become
+  part of the t8dev default test suite when this is a subrepo in a project
+  using t8dev.
 - `psrc/pytest_pt.py` is not included in the built package (the wheel), and
   thus users of t8dev must still use a Git submodule. This probably wants
   to be moved down into one of the packages (though none of `binary`,
