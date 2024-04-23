@@ -11,14 +11,16 @@ Release Process
 ---------------
 
 1. Update the following files:
-   - `pytest.toml`: Bump the version number and remove the `-current`
-     suffix from it if present.
-   - `doc/CHANGELOG.md`: Rename the "-current" section to the new version
-     number and date of release, and add a new (empty) "-current" section
-     to the top of the list of releases.
-   - Commit these changes, but do not push them to `main` yet.
-     Probably the commit should not include any other changes, and
-     the message can be just 'Release 0.x.x'.
+   - `pytest.toml`: Remove the `.devN` suffix from the version number.
+     (Lack of a `.devN` suffix indicates that a developer didn't add it
+     when making a releasable change; in this case just bump the version
+     number.)
+   - `doc/CHANGELOG.md`: Rename the 'dev' section to the new version number
+     and date of release, and add a new (empty) 'dev' section to the top of
+     the list of releases.
+   - Commit these changes, but do not push them to `main` yet. Probably the
+     commit should not include any other changes, and the message can be
+     just 'Release 0.x.x'.
 
 2. Build and check the release.
    - Change the current working directory to the project root.
