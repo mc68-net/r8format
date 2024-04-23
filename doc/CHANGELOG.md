@@ -14,7 +14,7 @@ specific releases can also be fetched via the Git commit ID.)
 
 ### -current
 
-#### 0.0.1 (2024-04-23)
+#### 0.0.2 (2024-04-23)
 - Initial release.
 
 

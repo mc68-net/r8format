@@ -1,5 +1,5 @@
 [project]
-version = '0.0.1'
+version = '0.0.2'
 name = 'r8format'
 description = 'Retrocomputing 8-bit file format manipulation tools'
 readme = 'README.md'
