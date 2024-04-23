@@ -1,7 +1,8 @@
 [project]
+version = '0.0.1'
 name = 'r8format'
 description = 'Retrocomputing 8-bit file format manipulation tools'
-version = '0.0.1'
+readme = 'README.md'
 dependencies = []
 authors = [
     { name = 'Curt J. Sampson', email = 'cjs@cynic.net' },
