@@ -23,6 +23,7 @@ will be tagged, but specific releases can also be fetched via the Git
 commit ID.
 
 ### dev
+- Added missing `pytest_pt` top-level module.
 
 #### 0.0.2 (2024-04-23)
 - Initial release.

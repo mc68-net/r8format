@@ -1,5 +1,5 @@
 [project]
-version = '0.0.2'
+version = '0.0.3.dev1'
 name = 'r8format'
 description = 'Retrocomputing 8-bit file format manipulation tools'
 readme = 'README.md'
@@ -24,8 +24,22 @@ cmtconv         = 'cmtconv.cli.cmtconv:main'
 requires = ['setuptools']
 build-backend = 'setuptools.build_meta'
 
-[tool.setuptools.packages.find]
-where = ['psrc']
+[tool.setuptools.packages]
+find = { where = ['psrc'] }
+
+[tool.setuptools]
+py-modules = ['pytest_pt']
+#
+#   The packages.find specification above, for whatever reason, ignores all
+#   top-level modules (i.e., `*.py` files that can be imported).
+#
+#   We work around this by adding the top-level modules we need to include
+#   to `py-modules` above. This configuration directive is mentioned but
+#   not documented, but it seems to add additional modules to the list that
+#   `packages.find` comes up with.
+#
+#   Note that these must be Python module names, not filenames.
+#
 
 [tool.pytest.ini_options]
 testpaths = ['psrc']
