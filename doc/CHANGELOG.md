@@ -23,7 +23,10 @@ will be tagged, but specific releases can also be fetched via the Git
 commit ID.
 
 ### dev
-- Added missing `pytest_pt` top-level module.
+
+### 0.0.3 (2024-04-25)
+- Added: missing `pytest_pt` top-level module now present.
+  (t8dev and other repos using their own copy now no longer need to do so.)
 
 #### 0.0.2 (2024-04-23)
 - Initial release.
