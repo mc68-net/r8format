@@ -24,13 +24,19 @@ The `pavucontrol` window can be used to view levels during recording and
 playback.
 
 
-Similar Tools
--------------
+Similar and Related Tools
+-------------------------
 
 - MAME [Castool]: Converts various formats (CoCo `.CAS`, C64 `.TAP`, etc.
   etc.) to WAV files for use with MAME.
+- [minimodem]: A command-line program which generates/decodes FSK audio at
+  any specified baud rate using various framing protocols. Supports many
+  standard FSK protocols, including Bell103, Bell202, RTTY, TTY/TDD, NOAA
+  SAME, and Caller-ID. This can decode, at least to some degree, certain
+  FSK cassette tape formats as well.
 
 
 
 <!-------------------------------------------------------------------->
 [Castool]: https://docs.mamedev.org/tools/castool.html
+[minimodem]: https://github.com/kamalmostafa/minimodem
