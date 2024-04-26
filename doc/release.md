@@ -33,5 +33,5 @@ Release Process
 
 3. Do the release
    - `git tag v0.x.x`
-   - `git push main tag v0.x.x`
-   - `twine upload dist/*` (ensure you have your API token handy)
+   - `git push r main tag v0.x.x`   (replace `r` with your remote name)
+   - `twine upload dist/*`          (ensure you have your API token handy)
