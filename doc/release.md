@@ -25,6 +25,7 @@ Release Process
 2. Build and check the release.
    - Change the current working directory to the project root.
    - Activate the virtualenv: `source .build/virtalenv/bin/activate`.
+     (Or use `pae -a .` if you use pactiavte's pae tool.)
    - `pip install build twine`.
    - `rm -f dist/*`
    - `pyproject-build`.
