@@ -11,7 +11,7 @@ Release Process
 ---------------
 
 1. Update the following files:
-   - `pytest.toml`: Remove the `.devN` suffix from the version number.
+   - `pyproject.toml`: Remove the `.devN` suffix from the version number.
      (Lack of a `.devN` suffix indicates that a developer didn't add it
      when making a releasable change; in this case just bump the version
      number.)
