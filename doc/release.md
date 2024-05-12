@@ -29,7 +29,7 @@ Release Process
    - `pip install build twine`.
    - `rm -f dist/*`
    - `pyproject-build`.
-   - `twine check dist/*`
+   - `twine check --strict dist/*`  (the strict opt. fails on warnings)
    - Fix anything broken.
 
 3. Do the release
