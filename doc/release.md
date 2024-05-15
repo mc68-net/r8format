@@ -18,9 +18,9 @@ Release Process
    - `doc/CHANGELOG.md`: Rename the 'dev' section to the new version number
      and date of release, and add a new (empty) 'dev' section to the top of
      the list of releases.
-   - Commit these changes, but do not push them to `main` yet. Probably the
-     commit should not include any other changes, and the message can be
-     just 'Release 0.x.x'.
+   - Commit these changes to `main`, but do not push them up to GitHub yet.
+     Probably the commit should not include any other changes, and the
+     message can be just 'Release 0.x.x'.
 
 2. Build and check the release.
    - Change the current working directory to the project root.
