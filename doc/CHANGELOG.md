@@ -23,6 +23,7 @@ will be tagged, but specific releases can also be fetched via the Git
 commit ID.
 
 ### dev
+- Added: `binary.romimage`, a package to download/build/patch ROM images.
 
 ### 0.0.3 (2024-04-25)
 - Added: missing `pytest_pt` top-level module now present.
