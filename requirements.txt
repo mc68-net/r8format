@@ -1,5 +1,6 @@
 #   These are build/test deps; pytest.pt contains the runtime deps.
 pytest>=7
 pytest_pt
+pdoc
 build
 twine
