@@ -23,6 +23,8 @@ will be tagged, but specific releases can also be fetched via the Git
 commit ID.
 
 ### dev
+
+### 0.0.4 (2024-07-14)
 - Added: `binary.romimage`, a package to download/build/patch ROM images.
 - Changed: `binary.tool.asl` produces better messages when failing to parse
   symbol values in ASL listing/map files. (This better exposes an ASL bug.)
