@@ -1,0 +1,13 @@
+# https://docs.readthedocs.io/en/stable/config-file/v2.html
+version: 2
+
+#   With `formats: all`, the expected output directories are:
+#       $READTHEDOCS_OUTPUT/{html,htmlzip,pdf,epub}/
+formats: html
+
+build.os: ubuntu-24.04
+build.tools.python: "3.11"
+build.commands:
+    - ./Test
+    - mkdir -p "$READTHEDOCS_OUTPUT"
+    - cp -r ".build/..." "$READTHEDOCS_OUTPUT/html"
