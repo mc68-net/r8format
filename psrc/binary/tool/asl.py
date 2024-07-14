@@ -273,16 +273,14 @@ def ps_parse_section(secname, stream):
         # size = fields[3]
         # used = fields[4]
         # isvar = fields[5]  # ASL ≥ cur-142-bld172: '0'=const, '1'=var
-
-
-        if type == 'Int':
-            value = int(value, base=16)
-        elif type == 'Float':
-            value = float(value)
-        elif type == 'String':
-            value = aslunescape(value)
-        else:
-            raise ParseError("Unknown type '{}': {}".format(type, line))
+        try:
+            if type == 'Int':           value = int(value, base=16)
+            elif type == 'Float':       value = float(value)
+            elif type == 'String':      value = aslunescape(value)
+            else:
+                raise ParseError(f"Unknown type '{type}': {line}")
+        except ValueError as ex:
+            raise ParseError(f"Can't parse '{value}' as {type}: {line}")
         sym = SymTab.Symbol(name, value, secname)
         syms.append(sym)
 

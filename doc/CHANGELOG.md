@@ -24,6 +24,8 @@ commit ID.
 
 ### dev
 - Added: `binary.romimage`, a package to download/build/patch ROM images.
+- Changed: `binary.tool.asl` produces better messages when failing to parse
+  symbol values in ASL listing/map files. (This better exposes an ASL bug.)
 
 ### 0.0.3 (2024-04-25)
 - Added: missing `pytest_pt` top-level module now present.
