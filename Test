@@ -68,4 +68,20 @@ diff -u {$ftdata/detok,programs}/simple.ba1
 echo "====== cmtconv"
 psrc/cmtconv/Test "$@"
 
+####################################################################
+#   Docs
+
+built_docs="$basedir/.build/hdoc"
+echo "===== Generating documentation to:"
+echo "file://$built_docs/index.html"
+#   This produces documentation as if it were under a top-level module
+#   named `psrc`. It doesn't seem possible to convince it that the modules
+#   in psrc/ are top-level modules; doing a chdir into psrc/ and trying
+#   `.` or `./` as an argument doesn't work. So for the moment we just live
+#   with it.
+PYTHONPATH=psrc/ pdoc -o "$built_docs" psrc/
+
+####################################################################
+
+echo OK
 PASSED=true
