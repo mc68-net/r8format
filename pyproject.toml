@@ -2,12 +2,17 @@
 version = '0.0.3'
 name = 'r8format'
 description = 'Retrocomputing 8-bit file format manipulation tools'
-readme = 'README.md'
-dependencies = []
 authors = [
     { name = 'Curt J. Sampson', email = 'cjs@cynic.net' },
     { name = 'Stuart Croy', email = 'stuartcroy@mac.com' },
 ]
+readme = 'README.md'
+urls.homepage = 'https://github.com/mc68-net/r8format'
+urls.source = 'https://github.com/mc68-net/r8format'
+urls.tracker = 'https://github.com/mc68-net/r8format/issues'
+
+requires-python = '>=3.6'
+dependencies = []
 
 [project.scripts]
 #   bastok
