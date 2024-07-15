@@ -2,3 +2,4 @@
 pytest>=7
 pytest_pt
 build
+twine
