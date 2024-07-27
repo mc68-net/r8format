@@ -25,6 +25,8 @@ commit ID.
 ### dev
 - Added: A `binary.romimage.RomImage` can now be cleared (set to length 0)
   with loadspec of `--`. This is useful to "disable" a default RomImage.
+- Fixed: `binary.romimage` no longer catches `HTTPError` where it tried
+  (but failed) to print a message and exit.
 
 ### 0.0.5 (2024-07-15)
 - Added: `binary.romimage`, a package to download/build/patch ROM images.

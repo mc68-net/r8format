@@ -148,12 +148,9 @@ class RomImage:
                 self.readfile(offset, cf)
                 return
 
-        try:
-            with urlopen(source) as response:
-                romdata = response.read()
-                self.set_image(offset, romdata)
-        except HTTPError as ex:
-            err(f'{ex} for {source!r}')
+        with urlopen(source) as response:
+            romdata = response.read()
+            self.set_image(offset, romdata)
         if self.cachedir:
             with open(cf, 'wb') as f: f.write(romdata)
 
