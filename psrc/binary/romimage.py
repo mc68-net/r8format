@@ -55,9 +55,15 @@ class RomImage:
         self.name       = name
         if cachedir is None:    self.cachedir = None
         else:                   self.cachedir = Path(cachedir)
-        self.image      = bytearray()
+        self.clear()
         if loadspec is not None:
             self.load(*self.parse_loadspec(loadspec))
+
+    def clear(self):
+        ''' Clear the RomImage (remove all data, giving a data length of 0).
+            (``load(-1, None)`` will also clear the image.)
+        '''
+        self.image = bytearray()
 
     LOADSPEC = re.compile(r'(@[0-9A-Fa-f]+:)?(.*)')
     SCHEME   = re.compile(r'^[A-Za-z][A-Za-z0-9+.-]*:')
@@ -66,16 +72,17 @@ class RomImage:
     def parse_loadspec(loadspec):
         ''' Given a `loadspec` in the format ``[@hhhh:]path-or-URL``, return
             the startaddr (hex digits _hhhh_ above; $0000 if not present)
-            and the path or URL.
+            and the path or URL. As a special case, if the *path-or-URL*
+            is ``--``, this returns ``(-1, None)`` to indicate that the
+            `RomImage` should be cleared (set to 0 length).
 
             This never fails, though it may return an odd "path" if you
             e.g. include a non-hex-digit in the ``@hhhh:`` part.
         '''
         addr, rhs = RomImage.LOADSPEC.fullmatch(loadspec).group(1, 2)
-        if addr:
-            return (int(addr[1:-1], 16), rhs)
-        else:
-            return (0, rhs)
+        if rhs == '--':     return (-1, None)
+        elif addr:          return (int(addr[1:-1], 16), rhs)
+        else:               return (0, rhs)
 
     def cache_file(self, url, mkdir=True):
         ''' Given a URL return a (hopefully) unique filesystem path in which
@@ -124,8 +131,13 @@ class RomImage:
 
     def load(self, offset, source):
         ''' Load the data from `source` (a URL or path) into this RomImage,
-            at offset `offset`.
+            at offset `offset`. If `offset` is -1, clear the RomImage (set
+            its length to 0).
         '''
+        if offset == -1:
+            self.clear()
+            return
+
         if not self.SCHEME.match(str(source)):      # is path to a file?
             self.readfile(offset, source)
             return

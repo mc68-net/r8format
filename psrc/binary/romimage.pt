@@ -29,6 +29,7 @@ def test_SCHEME_false(s):  assert not RomImage.SCHEME.match(s)
     ('foo/bar',                          0, 'foo/bar'),
     ('@12:file://foo/bar',          0x0012, 'file://foo/bar'),
     ('https://bin.com/foo/bar.bin',      0, 'https://bin.com/foo/bar.bin'),
+    ('--',                              -1, None),      # "clear RomImage"
 ])
 def test_parse_loadspec(loadspec, startaddr, source):
     assert (startaddr, source) == RomImage.parse_loadspec(loadspec)
@@ -49,6 +50,11 @@ def test_write():
     ri.image = b'\x00\x01\x02'
     with BytesIO() as f:
         ri.writefd(f);  assert b'\x00\x01\x02' == f.getvalue()
+
+def test_load_clear():
+    ri = RomImage('t_load_clear', cachedir=None)
+    ri.set_image(0, b'AB'); assert 0 < len(ri.image)
+    ri.load(-1, None);      assert 0 == len(ri.image)
 
 def test_load_file():
     ri = RomImage('t_load_file', cachedir=None)
