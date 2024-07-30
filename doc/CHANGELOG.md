@@ -23,6 +23,8 @@ will be tagged, but specific releases can also be fetched via the Git
 commit ID.
 
 ### dev
+
+### 0.0.6 (2024-07-30)
 - Added: A `binary.romimage.RomImage` can now be cleared (set to length 0)
   with loadspec of `--`. This is useful to "disable" a default RomImage.
 - Fixed: `binary.romimage` no longer catches `HTTPError` where it tried
