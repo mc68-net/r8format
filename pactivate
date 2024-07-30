@@ -1,4 +1,4 @@
-#   pactivate version 0.5.2   https://github.com/cynic-net/pactivate
+#   pactivate version 0.5.4   https://github.com/cynic-net/pactivate
 
 [ -n "$BASH_VERSION" ] || { echo 1>&2 "source (.) this with Bash."; exit 9; }
 #   https://stackoverflow.com/a/28776166/107294
@@ -41,14 +41,14 @@ fi
     __pa_cleanup; return 3
 }
 #   $__pa_pyver is empty for "modern" versions of Python (i.e., those that
-#   can use the current get-pip.py, 3.7 and above) and otherwise is the
+#   can use the current get-pip.py, 3.8 and above) and otherwise is the
 #   major.minor revision number, suitable for use in the URL to download
 #   an alternate version of get-pip.py.
 __pa_pyver=$("$__pa_python" -c '
 #   Reminder: this script must be compatible with Python 2 syntax.
 import sys
 M, m = sys.version_info[0], sys.version_info[1]     # Major, minor
-if (M < 3 or (M == 3 and m < 7)):
+if (M < 3 or (M == 3 and m < 8)):
     print("{}.{}".format(M, m))
 ')
 
@@ -120,9 +120,18 @@ if (M < 3 or (M == 3 and m < 11)): import distutils.cmd # deprecated ≥3.11
         echo
     fi
     echo -n "Version: " && "$__pa_python" --version
+    #   1. Use virtualenv to create the new virtualenv.
+    #   2. Upgrade pip to the latest version, because often the get_pip.py
+    #      version is old enough that we'll get annoying upgrade messages
+    #      with every use if we don't do this. To reduce output size, we
+    #      do this quietly and display the new version after. (The old
+    #      version is displayed in the virtualenv creation output.)
+    #   3. If we have a requirements file, install its contents.
     PYTHONPATH="$__pa_bootdir" "$__pa_python_deref" -s -m virtualenv \
         $__pa_quiet --prompt $(basename "$__pa_basedir") \
         "$__pa_builddir/virtualenv/" \
+    && "$__pa_builddir"/virtualenv/[bS]*/pip install -q -U pip \
+    && "$__pa_builddir"/virtualenv/[bS]*/pip --version \
     && [[ -f "$__pa_requirements" ]] \
     && "$__pa_builddir"/virtualenv/[bS]*/pip \
         install $__pa_quiet -r "$__pa_requirements"
