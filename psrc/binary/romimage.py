@@ -177,5 +177,7 @@ class RomImage:
         matches = [ i for i in range(len(patchspecs))
                       if self.matchpatchspec(patchspecs[i]) ]
         for i in matches:
-            name, loadspec = patchspecs.pop(i).split('=', 1)
+            name, loadspec = patchspecs[i].split('=', 1)
             self.load(*self.parse_loadspec(loadspec))
+        for i in reversed(matches):
+            patchspecs.pop(i)

@@ -99,3 +99,9 @@ def test_patches():
     patchspecs[1] = 'abc=/dev/null'
     ri.patches(patchspecs)
     assert 2 == len(patchspecs)
+
+def test_patches_multi():
+    ri = RomImage('ABC.def', cachedir=None)
+    patchspecs = ['foo=bar', 'abc=/dev/null', 'baz=quux', 'abc=/dev/null']
+    ri.patches(patchspecs)
+    assert ['foo=bar', 'baz=quux'] == patchspecs

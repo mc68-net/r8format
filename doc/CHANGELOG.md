@@ -23,6 +23,7 @@ will be tagged, but specific releases can also be fetched via the Git
 commit ID.
 
 ### dev
+- Fixed: `RomImage.patches()` now works if more than one patchspec matches.
 
 ### 0.0.6 (2024-07-30)
 - Added: A `binary.romimage.RomImage` can now be cleared (set to length 0)
