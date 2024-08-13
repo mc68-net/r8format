@@ -7,7 +7,7 @@ from    collections  import namedtuple
 from    enum  import IntEnum
 import  math
 
-from    binary.memimage  import MemImage
+from    r8bin.memimage  import MemImage
 from    cmtconv.logging  import *
 
 class ReadError(Exception):

@@ -1,4 +1,4 @@
-''' binary.tool.asxxxx - Support for ASxxx_ assembler/linker output
+''' r8bin.tool.asxxxx - Support for ASxxx_ assembler/linker output
 
     .. _ASxxxx: http://shop-pdp.net/ashtml/asxdoc.htm
 '''
@@ -7,8 +7,8 @@ from    collections import namedtuple as ntup
 from    struct import unpack_from
 import  re
 
-from    binary.memimage   import MemImage
-from    binary.symtab   import SymTab
+from    r8bin.memimage   import MemImage
+from    r8bin.symtab   import SymTab
 
 ####################################################################
 

@@ -1,5 +1,5 @@
-from    binary.tool.asxxxx import *
-from    binary  import pylib
+from    r8bin.tool.asxxxx import *
+from    r8bin  import pylib
 
 from    io import BytesIO, StringIO
 from    pathlib import Path
@@ -76,7 +76,7 @@ def tdatafile(filename):
     ''' Return a ByteStream reading from the given test file.
         This returns a context manager and so can be used with ``with``.
     '''
-    dir = 'binary/tool/testfiles/asxxxx'
+    dir = 'r8bin/tool/testfiles/asxxxx'
     return open(str(pylib(dir, filename)), 'r')
 
 @pytest.mark.parametrize('filename',
@@ -132,8 +132,8 @@ def test_AxSymTab_readsymtabpath_nonexistent_file():
         AxSymTab.readsymtabpath('/dev/null')
 
 def test_AxSymTab_readsymtabpath():
-    assert AxSymTab.readsymtabpath(pylib('binary/tool/testfiles/asxxxx/wide.rst'))
-    assert AxSymTab.readsymtabpath(pylib('binary/tool/testfiles/asxxxx/wide'))
+    assert AxSymTab.readsymtabpath(pylib('r8bin/tool/testfiles/asxxxx/wide.rst'))
+    assert AxSymTab.readsymtabpath(pylib('r8bin/tool/testfiles/asxxxx/wide'))
 
 def test_AxSymTab_readsymtabstream():
     #   Here we deliberately use a file that does not list the areas

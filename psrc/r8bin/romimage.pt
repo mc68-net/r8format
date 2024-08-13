@@ -2,7 +2,7 @@ from    io  import BytesIO
 from    urllib.error  import URLError
 import  pytest
 
-from    binary.romimage  import *
+from    r8bin.romimage  import *
 
 pm = pytest.mark.parametrize
 

@@ -1,5 +1,5 @@
-from    binary.tool.asl   import *
-from    binary  import pylib
+from    r8bin.tool.asl   import *
+from    r8bin  import pylib
 
 from    io   import BytesIO, StringIO
 from    pathlib import Path
@@ -9,7 +9,7 @@ import  re
 ####################################################################
 #   Test support
 
-TESTDATA_DIR = pylib('binary/tool/testfiles')
+TESTDATA_DIR = pylib('r8bin/tool/testfiles')
 
 def tdatafile(filename):
     ''' Return a ByteStream reading from the given test file.

@@ -1,6 +1,6 @@
 from    collections   import namedtuple as ntup
 import  pytest
-from    binary.memimage   import MemImage
+from    r8bin.memimage   import MemImage
 
 def test_memimage_entrypoint():
     mi = MemImage()

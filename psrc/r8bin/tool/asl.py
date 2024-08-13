@@ -1,4 +1,4 @@
-''' binary.tool.asl - Support for Macro Assembler AS__ assembler output.
+''' r8bin.tool.asl - Support for Macro Assembler AS__ assembler output.
 
     .. _AS: http://john.ccac.rwth-aachen.de:8000/as/
 
@@ -11,8 +11,8 @@
     that would then be inconsistent with other toolchains.
 '''
 
-from    binary.memimage import MemImage
-from    binary.symtab   import SymTab
+from    r8bin.memimage import MemImage
+from    r8bin.symtab   import SymTab
 
 from    collections   import namedtuple as ntup
 from    struct   import unpack_from

@@ -20,7 +20,7 @@ from    cmtconv.audio  import samples_to_pulses, pulses_to_samples, \
     filter_clicks, samples_to_pulses_via_edge_detection, \
     pulses_to_samples2
 from    cmtconv.logging  import *
-from    binary.tool  import asl
+from    r8bin.tool  import asl
 
 def get_block_module(platform):
     ''' Find, load and return the module containing the block classes for

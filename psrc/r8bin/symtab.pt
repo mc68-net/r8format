@@ -1,4 +1,4 @@
-from    binary.symtab   import SymTab
+from    r8bin.symtab   import SymTab
 import  pytest
 
 def test_empty_symtab():
