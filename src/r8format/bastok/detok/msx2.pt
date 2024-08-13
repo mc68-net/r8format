@@ -1,0 +1,373 @@
+from    r8format.bastok.detok.msx2  import *
+import  pytest
+
+class UTCharset:
+    ''' A Charset converter for unit testing detokenization. This only
+        converts native codes to Unicode, and codes are converted
+        algorithmically from *nn* to *U+F0nn, which are codes in the
+        private use area (U+E000-U+F8FF).
+
+        This will translate ASCII codes to non-ASCII codes, which is
+        intentional: it ensures that we are using this only for strings
+        rather than for code as well.
+    '''
+    def trans(self, n):
+        ''' Translate native code `n`, an `int` from 0x00 through 0xFF, to
+            a single-character Unicode `str`. Note that codes 0x00 through
+            0x1F are represented as [0x01, 0x40+`n`] in MSX BASIC.
+
+            This intentionally translates ASCII to non-ASCII to allow us
+            to confirm exactly where decoding is being done.
+        '''
+        assert n >= 0 and n < 0x100
+        return chr(0xF000+n)
+
+class MSXCodePoint:
+    ''' Produce printable ASCII and Unicode code points that have the same
+        number as the MSX code points. This is nonsense output, but convenient
+        for testing.
+    '''
+    def trans(self, n):
+        assert n >= 0 and n < 0x100
+        return chr(n)
+
+UTCS    = UTCharset()
+MSXCP   = MSXCodePoint()
+
+####################################################################
+
+def test_tokbytes():
+    ''' XXX This should probably be genericised for use with other token
+        sets.
+        XXX This does not currently test that it correctly detects
+        multiple entries.
+    '''
+    assert b'\x82'                          == tokbytes('FOR')
+    assert b'\xFF\x85' b'ER' b'\xFF\x94'    == tokbytes('INTERVAL')
+    with pytest.raises(LookupError):
+        tokbytes('NOT FOUND')
+
+def test_T_():
+    ' Make sure we correctly extracted certain tokens. '
+    assert 0x84 == T_DATA
+    assert 0x8F == T_REM
+    assert 0xA1 == T_ELSE1
+    assert 0xEF == T_EQ
+
+####################################################################
+#   Support functions
+
+@pytest.mark.parametrize('a, s', [
+    (0x00,      '\u0000'),
+    ('\u0000',  '\u0000'),
+    (0x7E,      '~'),
+    ('ABCdef',  'ABCdef'),
+])
+def test_genasc_good(a, s):
+    dt = Detokenizer(UTCS, b'')
+    dt.genasc(a)
+    assert s == dt.output()
+
+    dt = Detokenizer(None, b'')
+    dt.genasc(a)
+    assert bytes(s, 'ASCII') == dt.output()
+
+@pytest.mark.parametrize('a', [ -1, 0x80, '\u0080', ])
+def test_genasc_error(a):
+    dt = Detokenizer(UTCS, b'')
+    with pytest.raises(ValueError):
+        dt.genasc(a)
+
+def test_parse_functions():
+    ' Various generic parsing functions. '
+    #   XXX This API is a bit of a mess right now.
+
+    def ascout(c=None, a=None):
+        dt.asc(c, a)
+        return dt.output()[-1]
+
+    dt = Detokenizer(UTCS, b'@ABCDE')
+    assert                             dt.match(b'@ABCD') \
+                               and not dt.match(b'@ABCE') \
+                               and not dt.match(b'@ABCDEF')
+    assert (0x40, 0x40) == (dt.peek(), dt.byte())
+    assert (0x41, 'A')  == (dt.peek(), ascout(0x41))
+    assert (0x42, 'X')  == (dt.peek(), ascout(0x42, 'X'))
+    assert (0x43, 'C')  == (dt.peek(), ascout())
+    assert                             dt.match(b'DE')
+
+    with pytest.raises(dt.ParseError): dt.byte(0x3F)
+    with pytest.raises(dt.ParseError): dt.asc(0x3F)
+
+    #   XXX EOF behaviour
+    dt = Detokenizer(UTCS, b'')
+    assert not dt.match(b'A')
+    assert None is dt.peek()
+    assert None is dt.byte()
+    #   dt.asc() behviour at EOF is undefined
+
+def test_consume():
+    dt = Detokenizer(UTCS, b'abcdef')
+    dt.consume(b'abc'); assert dt.match(b'def')
+    dt.consume(b'de');  assert dt.match(b'f')
+    with pytest.raises(dt.ParseError):
+        dt.consume(b'XY')
+
+tok_interval = b'\xFF\x85' b'ER' b'\xFF\x94'
+tok_eq = bytes([T_EQ])
+
+@pytest.mark.parametrize('expand, input, output', [
+    (False, b'\x91',                'PRINT'),
+    ( True, b'\x91',                'PRINT'),
+    ( True, b'\x91:',               'PRINT'),
+    (False, b'\xFF\x85',            'INT'),
+    ( True, b'\xFF\x85(',           'INT'),
+    (False, tok_interval,           'INTERVAL'),
+    ( True, tok_interval + b'ON',   'INTERVAL '),
+    ( True, tok_interval + tok_eq,  'INTERVAL'),
+])
+def test_token_match(expand, input, output):
+    dt = Detokenizer(UTCS, input, expand=expand)
+    assert dt.token()
+    assert output == dt.output()
+
+def test_token_nomatch():
+    dt = Detokenizer(UTCS, b'ABC')
+    assert not dt.token()
+
+@pytest.mark.parametrize('n, s', [
+    (0x00, '00'), (0x47, '47'), (0x99, '99'), ])
+def test_bcdstr(n, s):
+    dt = Detokenizer(UTCS, b'')
+    assert s == dt.bcdstr(n)
+
+@pytest.mark.parametrize('b, s', [
+    #   E+14 form is used from exponent +14 upward and -3 downward
+    #   Remember that printed form shifts decimal point 1 right and
+    #   subtracts 1 from the exponent, compared to internal form where the
+    #   decimal point leads all the significand digits.
+    (b'\x4F\x12\x34\x56',   '1.23456E+14'),
+    (b'\x4F\x12\x00\x00',   '1.2E+14'),
+    (b'\x4F\x70\x00\x00',   '7E+14'),
+    (b'\x7F\x30\x00\x00',   '3E+62'),
+    (b'\x3E\x12\x00\x00',   '1.2E-3'),
+    (b'\x01\x45\x60\x00',   '4.56E-64'),
+    #   Internally denormalized significands are not normalized for output,
+    #   and any significand starting with two zeros wedges the machine on load.
+    (b'\x01\x02\x34\x56',   '0.23456E-64'),
+    #   Exponent 0x00 seems to encode `0!`? Not sure if this is worth doing.
+
+    #   Non-exponent form with no insignficant leading/trailing zeros
+    #   is used for (human-normalized) exponents between -2 and +13.
+    (b'\x3F\x12\x34\x50',   '.012345!'),    # smallest non-exponent form
+    (b'\x40\x12\x34\x56',   '.123456!'),
+    (b'\x40\x12\x30\x00',   '.123!'),
+    (b'\x41\x12\x30\x00',   '1.23!'),
+    (b'\x43\x12\x30\x00',   '123!'),
+    (b'\x45\x12\x34\x56',   '12345.6!'),
+    (b'\x48\x12\x34\x56',   '12345600!'),
+    (b'\x4E\x12\x34\x56',   '12345600000000!'),
+
+    #   If the exponent byte is 0x00, the number is always 0, regardless
+    #   of the significand. (Zero normally seems to be tokenized as an
+    #   exponent and significand of all-zeros.)
+    (b'\x00\x00\x00\x00',   '0!'),
+
+    #   Double precision works pretty much exactly the same as single.
+    (b'\x00\x00\x00\x00\x00\x00\x00\x00', '0#'),
+    (b'\x3F\x10\x20\x30\x40\x50\x60\x78', '.010203040506078#'),
+    (b'\x4A\x10\x20\x30\x40\x50\x60\x78', '1020304050.6078#'),
+    (b'\x4E\x10\x20\x30\x40\x50\x60\x78', '10203040506078#'),
+    (b'\x6E\x10\x20\x30\x40\x50\x60\x78', '1.0203040506078D+45'),
+    (b'\x70\x10\x20\x34\x50\x00\x00\x00', '1.020345D+47'),
+    #   MS-BASIC decodes this as nEm instead of nDm when there are 6 sig digs
+    #   or less, even though a double is stored in the BASIC text. We use
+    #   nDm instead so that we can round-trip; see the code for details of why.
+    (b'\x70\x10\x20\x34\x00\x00\x00\x00', '1.02034D+47'),
+])
+def test_real(b, s):
+    dt = Detokenizer(UTCS, b)
+    dt.reset()
+    dt.real(len(b))
+    assert s == dt._output[0]
+
+@pytest.mark.parametrize('b, s', [
+    (b'a',          '\uF061'),
+    (b'\xFF',       '\uF0FF'),
+    (b'\x01\x40',   '\uF000'),
+    (b'\x01\x5F',   '\uF01F'),
+])
+def test_char(b, s):
+    dt = Detokenizer(UTCS, b)
+    dt.char()
+    assert s == dt.output()
+
+@pytest.mark.parametrize('b', [
+    #   Bytes that should never appear in a tokenized string constant;
+    #   as these character codes would be encoded as \x01\xNN sequences.
+    b'\x00', b'\x02', b'\x1F',
+    b'\x01\x3F',                # \x01 must be followed by >= \x40
+    b'\x01\x60',                # \x01 must be followed by  < \x60
+    b'\x01',                    # \x01 must have a following byte
+    b'\x7F',                    # DEL is a control char
+])
+def test_chdecode_invalid(b):
+    dt = Detokenizer(UTCS, b)
+    with pytest.raises(dt.TokenError):
+        dt.char()
+
+@pytest.mark.parametrize('b', [
+    b'\x00', b'\x01', b'\x1F', b'\x7F', b'\x01\x3F', b'\x01\x01',
+])
+def test_char_notrans_invalid(b):
+    ''' Show that we pass through control characters and invalid encoding
+        sequences when not doing translation.
+    '''
+    dt = Detokenizer(None, b)
+    #   char() always reads only one byte when not doing chracer translation.
+    for _ in range(len(b)): dt.char()
+    assert b == dt.output()
+
+@pytest.mark.parametrize('t, s', [
+    (b'"',                  '"'),
+    (b'ab"',                '\uF061\uF062"'),
+    (b'ab"cd',              '\uF061\uF062"'),
+    (b'ab:',                '\uF061\uF062\uF03A'),   # no closing quote
+    (b'\x20\x01\x41\x21',   '\uF020\uF001\uF021'),   # extended code conversion
+])
+def test_quoted(t, s):
+    ''' Quoted characters, which are always charset-converted excepting
+        the quotes themselves.
+    '''
+    dt = Detokenizer(UTCS, t)
+    dt.quoted()
+    assert s == dt.output()
+
+@pytest.mark.parametrize('t, s', [
+    (b'',                       ''),
+    (b'ab,cd:ef',               '\uF061\uF062,\uF063\uF064:'),
+    (b'a,"b,c":d',              '\uF061,"\uF062\uF02C\uF063":'),
+    (b'a,"b:c":d',              '\uF061,"\uF062\uF03A\uF063":'),
+    (b'",",a"b,"c,d:\x91',      '"\uF02C",\uF061"\uF062\uF02C"\uF063,\uF064:'),
+    (b'\x84,"\x84"\x84:\x84',   '\uF084,"\uF084"\uF084:'),
+    #   Leading spaces should not be charset-converted because
+    #   they're dropped when the line is parsed.
+    (b'  a , b "" :',           '  \uF061\uF020, \uF062\uF020""\uF020:'),
+])
+def test_data(t, s):
+    dt = Detokenizer(UTCS, t)
+    dt.data()
+    assert s == dt.output()
+
+####################################################################
+#   Main function
+
+@pytest.mark.parametrize('t, s', [
+    (b'',               '' ),
+    (b' ',              ' '),
+    (b'Ab',             'Ab'),
+    (b'\x91',           'PRINT'),
+    #   &Onnnnn octal integers
+    (b'\x0B\x00\x00',   '&O0'),
+    (b'\x0B\x9C\xF1',   '&O170634'),
+    #   &Hnnnn hexadecimal integers
+    (b'\x0C\x00\x00',   '&H0'),
+    (b'\x0C\x0F\x00',   '&HF'),
+    (b'\x0C\x1A\x00',   '&H1A'),
+    (b'\x0C\x2B\x01',   '&H12B'),
+    (b'\x0C\xFE\xFF',   '&HFFFE'),
+    #   Integers 10-255
+    (b'\x0F\x0A',       '10'),
+    (b'\x0F\xFF',       '255'),
+    #   Integers 0-9
+    (b'\x11',           '0'),
+    (b'\x12',           '1'),
+    (b'\x13',           '2'),
+    (b'\x14',           '3'),
+    (b'\x15',           '4'),
+    (b'\x16',           '5'),
+    (b'\x17',           '6'),
+    (b'\x18',           '7'),
+    (b'\x19',           '8'),
+    (b'\x1A',           '9'),
+    #   Line numbers
+    (b'\x0E\x00\x00',   '0'),
+    (b'\x0E\xF9\xFF',   '65529'),
+    #   Integers 256-32767
+    (b'\x1C\x00\x01',   '256'),
+    (b'\x1C\x34\x12',   '4660'),
+    (b'\x1C\xFF\x7F',   '32767'),
+    #   Real numbers
+    (b'A\xEF\x1D\x3F\x12\x34\x56',                  'A=.0123456!'),
+    (b'A\xEF\x1F\x43\x12\x30\x00\x00\x00\x00\x00',  'A=123#'),
+    #   ELSE is a weird special case
+    (b'\x3A\xA1',        'ELSE'),
+    #   Quoted strings, REM, single-quote alterantive for REM
+    (b'\x91"\x91":\x91"\x91',       'PRINT"\uF091":PRINT"\uF091'),
+    (b'\x8F\x91',                   'REM\uF091'),
+    (b':\x8F\xE6\x91',              "'\uF091"),
+    (b':\x8F',                      ':REM'),        # used to trigger a bug
+    #   DATA
+    (b'\x84\x84,"\x84"\x84:\x84',   'DATA\uF084,"\uF084"\uF084:DATA'),
+    #   Multi-byte tokens
+    (b'\xFF\x84(A) \xF1 \xFF\x85(B)',   'SGN(A) + INT(B)'),
+])
+def test_detokenized(t, s):
+    dt = Detokenizer(UTCS, t, 12345)
+    assert '12345 ' + s == dt.detokenized()
+
+@pytest.mark.parametrize('t, err', [
+    #   Line numbers
+    (b'\x0E\xFA\xFF',   'line no. 65530 > 65529'),
+    #   Integers 10-255
+    (b'\x0F\x09',       'too small'),
+    #   Integers 256-32767
+    (b'\x1C\xFF\x00',   'too small'),
+    (b'\x1C\x00\x80',   'too large'),
+    (b'\x1C\xFF\xFF',   'too large'),
+])
+def test_detokenize_bad(t, err):
+    with pytest.raises(Detokenizer.TokenError):
+        dt = Detokenizer(UTCS, t)
+        dt.detokenized()
+
+
+@pytest.mark.parametrize('ln, toks, compact, expanded', [
+    (    0, b'\x91""',      '0 PRINT""',            '    0 PRINT ""'),
+    (60000, b'\x8F',        '60000 REM',            '60000 REM'),
+
+    (   10, b'\x91:\x8FARKABLE',
+            '10 PRINT:REMARKABLE',
+            '   10 PRINT\n    : REMARKABLE'),
+    ( None, b'\x84a,b,   c,"d", "e",   "f"',
+            'DATAa,b,   c,"d", "e",   "f"',
+            'DATA a, b,   c, "d", "e",   "f"'),
+    ( None, b'\x91\xFF\x96(\x0F\x0C\xF8\x0F\xFF)\xF1"3"',
+            'PRINTCHR$(12XOR255)+"3"',
+            'PRINT CHR$(12 XOR 255)+"3"'),
+    ( None, b'\x8BX\xEF\x12\xDAY\xEF\x13:\xA1Z\xEF\x14',
+            'IFX=1THENY=2ELSEZ=3',
+           'IF X=1 THEN Y=2 ELSE Z=3'),
+    ( None, b'\x82I\xEF\x11\xD9\x1A\xDC\x13:\x83I',
+            'FORI=0TO9STEP2:NEXTI',
+            'FOR I=0 TO 9 STEP 2\n    : NEXT I'),
+   ##   Some keywords are tokenized with a combination of several tokens and
+   ##   letters; these must not have spaces inserted into the middle of them.
+    ( None, b'\xFF\x85' b'ER' b'\xFF\x94' b'\xEF' b'\x0F\x1E',
+            'INTERVAL=30',
+            'INTERVAL=30'),
+
+    #   Spaces should not be added if there's already space there.
+    ( None, b'\x8B X\xEF\x12 \xDAY\xEF\x13   :\xA1Z\xEF\x14',
+            'IF X=1 THENY=2   ELSEZ=3',
+            'IF X=1 THEN Y=2   ELSE Z=3'),
+])
+def test_detokenize_expand(ln, toks, compact, expanded):
+    dtc = Detokenizer(MSXCP, toks, lineno=ln, expand=False)
+    assert compact == dtc.detokenized()
+    dte = Detokenizer(MSXCP, toks, lineno=ln, expand=True)
+    assert expanded == dte.detokenized()
+
+def test_repl():
+    pass
+    #assert [] == DETOKENS[0:8]

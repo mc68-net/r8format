@@ -1,0 +1,31 @@
+from    r8format.bastok.blines  import blines
+import  pytest
+
+@pytest.mark.parametrize('result, input', [
+    #   Ignore lines before first bline
+    ([],                        ['']),
+    ([],                        ['foo']),
+    (['56 ef'],                 ['ab', '', 'cd', '56 ef',]),
+    #   Leading/trailing spaces, comments and blank lines stripped.
+    (['123 ab'],                ['  123 ab  ']),
+    (['123 ab'],                ['123 ab ‖ comment']),
+    (['123 ab'],                ['', '', '123 ab', '' '']),
+    #   Multiple lines.
+    (['123 ab cd',
+      '456 ef gh'],             ['',
+                                 '123 ab',
+                                 'cd',
+                                 '456 ef',
+                                 '',
+                                 '',
+                                 'gh',
+                                 '']),
+    #   plines starting with a number that are not the start of blines.
+    (['12 D 34, 56, 78',
+      '90 D'],                  ['12 D 34,',
+                                 '56,',
+                                 '  78  ',
+                                 '90 D'])
+])
+def test_blines(result, input):
+    assert result == blines(input)

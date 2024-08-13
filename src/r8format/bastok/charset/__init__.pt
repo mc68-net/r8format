@@ -1,0 +1,53 @@
+from    r8format.bastok.charset  import *
+from    re  import escape
+import  pytest
+
+####################################################################
+#   Charset
+
+def test_charset():
+    cs = Charset('test_charset',
+        [ (n, chr(n)) for n in range(0, 0x100) ])
+    for i in range(0, 0x100):
+        assert (chr(i), i) == (cs.trans(i), cs.native(chr(i)))
+
+    cs.setchars([ (0x40, '\u0020'), (0x20, '\u0040') ])
+    assert ('\u0020', '\u0040', 0x20, 0x40) \
+        == (cs.trans(0x40), cs.trans(0x20),
+                cs.native('\u0040'), cs.native('\u0020'))
+
+####################################################################
+#   UTCharset
+
+@pytest.mark.parametrize('n, u', [
+    (0x00, '\uF000'), (0x17, '\uF017'), (0xFF, '\uF0FF'),
+])
+def test_UTCharset_good(n, u):
+    uc = UTCharset()
+    assert (n, u) == (uc.native(u), uc.trans(n))
+
+def test_UTCharset_trans_err():
+    uc = UTCharset()
+    AE = pytest.raises(AssertionError)
+
+    with AE as ex: uc.trans(-1)
+    assert ex.match('-0x1')
+
+    with AE as ex: uc.trans(0x100)
+    assert ex.match('0x100')
+
+@pytest.mark.parametrize('u', [' ', '~', '\uEFFF', '\uF100', '\uF000\uF000' ])
+def test_UTCharset_native_err(u):
+    uc = UTCharset()
+    with pytest.raises(AssertionError) as ex: uc.native(u)
+    assert ex.match(escape(repr(u)))
+
+def test_UTCharset_offset():
+    uc = UTCharset(0)
+
+    assert (0x00, '\u0000') == (uc.native('\u0000'), uc.trans(0x00))
+
+    AE = pytest.raises(AssertionError)
+    with AE: uc.native('\u0100')
+    with AE: uc.trans(-1)
+    with AE: uc.trans(0x100)

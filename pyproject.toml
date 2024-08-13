@@ -1,5 +1,5 @@
 [project]
-version = '0.0.6'
+version = '1.0.0'
 name = 'r8format'
 description = 'Retrocomputing 8-bit file format manipulation tools'
 authors = [
@@ -30,7 +30,7 @@ requires = ['setuptools']
 build-backend = 'setuptools.build_meta'
 
 [tool.setuptools.packages]
-find = { where = ['psrc'] }
+find = { where = ['src'] }
 
 [tool.setuptools]
 py-modules = ['pytest_pt']
@@ -47,4 +47,4 @@ py-modules = ['pytest_pt']
 #
 
 [tool.pytest.ini_options]
-testpaths = ['psrc']
+testpaths = ['src']
