@@ -24,6 +24,7 @@ commit ID.
 
 ### dev
 - Fixed: `RomImage.patches()` now works if more than one patchspec matches.
+- Test framework: `Test` accepts `-c` as well as `-C` to do clean build.
 
 ### 0.0.6 (2024-07-30)
 - Added: A `binary.romimage.RomImage` can now be cleared (set to length 0)

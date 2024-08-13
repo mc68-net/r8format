@@ -19,8 +19,9 @@ hexdiff() {
 basedir=$(cd "$(dirname "$0")" && pwd -P)
 cd "$basedir"
 
-#   -C (clean) must be first argument if present
+#   -C/-c (clean) must be first argument if present
 [[ ${#@} -gt 0 && $1 == -C ]] && { shift; rm -rf .build/; }
+[[ ${#@} -gt 0 && $1 == -c ]] && { shift; rm -rf .build/; }
 #   -q anywhere in the command line (even with -v!) sets functests quiet.
 quiet=
 for arg in "$@"; do [[ $arg == -q ]] && quiet=-q; done
