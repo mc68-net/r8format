@@ -20,7 +20,14 @@ def test_set_image():
 @pm('s', [ 'http://usr@pw:ex.com/', 'http:', 'a2+-.:', ])
 def test_SCHEME_true(s):  assert RomImage.SCHEME.match(s)
 
-@pm('s', [ 'a', '', '2:', ])
+@pm('s', [
+    'a', '', '2:',
+    #   `x:` where `x` is a letter is technically legal per RFC 3896, but
+    #   it also matches some Windows paths. Since we allow giving either
+    #   a URL or a file path on the command line, we always interpret
+    #   `x:` as a path so that Windows users can reference other drives.
+    'C:',
+])
 def test_SCHEME_false(s):  assert not RomImage.SCHEME.match(s)
 
 @pm('loadspec, startaddr, source', [

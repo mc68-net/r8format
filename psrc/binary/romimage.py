@@ -66,7 +66,7 @@ class RomImage:
         self.image = bytearray()
 
     LOADSPEC = re.compile(r'(@[0-9A-Fa-f]+:)?(.*)')
-    SCHEME   = re.compile(r'^[A-Za-z][A-Za-z0-9+.-]*:')
+    SCHEME   = re.compile(r'^[A-Za-z][A-Za-z0-9+.-]+:')
 
     @staticmethod
     def parse_loadspec(loadspec):

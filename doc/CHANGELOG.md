@@ -24,6 +24,8 @@ commit ID.
 
 ### dev
 - Fixed: `RomImage.patches()` now works if more than one patchspec matches.
+- Fixed: `RomImage` now considers `C:…` to be a path instead of a URL,
+  for compatibility with Windows file paths.
 - Test framework: `Test` accepts `-c` as well as `-C` to do clean build.
 
 ### 0.0.6 (2024-07-30)
