@@ -23,6 +23,8 @@ will be tagged, but specific releases can also be fetched via the Git
 commit ID.
 
 ### dev
+
+### 0.0.7 (2024-09-22)
 - Fixed: `RomImage.patches()` now works if more than one patchspec matches.
 - Fixed: `RomImage` now considers `C:…` to be a path instead of a URL,
   for compatibility with Windows file paths.
