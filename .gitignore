@@ -5,6 +5,5 @@ __pycache__/
 /tags
 /tmp/
 
-#   pyproject-build output files.
-/dist/
+#   pip -e output files
 /psrc/r8format.egg-info/
