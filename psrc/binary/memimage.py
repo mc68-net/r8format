@@ -12,19 +12,17 @@ class MemImage(list):
 
         This is a mutable ordered collection. The records are
         not necessarily in order of address, but `sorted()` will
-        return the records ordered by address.
+        return the records ordered by address (assuming any records
+        added via `append()` sort properly).
+
+        `startaddr` and `endaddr` are set 
     '''
 
-    def __init__(self):
+    def __init__(self, fill=0x00):
+        self.startaddr = 0
+        self.endaddr = 0
         self.entrypoint = None
-        self.clear_cache()
-
-    def clear_cache(self):
-        ' Clear any cached values that have been calculated. '
-        self.startaddr      = None
-        self.endaddr        = None  # one past the last address with data
-        self.contig_fill    = None
-        self.contig_data    = None
+        self.fill = 0x00
 
     class OverlapError(ValueError):
         pass
@@ -35,8 +33,32 @@ class MemImage(list):
             of byte values that start at that address.
         '''
     def addrec(self, addr, data):
-        self.clear_cache()
+        ''' `append()` a new `MemRecord` to the list of records for this
+            image. Additionally, it checks that `data[0]` (if present)
+            is an `int`.
+        '''
+        if len(data) and not isinstance(data[0], int):
+            raise TypeError(f'data type {type(data)} not int sequence')
         self.append(MemImage.MemRecord(addr, data))
+
+    def append(self, rec):
+        ''' Append an additional data record to the list of records for
+            this image. This will update `startaddr` to the start address
+            of the lowest record in memory (regardless of where it is in
+            the list), and `endaddr` to the highest end address of any
+            record (which may not be the end address of the highest record
+            if another, lower record extends past it).
+        '''
+        super().append(rec)
+        self.startaddr = self.endaddr = None
+        for mr in self:
+            if len(mr.data) == 0:
+                continue                # Ignore empty records
+            if self.startaddr is None or self.startaddr > mr.addr:
+                self.startaddr = mr.addr
+            recend = mr.addr + len(mr.data)
+            if self.endaddr is None or self.endaddr < recend:
+                self.endaddr = recend
 
     def __iter__(self):
         return (self.MemRecord(mr.addr, mr.data) for mr in super().__iter__())
@@ -46,36 +68,23 @@ class MemImage(list):
             lowest to highest address. This is the number of bytes
             that will be returned by `contigbytes()`.
 
+            This honours any changes made to `startaddr` and `endaddr`
+            made since the last call to `append()` or `addrec()`.
+
             This does not check to see if the image has overlapping
             records.
         '''
-        if self.startaddr is not None and self.endaddr is not None:
-            return self.endaddr - self.startaddr
-        endaddr = None
-        for mr in sorted(self):
-            if len(mr.data) == 0:
-                continue                # Ignore empty records
-            if self.startaddr is None:
-                self.startaddr = mr.addr
-            recend = mr.addr + len(mr.data)
-            if endaddr is None or endaddr < recend:
-                endaddr = recend
-        self.endaddr = endaddr
-        return self.contiglen()
+        return self.endaddr - self.startaddr
 
-    def contigbytes(self, fill=0xFF):
+    def contigbytes(self):
         ''' Return the binary contents of this image as a contiguous
             list of bytes from the lowest address to the highest,
-            filling in unset areas with `fill`.
+            filling in unset areas with `self.fill`.
 
             If the image has any overlapping records a `MemOverlap`
             exception will be raised. (Possibly we should add a
             parameter to disable this check.)
         '''
-        if fill == self.contig_fill and self.contig_data is not None:
-            return self.contig_data
-
-        self.contig_fill = fill
         data = [None] * self.contiglen()
         for mr in self:
             start = mr.addr - self.startaddr
@@ -85,5 +94,6 @@ class MemImage(list):
                     raise self.OverlapError(
                         'Data overlap at location ${:04X}'.format(pos))
             data[sl] = list(mr.data)
-        self.contig_data = bytes(map(lambda x: fill if x is None else x, data))
+        self.contig_data = bytes(
+            map(lambda x: self.fill if x is None else x, data))
         return self.contig_data

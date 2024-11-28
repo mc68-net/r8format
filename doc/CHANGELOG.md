@@ -25,6 +25,9 @@ commit ID.
 For release instructions, see [cynic-net/pypi-release] on GitHub.
 
 ### dev
+- Changed: `MemImage` now automatically recalculates `startaddr` and
+  `endaddr` when a record is added, and these can be overridden afterwards
+  by the user.
 
 ### 0.0.7 (2024-09-22)
 - Fixed: `RomImage.patches()` now works if more than one patchspec matches.

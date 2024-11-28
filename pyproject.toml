@@ -1,5 +1,5 @@
 [project]
-version = '0.0.7'
+version = '0.0.8.dev0'
 name = 'r8format'
 description = 'Retrocomputing 8-bit file format manipulation tools'
 authors = [
@@ -21,6 +21,7 @@ blines          = 'bastok.cli.blines:main'
 detok           = 'bastok.cli.detok:main'
 #   binary
 msx-dasm        = 'binary.cli.msx_dasm:main'
+p2b             = 'binary.cli.p2b:main'
 #   cmtconv
 analyze-cmt     = 'cmtconv.cli.analyze_cmt:main'
 cmtconv         = 'cmtconv.cli.cmtconv:main'

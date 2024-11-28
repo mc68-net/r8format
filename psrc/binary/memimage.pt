@@ -7,15 +7,35 @@ def test_memimage_entrypoint():
     assert None is mi.entrypoint
     mi.entrypoint = 0x1234          # currently no accessors; set it directly
 
+def test_memimage_fill():
+    mi = MemImage()
+    assert 0x00 is mi.fill
+    mi.fill = 0xFF                  # currently no accessors; set it directly
+
 def test_memimage_memrec():
     mi = MemImage()
-    assert  0 == len(mi)
-    assert [] == mi
+    assert (0, [], 0, 0) == (len(mi), mi, mi.startaddr, mi.endaddr)
 
+    mi.addrec(0x0200, b'22')
+    assert (      1, (0x0200, b'22'),       0x0200,      0x0202,            0x2) \
+        == (len(mi),            mi[0], mi.startaddr, mi.endaddr, mi.contiglen())
+
+    mi.addrec(0x0100, b'111')
+    assert (      2, (0x0100, b'111'),       0x0100,     0x0202,          0x102) \
+        == (len(mi),            mi[1], mi.startaddr, mi.endaddr, mi.contiglen())
+
+    mi.addrec(0x444, b'4')
+    assert (0x0100, 0x0445) == (mi.startaddr, mi.endaddr)
+
+def test_memimage_notbin():
+    mi = MemImage()
+    with pytest.raises(TypeError, match='not int sequence'):
+        mi.addrec(0, '\x00')
+
+def test_memimage_iterable():
+    mi = MemImage()
     testdata =  b'\x00\x01\x02\x03\0x04'
     mi.addrec(0x1234, testdata)
-    assert (0x1234, testdata) == mi[0]
-    assert 1 == len(mi)
 
     for addr, data in mi:           # make sure we're iterable
         assert 0x1234 == addr
@@ -35,8 +55,9 @@ def test_memimage_memrec_alternate():
     mi = MemImage()
     mi.append(MR('x', testaddr, 'y', testdata, 'z'))
     for addr, data in mi:
-        assert testaddr == addr
-        assert testdata == data
+        assert (testaddr, testdata) == (addr, data)
+    assert (    testaddr, testaddr+len(testdata),  len(testdata)) \
+        == (mi.startaddr,             mi.endaddr, mi.contiglen())
 
 def test_memimage_contig():
     def byterange(s, e):
@@ -52,10 +73,12 @@ def test_memimage_contig():
 
     assert 12 == mi.contiglen()
     assert 12 == mi.contiglen()     # cached value
-    assert [0, 1, 2, 3, 255, 255, 255, 255, 8, 9, 10, 11] \
-        == list(mi.contigbytes())
     assert [0, 1, 2, 3, 0, 0, 0, 0, 8, 9, 10, 11] \
-        == list(mi.contigbytes(fill=0))
+        == list(mi.contigbytes())
+
+    mi.fill = 0xFF
+    assert [0, 1, 2, 3, 0xFF, 0xFF, 0xFF, 0xFF, 8, 9, 10, 11] \
+        == list(mi.contigbytes())
 
 @pytest.mark.parametrize('overlap_start, overlap_pos', [
     (0xFF,  r'\$0100'),
