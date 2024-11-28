@@ -1,0 +1,37 @@
+from    binary.memimage  import MemImage
+import  pytest
+from    binary.cli.p2b  import *
+
+@pytest.fixture
+def mi():
+    '   Test memory image. '
+    mi = MemImage()
+    mi.addrec(0xF000, b'\xBB')
+    mi.addrec(0xF002, b'\xEE')
+    mi.entrypoint = 0xF002
+    return mi
+
+def test_a2(mi):
+    mi.entrypoint = mi.startaddr
+    expected = bytes(
+        b'\x00\xF0'     # start address
+        b'\x03\x00'     # length
+        b'\xBB\x00\xEE' # program
+    )
+    assert expected == bin_a2(mi)
+
+    mi.entrypoint = mi.startaddr + 1
+    with pytest.raises(ValueError, match=r' \$F000 != \$F001 '):  bin_a2(mi)
+
+    mi.addrec(0xF000-0x8000-1, b'X')
+    mi.entrypoint = mi.startaddr
+    with pytest.raises(ValueError, match=r' > \$7FFF'):  bin_a2(mi)
+
+def test_kc85(mi):
+    expected = bytes(
+        b'\x00\xF0'     # start address
+        b'\x03\x00'     # length
+        b'\x02\xF0'     # entrypoint
+        b'\xBB\x00\xEE' # program
+    )
+    assert expected == bin_kc85(mi)
