@@ -1,5 +1,18 @@
-r8format - Tools for Manipulating and Converting Retro-8-bit File Formats
-=========================================================================
+r8format - Retrocomputing 8-bit file format manipulation tools
+==============================================================
+
+----------------------------------------------------------------------
+
+__NOTE:__ The current `r8format` package is in the [`r8format/`]
+subdirectory of the [t8dev] repo, which contains the entire history of this
+repo's `main` branch. This repository, which is marked as archived on
+GitHub, is now of historical interest only, mainly for old development
+branches (some of which may be moved to the t8dev repo anyway).
+
+[`r8format/`]: https://github.com/mc68-net/t8dev/blob/main/r8format/
+[t8dev]: https://github.com/mc68-net/t8dev
+
+----------------------------------------------------------------------
 
 This repository contains tools (mainly written in Python) and Python
 libraries for manipulating and converting some common file formats
